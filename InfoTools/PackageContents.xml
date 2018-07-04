@@ -1,0 +1,9 @@
+﻿<?xml version="1.0" encoding="utf-8" ?>
+<ApplicationPackage SchemaVersion="1.0" AutodeskProduct="AutoCAD" ProductType="Application" Name="Civil3DInfoTools">
+  <RuntimeRequirements OS="Win32|Win64" Platform="AutoCAD|AutoCAD*" SeriesMin="R21.0" SeriesMax="R23.1" />
+  <Components Description=".NET Framework 4.6 Acad 2017-2019">
+    <RuntimeRequirements OS="Win32|Win64" Platform="AutoCAD*|AutoCAD" SeriesMin="R21.0" SeriesMax="R23.1" />
+    <ComponentEntry AppName="Civil3DInfoTools" ModuleName="./Civil3DInfoTools.dll"  LoadOnAutoCADStartup="True" />
+    <ComponentEntry AppName = "InfoTools_Panel" ModuleName="./InfoTools.cuix" />
+  </Components>
+</ApplicationPackage>
