@@ -19,6 +19,8 @@ namespace Civil3DInfoTools.RoadMarking
 
         int n = 0;
 
+        ObjectId continuousLtype;
+
         [CommandMethod("CreateBoundaries", CommandFlags.Modal)]
         public void CreateBoundaries()
         {
@@ -138,6 +140,7 @@ namespace Civil3DInfoTools.RoadMarking
 
 
 
+
                     tr.Commit();
                 }
 
@@ -150,6 +153,7 @@ namespace Civil3DInfoTools.RoadMarking
                 ObjectIdCollection createdBtrs = new ObjectIdCollection();
                 using (Transaction trTarget = dbTarget.TransactionManager.StartTransaction())
                 {
+                    continuousLtype = Utils.GetContinuousLinetype(dbTarget);
                     //Обработка объектов в новой базе данных
                     BlockTable btTarget
                         = trTarget.GetObject(dbTarget.BlockTableId, OpenMode.ForWrite) as BlockTable;
@@ -164,7 +168,15 @@ namespace Civil3DInfoTools.RoadMarking
                         //Для штриховки - "Штриховка" + номер
                         if (ent is Curve)
                         {
-                            createdBtrId = ProcessEntity(ent as Curve, btTarget);
+                            Curve curve = ent as Curve;
+                            if (ent is Polyline2d)
+                            {
+                                Polyline poly = new Polyline();
+                                poly.ConvertFrom(ent, false);
+                                curve = poly;
+                            }
+
+                            createdBtrId = ProcessEntity(curve as Polyline, btTarget);
                         }
                         else if (ent is Hatch)
                         {
@@ -175,7 +187,7 @@ namespace Civil3DInfoTools.RoadMarking
                         if (createdBtrId != ObjectId.Null)
                         {
                             createdBtrs.Add(createdBtrId);
-                            //НЕ СОЗДАЕТ ВХОЖДЕНИЕ БЛОКА!
+                            //ЗДЕСЬ НЕ СОЗДАЕТ ВХОЖДЕНИЕ БЛОКА!
                             //BlockReference br = new BlockReference(Point3d.Origin, createdBtrId);
                             //msTarget.AppendEntity(br);
                             //trTarget.AddNewlyCreatedDBObject(br, true);
@@ -188,13 +200,31 @@ namespace Civil3DInfoTools.RoadMarking
 
 
 
+
                     trTarget.Commit();
 
                 }
 
+                //Создание вхождений блоков
+                using (Transaction trTarget = dbTarget.TransactionManager.StartTransaction())
+                {
+                    BlockTable btTarget
+                        = trTarget.GetObject(dbTarget.BlockTableId, OpenMode.ForWrite) as BlockTable;
+                    BlockTableRecord msTarget
+                            = (BlockTableRecord)trTarget
+                            .GetObject(btTarget[BlockTableRecord.ModelSpace], OpenMode.ForWrite);
+
+                    foreach (ObjectId id in createdBtrs)
+                    {
+                        BlockReference br = new BlockReference(Point3d.Origin, id);
+                        msTarget.AppendEntity(br);
+                        trTarget.AddNewlyCreatedDBObject(br, true);
+                    }
+                }
 
 
-
+                //TODO: Учесть возможные ошибки из-за отсутствия прав или занятости файла
+                //TODO: Придумать именование создаваемого чертежа
                 //Создание нового чертежа и открытие его
                 string targetDocFullPath = Path.Combine(Path.GetDirectoryName(adoc.Name), "test.dwg");
                 dbTarget.SaveAs(targetDocFullPath, DwgVersion.Current);
@@ -208,10 +238,6 @@ namespace Civil3DInfoTools.RoadMarking
             catch (System.Exception ex)
             {
                 Utils.ErrorToCommandLine(ed, "Ошибка при выполнении команды InsertByCoordinates", ex);
-                if (adocTarget != null)
-                {
-                    //В случае ошибки удалить 
-                }
 
             }
             finally
@@ -240,38 +266,33 @@ namespace Civil3DInfoTools.RoadMarking
         }
 
 
-        private ObjectId ProcessEntity(Curve curve, BlockTable bt)
+        private ObjectId ProcessEntity(Polyline curve, BlockTable bt)
         {
             Database db = bt.Database;
             ObjectId createdBtrId = ObjectId.Null;
             using (Transaction tr = db.TransactionManager.StartTransaction())
             {
-                BlockTableRecord ms
-                            = (BlockTableRecord)tr
-                            .GetObject(bt[BlockTableRecord.ModelSpace], OpenMode.ForWrite);
-
 
                 //Масштаб типа линии
                 double ltScale = curve.LinetypeScale;
+                //Глобальная ширина линии
+
+                double offsetDist = 0;
+                offsetDist = (curve as Polyline).GetStartWidthAt(0) / 2;
+
+                if (offsetDist == 0)
+                {
+                    throw new System.Exception("Не определена глобальная ширина кривой");
+                }
 
                 //Анализ типа линии. Получить длину штриха и длину пробела
                 LinetypeTableRecord ltype = tr.GetObject(curve.LinetypeId, OpenMode.ForRead) as LinetypeTableRecord;
+
                 //string ltypeDef = ltype.Comments;
                 //double patternLength = ltype.PatternLength;
                 //int numDashes = ltype.NumDashes;
 
-                List<double> pattern = new List<double>();
-                for (int i = 0; i < ltype.NumDashes; i++)
-                {
-                    //TODO: Учесть возможность вставки подряд двух пробелов или двух штрихов
-                    //(если это вообще возможно сделать)
-                    double dash = ltype.DashLengthAt(i);
-                    if (dash != 0)
-                    {
-                        pattern.Add(dash * ltScale);//сразу домножить на масштаб типа линии
-                    }
-
-                }
+                List<double> pattern = Utils.GetLinePattern(ltype, ltScale);
 
                 bool startFromDash = pattern[0] > 0;//паттерн начинается со штриха (не пробела)
                 //SortedSet<Curve> curves = new SortedSet<Curve>(new CurvePositionComparer(curve));
@@ -353,10 +374,46 @@ namespace Civil3DInfoTools.RoadMarking
                                 //Использовать метод Curve.GetOffsetCurves
                                 //для создания линий границ справа и слева в соответствии с глобальной шириной
                                 //Создание замкнутого контура в новом блоке
+                                DBObjectCollection offsetCurves = axisCurve.GetOffsetCurves(offsetDist);
+                                Curve c1 = Utils.GetFirstDBObject(offsetCurves) as Curve;
+                                offsetCurves = axisCurve.GetOffsetCurves(-offsetDist);
+                                Curve c2 = Utils.GetFirstDBObject(offsetCurves) as Curve;
+                                //c2.ReverseCurve();
+                                Line concatLine = new Line(c1.EndPoint, c2.EndPoint/*.StartPoint*/);
 
-                                //test
-                                btr.AppendEntity(axisCurve);
-                                tr.AddNewlyCreatedDBObject(axisCurve, true);
+                                IntegerCollection joined
+                                    = c1.JoinEntities(new Entity[] { concatLine, c2 });
+                                if (joined.Count < 2)
+                                {
+                                    throw new System.Exception("Соединение примитивов не выполнено");
+                                }
+
+                                if (c1 is Polyline)
+                                {
+                                    Polyline poly = c1 as Polyline;
+                                    poly.Closed = true;
+
+                                    //Убрать глобальную ширину
+                                    int numVert = poly.NumberOfVertices;
+                                    for (int i = 0; i < numVert; i++)
+                                    {
+                                        poly.SetStartWidthAt(i, 0);
+                                        poly.SetEndWidthAt(i, 0);
+                                    }
+
+                                    //Сбросить тип линии
+                                    if (continuousLtype != ObjectId.Null)
+                                    {
+                                        poly.LinetypeId = continuousLtype;
+                                    }
+                                }
+                                else
+                                {
+                                    throw new System.Exception("При соединении примитивов создан невалидный объект");
+                                }
+
+                                btr.AppendEntity(c1);
+                                tr.AddNewlyCreatedDBObject(c1, true);
 
                             }
                             currIsDash = !currIsDash;//Считаем, что штрихи и пробелы встречаются строго поочереди
@@ -372,6 +429,8 @@ namespace Civil3DInfoTools.RoadMarking
             return createdBtrId;
         }
 
+
+
         private ObjectId ProcessEntity(Hatch hatch, BlockTable bt)
         {
             //Для создания контура штриховки
@@ -379,7 +438,100 @@ namespace Civil3DInfoTools.RoadMarking
             //Hatch.GetLoopAt
             //HatchLoop.Polyline!!!
 
-            return ObjectId.Null;
+            //Получить полилинии
+            List<Polyline> polylines = new List<Polyline>();
+            for (int i = 0; i < hatch.NumberOfLoops; i++)
+            {
+                HatchLoop hl = hatch.GetLoopAt(i);
+                BulgeVertexCollection bvc = hl.Polyline;
+                Curve2dCollection cc = hl.Curves;
+                Polyline poly = null;
+
+                if (bvc != null && bvc.Count > 0)
+                {
+                    //сюда попадет если контур состоит из отрезков и круговых дуг
+                    poly = new Polyline();
+                    int vertNum = 0;
+                    foreach (BulgeVertex bv in bvc)
+                    {
+                        poly.AddVertexAt(vertNum, bv.Vertex, bv.Bulge, 0, 0);
+                        vertNum++;
+                    }
+                }else if (cc != null && cc.Count > 0)
+                {
+                    //сюда попадет если контур состоит только из отрезков или включает сложные линии (сплайны, эллипсы)
+                    poly = new Polyline();
+                    //добавить первую вершину
+                    //poly.AddVertexAt(0, cc[0].StartPoint, 0, 0, 0);
+                    int vertNum = 0;
+                    foreach (Curve2d c in cc)
+                    {
+                        if (c is LinearEntity2d)
+                        {
+                            //добавить сегмент без кривизны
+                            LinearEntity2d l2d = c as LinearEntity2d;
+                            poly.AddVertexAt(vertNum, l2d.EndPoint, 0, 0, 0);
+                            vertNum++;
+                        }
+                        else
+                        {
+                            //просто пропустить эту кривую (может это сплайн или еще чего)
+                            //throw new System.Exception("Неверный тип 2d кривой - " + c.GetType().ToString());
+                        }
+                    }
+
+                }
+
+
+
+                if (poly != null && poly.NumberOfVertices > 1)
+                {
+                    //присвоить слой штриховки
+                    poly.LayerId = hatch.LayerId;
+                    //замкнуть
+                    poly.Closed = true;
+
+                    polylines.Add(poly);
+                }
+
+            }
+
+            //Создать новый блок и сохранить в него полилинии
+            ObjectId createdBtrId = ObjectId.Null;
+            Database db = bt.Database;
+            if (polylines.Count > 0)
+            {
+                using (Transaction tr = db.TransactionManager.StartTransaction())
+                {
+
+                    //Создать новый блок для сохранения замкнутых контуров
+
+                    BlockTableRecord btr = new BlockTableRecord();
+                    btr.Name = n.ToString();
+                    n++;
+                    createdBtrId = bt.Add(btr);
+                    tr.AddNewlyCreatedDBObject(btr, true);
+
+                    if (createdBtrId != ObjectId.Null)
+                    {
+                        foreach (Polyline p in polylines)
+                        {
+                            btr.AppendEntity(p);
+                            tr.AddNewlyCreatedDBObject(p, true);
+                        }
+                    }
+
+
+                    tr.Commit();
+                }
+            }
+
+
+
+
+
+
+            return createdBtrId;
         }
 
 
