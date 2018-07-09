@@ -75,6 +75,12 @@ namespace Civil3DInfoTools
 
             }
 
+
+            if (pattern.Count==0)//если данные не получены, то выдать патерн для сплошной линии 
+            {
+                pattern.Add(1);
+            }
+
             return pattern;
         }
 

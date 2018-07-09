@@ -287,6 +287,22 @@ namespace Civil3DInfoTools.RoadMarking
 
                 //Анализ типа линии. Получить длину штриха и длину пробела
                 LinetypeTableRecord ltype = tr.GetObject(curve.LinetypeId, OpenMode.ForRead) as LinetypeTableRecord;
+                //Создать слой, который будет называться как тип линии
+                LayerTable lt = tr.GetObject(db.LayerTableId, OpenMode.ForRead) as LayerTable;
+                ObjectId layerId = ObjectId.Null;
+                if (!lt.Has(curve.Linetype))
+                {
+                    lt.UpgradeOpen();
+                    LayerTableRecord ltrCurr = tr.GetObject(curve.LayerId, OpenMode.ForRead) as LayerTableRecord;
+                    LayerTableRecord ltrNew = (LayerTableRecord)ltrCurr.Clone();
+                    ltrNew.Name = curve.Linetype;
+                    layerId = lt.Add(ltrNew);
+                    tr.AddNewlyCreatedDBObject(ltrNew, true);
+                }
+                else
+                {
+                    layerId = lt[curve.Linetype];
+                }
 
                 //string ltypeDef = ltype.Comments;
                 //double patternLength = ltype.PatternLength;
@@ -294,7 +310,11 @@ namespace Civil3DInfoTools.RoadMarking
 
                 List<double> pattern = Utils.GetLinePattern(ltype, ltScale);
 
-                bool startFromDash = pattern[0] > 0;//паттерн начинается со штриха (не пробела)
+                bool startFromDash = false;//паттерн начинается со штриха (не пробела)
+                if (pattern.Count > 0)
+                {
+                    startFromDash = pattern[0] > 0;
+                }
                 //SortedSet<Curve> curves = new SortedSet<Curve>(new CurvePositionComparer(curve));
                 List<Curve> curves = new List<Curve>();
                 if (pattern.Count > 1)
@@ -344,7 +364,7 @@ namespace Civil3DInfoTools.RoadMarking
                         }
                     }
                 }
-                else if (startFromDash)//Сплошная линия
+                else //if (startFromDash)//Сплошная линия
                 {
                     object o = curve.Clone();
                     if (o != null && o is Curve)
@@ -359,7 +379,7 @@ namespace Civil3DInfoTools.RoadMarking
                     //Создать новый блок для сохранения замкнутых контуров
 
                     BlockTableRecord btr = new BlockTableRecord();
-                    btr.Name = n.ToString();
+                    btr.Name = Guid.NewGuid().ToString();
                     n++;
                     createdBtrId = bt.Add(btr);
                     tr.AddNewlyCreatedDBObject(btr, true);
@@ -378,42 +398,48 @@ namespace Civil3DInfoTools.RoadMarking
                                 Curve c1 = Utils.GetFirstDBObject(offsetCurves) as Curve;
                                 offsetCurves = axisCurve.GetOffsetCurves(-offsetDist);
                                 Curve c2 = Utils.GetFirstDBObject(offsetCurves) as Curve;
-                                //c2.ReverseCurve();
-                                Line concatLine = new Line(c1.EndPoint, c2.EndPoint/*.StartPoint*/);
-
-                                IntegerCollection joined
-                                    = c1.JoinEntities(new Entity[] { concatLine, c2 });
-                                if (joined.Count < 2)
+                                if (!curve.Closed)//Если кривая не замкнута, то попытаться построить замкнутый контур из правой и левой кривой отступа 
                                 {
-                                    throw new System.Exception("Соединение примитивов не выполнено");
-                                }
-
-                                if (c1 is Polyline)
-                                {
-                                    Polyline poly = c1 as Polyline;
-                                    poly.Closed = true;
-
-                                    //Убрать глобальную ширину
-                                    int numVert = poly.NumberOfVertices;
-                                    for (int i = 0; i < numVert; i++)
+                                    try
                                     {
-                                        poly.SetStartWidthAt(i, 0);
-                                        poly.SetEndWidthAt(i, 0);
-                                    }
+                                        Line concatLine = new Line(c1.EndPoint, c2.EndPoint/*.StartPoint*/);
 
-                                    //Сбросить тип линии
-                                    if (continuousLtype != ObjectId.Null)
+
+                                        IntegerCollection joined
+                                            = c1.JoinEntities(new Entity[] { concatLine, c2 });
+                                        if (joined.Count < 2)
+                                        {
+                                            throw new System.Exception("Соединение примитивов не выполнено");
+                                        }
+
+                                        if (c1 is Polyline)
+                                        {
+                                            PrepareCurve(c1, layerId);
+                                        }
+                                        else
+                                        {
+                                            throw new System.Exception("При соединении примитивов создан невалидный объект");
+                                        }
+
+                                        btr.AppendEntity(c1);
+                                        tr.AddNewlyCreatedDBObject(c1, true);
+                                    }
+                                    catch (System.Exception ex)
                                     {
-                                        poly.LinetypeId = continuousLtype;
+
+
                                     }
                                 }
-                                else
+                                else//Если кривая замкнута, то просто создать левую и правую кривую
                                 {
-                                    throw new System.Exception("При соединении примитивов создан невалидный объект");
+                                    PrepareCurve(c1, layerId);
+                                    PrepareCurve(c2, layerId);
+                                    btr.AppendEntity(c1);
+                                    tr.AddNewlyCreatedDBObject(c1, true);
+                                    btr.AppendEntity(c2);
+                                    tr.AddNewlyCreatedDBObject(c2, true);
                                 }
-
-                                btr.AppendEntity(c1);
-                                tr.AddNewlyCreatedDBObject(c1, true);
+                                
 
                             }
                             currIsDash = !currIsDash;//Считаем, что штрихи и пробелы встречаются строго поочереди
@@ -429,6 +455,28 @@ namespace Civil3DInfoTools.RoadMarking
             return createdBtrId;
         }
 
+        private void PrepareCurve(Curve c1, ObjectId layerId)
+        {
+            Polyline poly = c1 as Polyline;
+            poly.Closed = true;
+
+            //Убрать глобальную ширину
+            int numVert = poly.NumberOfVertices;
+            for (int i = 0; i < numVert; i++)
+            {
+                poly.SetStartWidthAt(i, 0);
+                poly.SetEndWidthAt(i, 0);
+            }
+
+            //Перенести в слой, который называется так же как тип линии
+            poly.LayerId = layerId;
+
+            //Сбросить тип линии
+            if (continuousLtype != ObjectId.Null)
+            {
+                poly.LinetypeId = continuousLtype;
+            }
+        }
 
 
         private ObjectId ProcessEntity(Hatch hatch, BlockTable bt)
@@ -457,7 +505,8 @@ namespace Civil3DInfoTools.RoadMarking
                         poly.AddVertexAt(vertNum, bv.Vertex, bv.Bulge, 0, 0);
                         vertNum++;
                     }
-                }else if (cc != null && cc.Count > 0)
+                }
+                else if (cc != null && cc.Count > 0)
                 {
                     //сюда попадет если контур состоит только из отрезков или включает сложные линии (сплайны, эллипсы)
                     poly = new Polyline();

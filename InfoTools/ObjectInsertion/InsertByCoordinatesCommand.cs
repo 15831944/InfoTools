@@ -66,7 +66,7 @@ namespace Civil3DInfoTools.ObjectInsertion
                         BlockTable bt = tr.GetObject(db.BlockTableId, OpenMode.ForWrite) as BlockTable;
 
                         BlockTableRecord ms
-                            = (BlockTableRecord)tr.GetObject(bt[BlockTableRecord.ModelSpace],OpenMode.ForWrite);
+                            = (BlockTableRecord)tr.GetObject(bt[BlockTableRecord.ModelSpace], OpenMode.ForWrite);
 
                         foreach (ObjectPosition op in positionData.ObjectPositions)
                         {
@@ -85,6 +85,26 @@ namespace Civil3DInfoTools.ObjectInsertion
                                     {
                                         Database blockDb = new Database(false, true);
                                         blockDb.ReadDwgFile(dwgFullPath, FileShare.Read, true, "");
+
+                                        //Для каждого вложенного блока изменить имя
+                                        using (Transaction trBlock = blockDb.TransactionManager.StartTransaction())
+                                        {
+                                            BlockTable btBlock = (BlockTable)trBlock.GetObject(blockDb.BlockTableId, OpenMode.ForRead);
+                                            //BlockTableRecord msBlock = (BlockTableRecord)trBlock.GetObject(btBlock[BlockTableRecord.ModelSpace], OpenMode.ForWrite);
+                                            foreach (ObjectId id in btBlock)
+                                            {
+                                                BlockTableRecord nestedBlock
+                                                    = (BlockTableRecord)trBlock.GetObject(id, OpenMode.ForWrite);
+                                                if (!nestedBlock.Name.StartsWith("*"))
+                                                {
+                                                    nestedBlock.Name = blockName + "_" + nestedBlock.Name;
+                                                }
+                                                
+                                            }
+                                        }
+
+
+
                                         blockId = db.Insert(blockName, blockDb, true);
 
                                         //BlockTableRecord btr1 = trInner.GetObject(blockId, OpenMode.ForRead) as BlockTableRecord;
@@ -123,7 +143,7 @@ namespace Civil3DInfoTools.ObjectInsertion
 
 
                                     //Вставить новое вхождение блока
-                                    Point3d position = new Point3d(op.X, op.Y, op.Z+ zOffset);
+                                    Point3d position = new Point3d(op.X, op.Y, op.Z + zOffset);
                                     BlockReference br = new BlockReference(position, blockId);
                                     br.Rotation = op.Z_Rotation / (180 / Math.PI);
                                     ms.AppendEntity(br);
@@ -140,7 +160,7 @@ namespace Civil3DInfoTools.ObjectInsertion
 
                                 trInner.Commit();
                             }
-                                
+
 
                         }
 
