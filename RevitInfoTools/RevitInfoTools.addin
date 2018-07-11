@@ -1,0 +1,23 @@
+﻿<?xml version="1.0" encoding="utf-8" ?>
+<RevitAddIns>
+
+  <AddIn Type="Command">
+    <Text>Draw3DLine</Text>
+    <Description>Создание 3d линии по координатам</Description>
+    <Assembly>RevitInfoTools\RevitInfoTools.dll</Assembly>
+    <FullClassName>RevitInfoTools.Draw3DLineCommand</FullClassName>
+    <ClientId>ffcbdf75-b7e7-4940-a77a-85c9d9187b93</ClientId>
+    <VendorId>S-Info</VendorId>
+    <VendorDescription>S-Info</VendorDescription>
+  </AddIn>
+  
+  <AddIn Type="Application">
+    <Name>RevitInfoTools</Name>
+    <Assembly>RevitInfoTools\RevitInfoTools.dll</Assembly>
+    <FullClassName>RevitInfoTools.App</FullClassName>
+    <ClientId>557857d5-c7a1-4e01-8e29-132896543402</ClientId>
+    <VendorId>S-Info</VendorId>
+    <VendorDescription>S-Info</VendorDescription>
+  </AddIn>
+
+</RevitAddIns>

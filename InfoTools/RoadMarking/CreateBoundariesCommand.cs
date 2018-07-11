@@ -21,7 +21,7 @@ namespace Civil3DInfoTools.RoadMarking
 
         ObjectId continuousLtype;
 
-        [CommandMethod("CreateBoundaries", CommandFlags.Modal)]
+        [CommandMethod("S1NF0_CreateBoundaries", CommandFlags.Modal)]
         public void CreateBoundaries()
         {
             n = 0;
@@ -288,21 +288,9 @@ namespace Civil3DInfoTools.RoadMarking
                 //Анализ типа линии. Получить длину штриха и длину пробела
                 LinetypeTableRecord ltype = tr.GetObject(curve.LinetypeId, OpenMode.ForRead) as LinetypeTableRecord;
                 //Создать слой, который будет называться как тип линии
-                LayerTable lt = tr.GetObject(db.LayerTableId, OpenMode.ForRead) as LayerTable;
-                ObjectId layerId = ObjectId.Null;
-                if (!lt.Has(curve.Linetype))
-                {
-                    lt.UpgradeOpen();
-                    LayerTableRecord ltrCurr = tr.GetObject(curve.LayerId, OpenMode.ForRead) as LayerTableRecord;
-                    LayerTableRecord ltrNew = (LayerTableRecord)ltrCurr.Clone();
-                    ltrNew.Name = curve.Linetype;
-                    layerId = lt.Add(ltrNew);
-                    tr.AddNewlyCreatedDBObject(ltrNew, true);
-                }
-                else
-                {
-                    layerId = lt[curve.Linetype];
-                }
+                string layerName = curve.Linetype;
+                LayerTableRecord layerSample = tr.GetObject(curve.LayerId, OpenMode.ForRead) as LayerTableRecord;
+                ObjectId layerId = Utils.CreateLayerIfNotExists(layerName, db, tr, layerSample);
 
                 //string ltypeDef = ltype.Comments;
                 //double patternLength = ltype.PatternLength;
@@ -439,7 +427,7 @@ namespace Civil3DInfoTools.RoadMarking
                                     btr.AppendEntity(c2);
                                     tr.AddNewlyCreatedDBObject(c2, true);
                                 }
-                                
+
 
                             }
                             currIsDash = !currIsDash;//Считаем, что штрихи и пробелы встречаются строго поочереди
@@ -454,6 +442,8 @@ namespace Civil3DInfoTools.RoadMarking
 
             return createdBtrId;
         }
+
+        
 
         private void PrepareCurve(Curve c1, ObjectId layerId)
         {

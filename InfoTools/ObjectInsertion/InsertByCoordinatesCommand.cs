@@ -9,7 +9,7 @@ using Autodesk.AutoCAD.ApplicationServices;
 using Autodesk.AutoCAD.DatabaseServices;
 using Autodesk.AutoCAD.EditorInput;
 using System.IO;
-using Civil3DInfoTools.ObjectInsertion.XMLClasses;
+using Civil3DInfoTools.XMLClasses;
 using System.Xml.Serialization;
 using Autodesk.AutoCAD.Geometry;
 
@@ -19,7 +19,7 @@ namespace Civil3DInfoTools.ObjectInsertion
 {
     class InsertByCoordinatesCommand
     {
-        [CommandMethod("InsertByCoordinates", CommandFlags.Modal)]
+        [CommandMethod("S1NF0_InsertByCoordinates", CommandFlags.Modal)]
         public void InsertByCoordinates()
         {
             Document adoc = Application.DocumentManager.MdiActiveDocument;
