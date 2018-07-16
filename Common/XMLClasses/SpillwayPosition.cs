@@ -5,12 +5,12 @@ using System.Text;
 using System.Threading.Tasks;
 using System.Xml.Serialization;
 
-namespace Civil3DInfoTools.XMLClasses
+namespace Common.XMLClasses
 {
-    public class ObjectPosition
+    public class SpillwayPosition
     {
         [XmlAttribute("Name")]
-        public string Name { get; set; }
+        public string Name { get; set; } = "";
 
         [XmlAttribute("X")]
         public double X { get; set; }
@@ -23,5 +23,11 @@ namespace Civil3DInfoTools.XMLClasses
 
         [XmlAttribute("Z_Rotation")]
         public double Z_Rotation { get; set; }
+
+        [XmlAttribute("ToTheRight")]
+        public bool ToTheRight { get; set; }
+
+        [XmlArray("Slopes"), XmlArrayItem("Slope")]
+        public List<Slope> Slopes { get; set; } = new List<Slope>();
     }
 }

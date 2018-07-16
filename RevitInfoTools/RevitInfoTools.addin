@@ -10,6 +10,16 @@
     <VendorId>S-Info</VendorId>
     <VendorDescription>S-Info</VendorDescription>
   </AddIn>
+
+  <AddIn Type="Command">
+    <Text>SpillwaysPlacement</Text>
+    <Description>Создание водосбросов</Description>
+    <Assembly>RevitInfoTools\RevitInfoTools.dll</Assembly>
+    <FullClassName>RevitInfoTools.SpillwaysPlacementCommand</FullClassName>
+    <ClientId>5026aa47-fecf-40c3-9cbb-aae78a4639d9</ClientId>
+    <VendorId>S-Info</VendorId>
+    <VendorDescription>S-Info</VendorDescription>
+  </AddIn>
   
   <AddIn Type="Application">
     <Name>RevitInfoTools</Name>

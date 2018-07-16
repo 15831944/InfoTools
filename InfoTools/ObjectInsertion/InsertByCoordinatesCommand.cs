@@ -9,9 +9,9 @@ using Autodesk.AutoCAD.ApplicationServices;
 using Autodesk.AutoCAD.DatabaseServices;
 using Autodesk.AutoCAD.EditorInput;
 using System.IO;
-using Civil3DInfoTools.XMLClasses;
 using System.Xml.Serialization;
 using Autodesk.AutoCAD.Geometry;
+using Common.XMLClasses;
 
 [assembly: CommandClass(typeof(Civil3DInfoTools.ObjectInsertion.InsertByCoordinatesCommand))]
 
@@ -68,6 +68,7 @@ namespace Civil3DInfoTools.ObjectInsertion
                         BlockTableRecord ms
                             = (BlockTableRecord)tr.GetObject(bt[BlockTableRecord.ModelSpace], OpenMode.ForWrite);
 
+
                         foreach (ObjectPosition op in positionData.ObjectPositions)
                         {
                             string blockName = Path.GetFileNameWithoutExtension(op.Name);
@@ -97,7 +98,13 @@ namespace Civil3DInfoTools.ObjectInsertion
                                                     = (BlockTableRecord)trBlock.GetObject(id, OpenMode.ForWrite);
                                                 if (!nestedBlock.Name.StartsWith("*"))
                                                 {
-                                                    nestedBlock.Name = blockName + "_" + nestedBlock.Name;
+                                                    try
+                                                    {
+                                                        nestedBlock.Name = blockName + "_" + nestedBlock.Name;
+                                                    }
+                                                    catch (System.Exception)
+                                                    {
+                                                    }
                                                 }
                                                 
                                             }

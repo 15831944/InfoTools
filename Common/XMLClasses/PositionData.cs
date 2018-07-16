@@ -5,7 +5,7 @@ using System.Text;
 using System.Threading.Tasks;
 using System.Xml.Serialization;
 
-namespace Civil3DInfoTools.XMLClasses
+namespace Common.XMLClasses
 {
     public class PositionData
     {

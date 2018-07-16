@@ -1,23 +1,30 @@
 ﻿using Autodesk.AutoCAD.ApplicationServices;
 using Autodesk.AutoCAD.Colors;
 using Autodesk.AutoCAD.DatabaseServices;
+using AcadDb = Autodesk.AutoCAD.DatabaseServices;
 using Autodesk.AutoCAD.EditorInput;
 using Autodesk.AutoCAD.Geometry;
 using Autodesk.AutoCAD.Runtime;
 using Autodesk.Civil.DatabaseServices;
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using System.Xml.Serialization;
+using Common.XMLClasses;
 
 [assembly: CommandClass(typeof(Civil3DInfoTools.Spillway.ExtractSpillwayPositionsCommand))]
 
+
 namespace Civil3DInfoTools.Spillway
 {
+    //TODO: Проверить как это будет работать не на виде в плане
+    //TODO: Переделать на вариант, при котором будет только 3 слоя: КПЧ, ОТК0(для бровки) и ОТК1(для всех переломов)
+    //TODO: Сделать DrawOverrule - подписи для маркеров водосбросов, соответствующие именам в XML
     class ExtractSpillwayPositionsCommand
     {
-
         [CommandMethod("S1NF0_ExtractSpillwayPositions", CommandFlags.Modal)]
         public void ExtractSpillwayPositions()
         {
@@ -30,11 +37,14 @@ namespace Civil3DInfoTools.Spillway
 
             try
             {
+                Plane horizontalPlane = new Plane(Point3d.Origin, Vector3d.ZAxis);
+
+
                 //Указать линию КПЧ и линии перелома откоса (они должны быть в соответствующих слоях)
                 TypedValue[] tv = new TypedValue[] { new TypedValue(0, "POLYLINE") };
                 SelectionFilter flt = new SelectionFilter(tv);
                 PromptSelectionOptions opts = new PromptSelectionOptions();
-                opts.MessageForAdding = "\nВыберите 3d-полилинии, обозначающие край проезжей части и переломы откоса";
+                opts.MessageForAdding = "\nВыберите 3d-полилинии, обозначающие край проезжей части и переломы откоса (только с одной стороны дороги)";
                 PromptSelectionResult res = ed.GetSelection(opts, flt);
                 if (res.Status == PromptStatus.OK)
                 {
@@ -45,8 +55,8 @@ namespace Civil3DInfoTools.Spillway
 
 
                     //Считать направление полилинии соответствующим направлению дороги
-
-
+                    bool? toTheRight = null;//водосброс справа от КПЧ
+                    Polyline3dInfo baseLine = null;
                     using (Transaction tr = db.TransactionManager.StartTransaction())
                     {
                         WrongPolylinesException wrongPolylinesException = new WrongPolylinesException();
@@ -96,6 +106,8 @@ namespace Civil3DInfoTools.Spillway
                         }
 
                         //Проверить что линии откоса не пересекают друг друга в плане
+                        //TODO: ВРЕМЕННО отказался от проверки взаимного пересечения линий откоса. Нужно учесть возможность частичного совпадения линий
+                        /*
                         List<Polyline3dInfo> slopeLinesList = slopeLines.Values.ToList().Aggregate((l1, l2) =>
                         {
                             return l1.Concat(l2).ToList();
@@ -109,10 +121,19 @@ namespace Civil3DInfoTools.Spillway
                                 Polyline3d poly2 = slopeLinesList[j].Poly3d;
                                 Point3dCollection intersectPts = new Point3dCollection();
                                 poly1.IntersectWith(poly2, Intersect.OnBothOperands,
-                                    new Plane(Point3d.Origin, Vector3d.ZAxis), intersectPts,
+                                    horizontalPlane, intersectPts,
                                     new IntPtr(0), new IntPtr(0));
+
+                                //TODO!!!!! Не считать точки пересечения если в точках пересечения происходит полное совпадение вершин двух полилиний
+                                //В это случае скорее всего полилинии просто сливаются в одну. Это допустимо для коридора
+
+
+
                                 if (intersectPts.Count > 0)
                                 {
+
+
+
                                     wrongPolylinesException.Mistakes = wrongPolylinesException.Mistakes | Mistake.LinesAreIntersecting;
                                     exitLoop = true;
                                     break;
@@ -121,17 +142,19 @@ namespace Civil3DInfoTools.Spillway
                             if (exitLoop)
                                 break;
                         }
+                        */
 
                         //Проверить, что все точки откоса расположены с одной стороны от КПЧ
                         //Определить водосброс направо или налево
-                        bool? toTheRight = null;//водосброс справа от КПЧ
+                        //TODO: Проверить сонаправленность линий!
+
 
 
                         //Для всех кодов определить участки КПЧ. Параметры взаимного расположения расчитываются в горизонтальной проекции
                         //По начальным точкам линий определить расположение линии справа или слева от КПЧ
 
                         //Polyline3dInfo baseLine = slopeLines["КПЧ"].First();
-                        Polyline3dInfo baseLine = slopeLines["ОТК0"].First();
+                        baseLine = slopeLines["ОТК0"].First();//базовая линия - бровка откоса
 
                         foreach (KeyValuePair<string, List<Polyline3dInfo>> kvp in slopeLines)
                         {
@@ -158,6 +181,12 @@ namespace Civil3DInfoTools.Spillway
                                 }
                             }
                         }
+                        //Проверить что КПЧ с проивоположной стороны от ОТК0
+                        if (slopeLines["КПЧ"].First().ToTheRightOfBaseLine == toTheRight)
+                        {
+                            wrongPolylinesException.Mistakes = wrongPolylinesException.Mistakes | Mistake.WrongOrientation;
+                        }
+
 
 
                         if (wrongPolylinesException.Mistakes != Mistake.None)
@@ -166,71 +195,294 @@ namespace Civil3DInfoTools.Spillway
                         }
 
                         #region Test
-                        ed.WriteMessage("\nОшибок нет\ntoTheRight = " + toTheRight);
-                        //Начертить круги в точках начала и конца полилиний
-                        BlockTable bt = tr.GetObject(db.BlockTableId, OpenMode.ForRead) as BlockTable;
-                        BlockTableRecord ms
-                                = (BlockTableRecord)tr.GetObject(bt[BlockTableRecord.ModelSpace], OpenMode.ForWrite);
-                        foreach (KeyValuePair<string, List<Polyline3dInfo>> kvp in slopeLines)
-                        {
-                            if (!kvp.Key.Equals(/*"КПЧ"*/"ОТК0"))
-                            {
-                                foreach (Polyline3dInfo poly3dInfo in kvp.Value)
-                                {
-                                    Point3d pt1 = poly3dInfo.Poly3d.GetPointAtParameter(poly3dInfo.StartParameter);
-                                    Point3d pt2 = poly3dInfo.Poly3d.GetPointAtParameter(poly3dInfo.EndParameter);
-                                    Point3d pt3 = baseLine.Poly3d.GetPointAtParameter(poly3dInfo.StartParameterBase);
-                                    Point3d pt4 = baseLine.Poly3d.GetPointAtParameter(poly3dInfo.EndParameterBase);
+                        //ed.WriteMessage("\nОшибок нет\ntoTheRight = " + toTheRight);
+                        ////Начертить круги в точках начала и конца полилиний
+                        //BlockTable bt = tr.GetObject(db.BlockTableId, OpenMode.ForRead) as BlockTable;
+                        //BlockTableRecord ms
+                        //        = (BlockTableRecord)tr.GetObject(bt[BlockTableRecord.ModelSpace], OpenMode.ForWrite);
+                        //foreach (KeyValuePair<string, List<Polyline3dInfo>> kvp in slopeLines)
+                        //{
+                        //    if (!kvp.Key.Equals(/*"КПЧ"*/"ОТК0"))
+                        //    {
+                        //        foreach (Polyline3dInfo poly3dInfo in kvp.Value)
+                        //        {
+                        //            Point3d pt1 = poly3dInfo.Poly3d.GetPointAtParameter(poly3dInfo.StartParameter);
+                        //            Point3d pt2 = poly3dInfo.Poly3d.GetPointAtParameter(poly3dInfo.EndParameter);
+                        //            Point3d pt3 = baseLine.Poly3d.GetPointAtParameter(poly3dInfo.StartParameterBase);
+                        //            Point3d pt4 = baseLine.Poly3d.GetPointAtParameter(poly3dInfo.EndParameterBase);
 
-                                    foreach (Point3d pt in new Point3d[] { pt1, pt2, pt3, pt4 })
-                                    {
-                                        using (Circle circle = new Circle(pt, Vector3d.ZAxis, 1))
-                                        {
-                                            circle.Color = Color.FromColorIndex(ColorMethod.ByAci, 1);
-                                            ms.AppendEntity(circle);
-                                            tr.AddNewlyCreatedDBObject(circle, true);
-                                        }
-                                    }
-                                    using (Line line = new Line(pt1, pt3))
-                                    {
-                                        line.Color = Color.FromColorIndex(ColorMethod.ByAci, 1);
-                                        ms.AppendEntity(line);
-                                        tr.AddNewlyCreatedDBObject(line, true);
-                                    }
-                                    using (Line line = new Line(pt2, pt4))
-                                    {
-                                        line.Color = Color.FromColorIndex(ColorMethod.ByAci, 1);
-                                        ms.AppendEntity(line);
-                                        tr.AddNewlyCreatedDBObject(line, true);
-                                    }
+                        //            foreach (Point3d pt in new Point3d[] { pt1, pt2, pt3, pt4 })
+                        //            {
+                        //                using (Circle circle = new Circle(pt, Vector3d.ZAxis, 1))
+                        //                {
+                        //                    circle.Color = Color.FromColorIndex(ColorMethod.ByAci, 1);
+                        //                    ms.AppendEntity(circle);
+                        //                    tr.AddNewlyCreatedDBObject(circle, true);
+                        //                }
+                        //            }
+                        //            using (Line line = new Line(pt1, pt3))
+                        //            {
+                        //                line.Color = Color.FromColorIndex(ColorMethod.ByAci, 1);
+                        //                ms.AppendEntity(line);
+                        //                tr.AddNewlyCreatedDBObject(line, true);
+                        //            }
+                        //            using (Line line = new Line(pt2, pt4))
+                        //            {
+                        //                line.Color = Color.FromColorIndex(ColorMethod.ByAci, 1);
+                        //                ms.AppendEntity(line);
+                        //                tr.AddNewlyCreatedDBObject(line, true);
+                        //            }
 
 
-                                }
-                            }
-                        }
+                        //        }
+                        //    }
+                        //}
                         #endregion
 
                         tr.Commit();
                     }
 
+                    //TODO: Включать подсветку 3d полилиний, которые участвуют в расчете
+
+                    Polyline3dInfo edgeLine = slopeLines["КПЧ"].First();
+                    PositionData positionData = new PositionData();
                     while (true)
                     {
-                        break;
                         //Указать точку расположения водосброса
                         PromptPointResult pPtRes;
                         PromptPointOptions pPtOpts = new PromptPointOptions("");
-                        pPtOpts.Message = "\nHiveMind: Укажите точку расположения водосброса: ";
+                        pPtOpts.Message = "\nУкажите точку расположения водосброса: ";
+                        pPtRes = adoc.Editor.GetPoint(pPtOpts);
+                        if (pPtRes.Status == PromptStatus.OK)
+                        {
+                            //ed.WriteMessage("\nточка введена");
 
-                        //Отсортировать все линии по удаленности от КПЧ в этой точке
-                        //Сохраниение расположения водосброса и всех уклонов
-                        //Вычерчивание 3d полилинии по линии водосброса 
+                            Point3d pickedPt = new Point3d(pPtRes.Value.X, pPtRes.Value.Y, 0);
+
+                            Point3d nearestPtOnBasePt = baseLine.Poly2d.GetClosestPointTo(pickedPt, true);//найти ближайшую точку ОТК0
+
+                            double pickedParameterBase = baseLine.Poly2d.GetParameterAtPoint(nearestPtOnBasePt);//параметр базовой линии в этой точке
+                            //Найти все линии откоса, которые расположены в районе данного параметра
+                            //Предполагается, что для каждого кода есть только одна такая
+                            List<Polyline3dInfo> pickedPtSlopeLines = new List<Polyline3dInfo>();
+                            bool founded1 = false;
+                            bool founded2 = false;
+                            foreach (KeyValuePair<string, List<Polyline3dInfo>> kvp in slopeLines)
+                            {
+                                if (!kvp.Key.Equals("ОТК0"))
+                                {
+                                    Polyline3dInfo founded
+                                        = kvp.Value.Find(l => l.StartParameterBase <= pickedParameterBase && l.EndParameterBase >= pickedParameterBase);
+                                    if (founded != null)
+                                    {
+                                        pickedPtSlopeLines.Add(founded);
+                                        if (kvp.Key.Equals("КПЧ"))
+                                        {
+                                            founded1 = true;
+                                        }
+                                        if (kvp.Key.Equals("ОТК_"))
+                                        {
+                                            founded2 = true;
+                                        }
+                                    }
+                                }
+                            }
+
+
+                            if (founded1 && founded2)//Проверить, что найдены КПЧ и ОТК_
+                            {
+                                //Найти касательную к базовой линии
+                                Vector3d tangentVector = baseLine.Poly2d.GetFirstDerivative(pickedParameterBase);
+
+                                double rotateAngle = toTheRight.Value ? -Math.PI / 2 : Math.PI / 2;
+
+                                Vector3d spillWayVector = tangentVector.RotateBy(rotateAngle, Vector3d.ZAxis).GetNormal();
+                                Line spillWayAxis = new Line(nearestPtOnBasePt, nearestPtOnBasePt + spillWayVector);
+                                Point3dCollection intersections = new Point3dCollection();
+                                edgeLine.Poly2d.IntersectWith(spillWayAxis, Intersect.ExtendArgument,
+                                    horizontalPlane, intersections,
+                                    new IntPtr(0), new IntPtr(0));
+                                if (intersections.Count > 0)
+                                {
+                                    Point3d basePt = intersections[0];//Точка пересечения с КПЧ
+                                    //Найти точки пересечения перпендикуляра к ОТК0 и остальными линиями откоса
+                                    //Отсортировать все линии по удаленности от КПЧ в этой точке
+                                    SortedDictionary<Point3d, Polyline3dInfo> intersectionPts
+                                        = new SortedDictionary<Point3d, Polyline3dInfo>(new PtsSortComparer(basePt));
+                                    pickedPtSlopeLines.Add(baseLine);
+                                    foreach (Polyline3dInfo p3dI in pickedPtSlopeLines)
+                                    {
+                                        intersections.Clear();
+                                        p3dI.Poly2d.IntersectWith(spillWayAxis, Intersect.ExtendArgument,
+                                            horizontalPlane, intersections,
+                                            new IntPtr(0), new IntPtr(0));
+                                        if (intersections.Count > 0)
+                                        {
+                                            intersectionPts.Add(intersections[0], p3dI);
+                                        }
+                                    }
+
+                                    if (intersectionPts.Count == pickedPtSlopeLines.Count)//Проверить, что все пересечения найдены
+                                    {
+                                        //intersectionPts содержит все линии с точками пересечения в нужном порядке,
+                                        //но все точки пересечения лежат на плоскости XY
+                                        //Расчитать трехмерные точки
+                                        Point3dCollection pts = new Point3dCollection();
+                                        foreach (KeyValuePair<Point3d, Polyline3dInfo> kvp in intersectionPts)
+                                        {
+                                            Point3d pt2d = kvp.Key;
+                                            pt2d = kvp.Value.Poly2d.GetClosestPointTo(pt2d, false);//по какой-то причине в некоторых случаях без этой строки вылетала ошибка при получении параметра
+                                            double param = kvp.Value.Poly2d.GetParameterAtPoint(pt2d);
+                                            Point3d pt3d = kvp.Value.Poly3d.GetPointAtParameter(param);
+                                            pts.Add(pt3d);
+                                        }
+
+
+                                        using (Transaction tr = db.TransactionManager.StartTransaction())
+                                        {
+                                            ObjectId layerId = Utils.CreateLayerIfNotExists("ВОДОСБРОС", db, tr, null, 150, LineWeight.LineWeight030);
+
+
+                                            BlockTable bt = tr.GetObject(db.BlockTableId, OpenMode.ForRead) as BlockTable;
+                                            BlockTableRecord ms
+                                                    = (BlockTableRecord)tr.GetObject(bt[BlockTableRecord.ModelSpace], OpenMode.ForWrite);
+
+                                            //Вычерчивание вектора
+                                            //spillWayAxis.LayerId=layerId;
+                                            //ms.AppendEntity(spillWayAxis);
+                                            //tr.AddNewlyCreatedDBObject(spillWayAxis, true);
+
+                                            //Вычерчивание 3d полилинии по линии водосброса
+                                            //using (Polyline3d poly3d = new Polyline3d())
+                                            //{
+                                            //    poly3d.LayerId = layerId;
+                                            //    poly3d.PolyType = Poly3dType.SimplePoly;
+                                            //    ms.AppendEntity(poly3d);
+                                            //    tr.AddNewlyCreatedDBObject(poly3d, true);
+
+                                            //    foreach (Point3d pt in pts)
+                                            //    {
+                                            //        PolylineVertex3d vertex = new PolylineVertex3d(pt);
+                                            //        poly3d.AppendVertex(vertex);
+                                            //    }
+
+                                            //    //Почему-то не прорисовывается полилиния полностью (не прорисовывается последняя вершина)
+                                            //    //ничего не помогает
+                                            //    //TODO: Попоробовать решить эту проблему с помощью различных манипуляций (другие транзакции, другие объекты, хз)
+                                            //    //Point3d lastPt = pts[pts.Count - 1];
+                                            //    //Point3d dummyPt = new Point3d(lastPt.X+1, lastPt.Y+1, lastPt.Z+1);
+                                            //    //PolylineVertex3d dummyVertex = new PolylineVertex3d(dummyPt);
+                                            //    //poly3d.AppendVertex(dummyVertex);
+                                            //    //dummyVertex.Erase();
+                                            //    //poly3d.Draw();
+                                            //    //ed.Regen();
+                                            //    //ed.UpdateScreen();
+                                            //}
+
+                                            //Вычерчивание отдельных отрезков
+                                            for (int i = 0; i < pts.Count - 1; i++)
+                                            {
+                                                Point3d pt1 = pts[i];
+                                                Point3d pt2 = pts[i + 1];
+
+                                                AcadDb.Entity previous = null;
+                                                using (Line line = new Line(pt1, pt2))
+                                                {
+                                                    line.LayerId = layerId;
+                                                    ms.AppendEntity(line);
+                                                    tr.AddNewlyCreatedDBObject(line, true);
+
+                                                    //Объединять линии (не работает)
+                                                    //if (previous == null)
+                                                    //{
+                                                    //    previous = line;
+                                                    //}
+                                                    //else
+                                                    //{
+                                                    //    previous.JoinEntity(line);
+                                                    //}
+                                                }
+                                            }
+
+                                            tr.Commit();
+                                        }
+
+
+                                        Vector3d baseVector = Vector3d.YAxis;
+                                        int sign = Math.Sign(baseVector.CrossProduct(spillWayVector).Z);
+                                        double rotation = spillWayVector.GetAngleTo(baseVector) * sign;//в радианах
+                                        rotation = rotation * 180 / (Math.PI);//в градусах
+                                        List<Slope> slopes = new List<Slope>();
+                                        //Сохраниение расположения водосброса и всех уклонов
+                                        for (int i = 0; i < pts.Count - 1; i++)
+                                        {
+                                            Point3d pt1 = pts[i];
+                                            Point3d pt2 = pts[i + 1];
+                                            Point2d pt1_2d = new Point2d(pt1.X, pt1.Y);
+                                            Point2d pt2_2d = new Point2d(pt2.X, pt2.Y);
+
+                                            double len = pt1_2d.GetDistanceTo(pt2_2d);
+                                            if (len > 0)
+                                            {
+                                                double s = (pt2.Z - pt1.Z) / len;
+                                                slopes.Add(new Slope() { S = s, Len = len });
+                                            }
+
+                                        }
+
+                                        SpillwayPosition spillwayPosition = new SpillwayPosition()
+                                        {
+                                            X = pts[0].X,
+                                            Y = pts[0].Y,
+                                            Z = pts[0].Z,
+                                            Z_Rotation = rotation,
+                                            ToTheRight = toTheRight.Value,
+                                            Slopes = slopes
+                                        };
+                                        positionData.SpillwayPositions.Add(spillwayPosition);
+                                    }
+
+
+                                }
+
+
+                            }
+
+
+
+
+                        }
+                        else
+                        {
+                            ed.WriteMessage("\nвыбор закончен");
+                            break;
+                        }
+
                     }
 
 
 
 
+                    //ed.WriteMessage("\nпродолжение выполнения");
+                    //Сериализация расположений. Сохранить xml в папку рядом с файлом
+                    if (positionData.SpillwayPositions.Count > 0)
+                    {
+                        string filename = null;
+                        int n = 0;
+                        do
+                        {
+                            filename = Path.Combine(Path.GetDirectoryName(adoc.Name), "SpillwayPositions" + n + ".xml");
+                            n++;
+                        } while (File.Exists(filename));
 
-                    //Сериализация расположений
+
+                        XmlSerializer xmlSerializer = new XmlSerializer(typeof(PositionData));
+                        using (StreamWriter sw = new StreamWriter(filename))
+                        {
+                            xmlSerializer.Serialize(sw, positionData);
+                        }
+                        //TODO!!!!!: Добавить сообщение о том, что все выполнено
+                    }
                 }
             }
             catch (System.Exception ex)
@@ -240,6 +492,29 @@ namespace Civil3DInfoTools.Spillway
 
         }
 
+
+        /// <summary>
+        /// Сортирует точки по удаленности от базовой
+        /// </summary>
+        private class PtsSortComparer : IComparer<Point3d>
+        {
+            Point2d basePt;
+            public PtsSortComparer(Point3d basePt)
+            {
+                this.basePt = new Point2d(basePt.X, basePt.Y);
+            }
+
+            public int Compare(Point3d pt1_3d, Point3d pt2_3d)
+            {
+                Point2d pt1 = new Point2d(pt1_3d.X, pt1_3d.Y);
+                Point2d pt2 = new Point2d(pt2_3d.X, pt2_3d.Y);
+
+                double dist1 = pt1.GetDistanceTo(basePt);
+                double dist2 = pt2.GetDistanceTo(basePt);
+
+                return dist1.CompareTo(dist2);
+            }
+        }
 
         class WrongPolylinesException : System.Exception
         {
@@ -340,6 +615,9 @@ namespace Civil3DInfoTools.Spillway
             /// </summary>
             public double EndParameterBase { get; private set; } = -1;
 
+
+
+
             public Polyline3dInfo(string code, Polyline3d poly3d)
             {
                 Code = code;
@@ -371,6 +649,7 @@ namespace Civil3DInfoTools.Spillway
                 {
                     throw new System.Exception("Нет ссылки на BaseLine");
                 }
+
 
                 //Начало
                 Point3d startPt = Poly2d.GetPoint3dAt(0);//Начальная точка этой полилинии
@@ -408,7 +687,7 @@ namespace Civil3DInfoTools.Spillway
                 }
                 if (StartParameterBase < 0 || StartParameter < 0 || EndParameterBase < 0 || EndParameter < 0)
                 {
-                    throw new System.Exception("Не расчитано расположение");
+                    throw new System.Exception("Не расcчитано расположение");
                 }
 
                 //Получить две точки на BaseLine между которыми находится параметр начала этой линии
