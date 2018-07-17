@@ -14,14 +14,14 @@ using System.Text;
 using System.Threading.Tasks;
 using System.Xml.Serialization;
 using Common.XMLClasses;
+using static Common.ExceptionHandling.ExeptionHandlingProcedures;
 
 [assembly: CommandClass(typeof(Civil3DInfoTools.Spillway.ExtractSpillwayPositionsCommand))]
 
 
 namespace Civil3DInfoTools.Spillway
 {
-    //TODO: Проверить как это будет работать не на виде в плане (низкий приоритет)
-    //TODO: Переделать на вариант, при котором будет только 3 слоя: КПЧ, ОТК0(для бровки) и ОТК1(Hinge, Daylight)(для всех переломов и выхода на рельеф)
+
     //TODO: Сделать DrawOverrule - подписи для маркеров водосбросов, соответствующие именам в XML
     class ExtractSpillwayPositionsCommand
     {
@@ -35,16 +35,19 @@ namespace Civil3DInfoTools.Spillway
 
             Editor ed = adoc.Editor;
 
+            List<Polyline3d> highlighted = new List<Polyline3d>();
+
             try
             {
                 Plane horizontalPlane = new Plane(Point3d.Origin, Vector3d.ZAxis);
 
 
                 //Указать линию КПЧ и линии перелома откоса (они должны быть в соответствующих слоях)
-                TypedValue[] tv = new TypedValue[] { new TypedValue(0, "POLYLINE") };
+                TypedValue[] tv = new TypedValue[] { new TypedValue(0, "POLYLINE"), new TypedValue(8, "КПЧ,ОТК") };//ограничение по слоям
                 SelectionFilter flt = new SelectionFilter(tv);
                 PromptSelectionOptions opts = new PromptSelectionOptions();
-                opts.MessageForAdding = "\nВыберите 3d-полилинии, обозначающие край проезжей части и переломы откоса (только с одной стороны дороги)";
+                opts.MessageForAdding = "\nВыберите 3d-полилинии, обозначающие край проезжей части"
+                    +"и переломы откоса (только с одной стороны дороги). Линии должны быть в слоях КПЧ и ОТК";
                 PromptSelectionResult res = ed.GetSelection(opts, flt);
                 if (res.Status == PromptStatus.OK)
                 {
@@ -69,7 +72,7 @@ namespace Civil3DInfoTools.Spillway
                             Polyline3d currPoly = tr.GetObject(acSSObj.ObjectId, OpenMode.ForRead) as Polyline3d;
                             if (currPoly != null)
                             {
-                                if (currPoly.Layer.Equals("КПЧ") || currPoly.Layer.Equals("ОТК_") || Constants.SlopeLayerRegex.IsMatch(currPoly.Layer))
+                                if (currPoly.Layer.Equals("КПЧ") || currPoly.Layer.Equals("ОТК"))
                                 {
                                     List<Polyline3dInfo> polylines = null;
                                     slopeLines.TryGetValue(currPoly.Layer, out polylines);
@@ -85,27 +88,21 @@ namespace Civil3DInfoTools.Spillway
 
                         }
 
-                        //Проверить, что есть минимальный набор слоев - КПЧ, ОТК0, ОТК_
-                        if (!slopeLines.ContainsKey("КПЧ") || !slopeLines.ContainsKey("ОТК0") || !slopeLines.ContainsKey("ОТК_"))
+                        //Проверить, что есть весь набор слоев - КПЧ, ОТК
+                        if (!slopeLines.ContainsKey("КПЧ") || !slopeLines.ContainsKey("ОТК"))
                         {
                             wrongPolylinesException.Mistakes = wrongPolylinesException.Mistakes | Mistake.NotEnoughLayers;
                         }
 
-                        //Проверить, что в слоях КПЧ, ОТК0, ОТК_ находится по одной полилинии
+                        //Проверить, что в слое КПЧ находится только 1 полилиния
                         List<Polyline3dInfo> checkList1 = null;
-                        List<Polyline3dInfo> checkList2 = null;
-                        List<Polyline3dInfo> checkList3 = null;
                         slopeLines.TryGetValue("КПЧ", out checkList1);
-                        slopeLines.TryGetValue("ОТК0", out checkList2);
-                        slopeLines.TryGetValue("ОТК_", out checkList3);
-                        if ((checkList1 != null && checkList1.Count != 1)
-                            || (checkList2 != null && checkList2.Count != 1)
-                            || (checkList3 != null && checkList3.Count != 1))
+                        if (checkList1 == null || checkList1.Count != 1)
                         {
                             wrongPolylinesException.Mistakes = wrongPolylinesException.Mistakes | Mistake.TooManyLinesInOneLayer;
                         }
 
-                        #region Проперка непересечения
+                        #region Проперка непересечения линий
                         //Проверить что линии откоса не пересекают друг друга в плане
                         //TODO: ВРЕМЕННО отказался от проверки взаимного пересечения линий откоса. Нужно учесть возможность частичного совпадения линий
                         /*
@@ -143,24 +140,23 @@ namespace Civil3DInfoTools.Spillway
                             if (exitLoop)
                                 break;
                         }
-                        */ 
+                        */
                         #endregion
 
                         //Проверить, что все точки откоса расположены с одной стороны от КПЧ
                         //Определить водосброс направо или налево
-                        //TODO: Проверить сонаправленность линий!
+                        //TODO: Проверить сонаправленность линий! (низкий приоритет)
 
 
 
                         //Для всех кодов определить участки КПЧ. Параметры взаимного расположения расчитываются в горизонтальной проекции
                         //По начальным точкам линий определить расположение линии справа или слева от КПЧ
 
-                        //Polyline3dInfo baseLine = slopeLines["КПЧ"].First();
-                        baseLine = slopeLines["ОТК0"].First();//базовая линия - бровка откоса
+                        baseLine = slopeLines["КПЧ"].First();//базовая линия - КПЧ
 
                         foreach (KeyValuePair<string, List<Polyline3dInfo>> kvp in slopeLines)
                         {
-                            if (!kvp.Key.Equals(/*"КПЧ"*/"ОТК0"))
+                            if (!kvp.Key.Equals("КПЧ"))
                             {
                                 foreach (Polyline3dInfo poly3dInfo in kvp.Value)
                                 {
@@ -168,26 +164,23 @@ namespace Civil3DInfoTools.Spillway
                                     poly3dInfo.BaseLine = baseLine.Poly2d;
                                     poly3dInfo.ComputeParameters();
                                     poly3dInfo.ComputeOrientation();
-                                    if (!kvp.Key.Equals("КПЧ"))
-                                        if (toTheRight != null)
+                                    //проверка, что все линии с одной стороны от базовой
+                                    if (toTheRight != null)
+                                    {
+                                        if (toTheRight != poly3dInfo.ToTheRightOfBaseLine)
                                         {
-                                            if (toTheRight != poly3dInfo.ToTheRightOfBaseLine)
-                                            {
-                                                wrongPolylinesException.Mistakes = wrongPolylinesException.Mistakes | Mistake.WrongOrientation;
-                                            }
+                                            wrongPolylinesException.Mistakes = wrongPolylinesException.Mistakes | Mistake.WrongOrientation;
                                         }
-                                        else
-                                        {
-                                            toTheRight = poly3dInfo.ToTheRightOfBaseLine;
-                                        }
+                                    }
+                                    else
+                                    {
+                                        toTheRight = poly3dInfo.ToTheRightOfBaseLine;
+                                    }
+
                                 }
                             }
                         }
-                        //Проверить что КПЧ с проивоположной стороны от ОТК0
-                        if (slopeLines["КПЧ"].First().ToTheRightOfBaseLine == toTheRight)
-                        {
-                            wrongPolylinesException.Mistakes = wrongPolylinesException.Mistakes | Mistake.WrongOrientation;
-                        }
+
 
 
 
@@ -204,7 +197,7 @@ namespace Civil3DInfoTools.Spillway
                         //        = (BlockTableRecord)tr.GetObject(bt[BlockTableRecord.ModelSpace], OpenMode.ForWrite);
                         //foreach (KeyValuePair<string, List<Polyline3dInfo>> kvp in slopeLines)
                         //{
-                        //    if (!kvp.Key.Equals(/*"КПЧ"*/"ОТК0"))
+                        //    if (!kvp.Key.Equals("КПЧ"))
                         //    {
                         //        foreach (Polyline3dInfo poly3dInfo in kvp.Value)
                         //        {
@@ -244,9 +237,18 @@ namespace Civil3DInfoTools.Spillway
                         tr.Commit();
                     }
 
-                    //TODO: Включать подсветку 3d полилиний, которые участвуют в расчете
+                    //Включать подсветку 3d полилиний, которые участвуют в расчете
+                    highlighted.Clear();
+                    foreach (KeyValuePair<string, List<Polyline3dInfo>> kvp in slopeLines)
+                    {
+                        foreach (Polyline3dInfo p3dI in kvp.Value)
+                        {
+                            p3dI.Poly3d.Highlight();
+                            highlighted.Add(p3dI.Poly3d);
+                        }
+                    }
 
-                    Polyline3dInfo edgeLine = slopeLines["КПЧ"].First();
+                    int spillwayNum = 1;
                     PositionData positionData = new PositionData();
                     while (true)
                     {
@@ -257,56 +259,53 @@ namespace Civil3DInfoTools.Spillway
                         pPtRes = adoc.Editor.GetPoint(pPtOpts);
                         if (pPtRes.Status == PromptStatus.OK)
                         {
-                            //ed.WriteMessage("\nточка введена");
-
                             Point3d pickedPt = new Point3d(pPtRes.Value.X, pPtRes.Value.Y, 0);
 
-                            Point3d nearestPtOnBasePt = baseLine.Poly2d.GetClosestPointTo(pickedPt, true);//найти ближайшую точку ОТК0
+                            Point3d nearestPtOnBase = baseLine.Poly2d.GetClosestPointTo(pickedPt, true);//найти ближайшую точку базовой линии
 
-                            double pickedParameterBase = baseLine.Poly2d.GetParameterAtPoint(nearestPtOnBasePt);//параметр базовой линии в этой точке
+                            double pickedParameterBase = baseLine.Poly2d.GetParameterAtPoint(nearestPtOnBase);//параметр базовой линии в этой точке
                             //Найти все линии откоса, которые расположены в районе данного параметра
                             //Предполагается, что для каждого кода есть только одна такая
-                            List<Polyline3dInfo> pickedPtSlopeLines = new List<Polyline3dInfo>();
-                            bool founded1 = false;
-                            bool founded2 = false;
-                            foreach (KeyValuePair<string, List<Polyline3dInfo>> kvp in slopeLines)
+                            List<Polyline3dInfo> pickedPtSlopeLines =
+                                slopeLines["ОТК"].FindAll(l => l.StartParameterBase <= pickedParameterBase && l.EndParameterBase >= pickedParameterBase);
+
+
+                            if (pickedPtSlopeLines.Count>1)//Проверить, что найдены минимум 2 линии перелома откоса
                             {
-                                if (!kvp.Key.Equals("ОТК0"))
+                                //Найти ближайшую линию к базовой линии - это бровка
+                                Polyline3dInfo edgeLine = null;
+                                double minDist = double.MaxValue;
+                                foreach (Polyline3dInfo p3dI in pickedPtSlopeLines)
                                 {
-                                    Polyline3dInfo founded
-                                        = kvp.Value.Find(l => l.StartParameterBase <= pickedParameterBase && l.EndParameterBase >= pickedParameterBase);
-                                    if (founded != null)
+                                    Point3d ptOnLine = p3dI.Poly2d.GetClosestPointTo(nearestPtOnBase, false);
+                                    double distance = ptOnLine.DistanceTo(nearestPtOnBase);
+                                    if (distance < minDist)
                                     {
-                                        pickedPtSlopeLines.Add(founded);
-                                        if (kvp.Key.Equals("КПЧ"))
-                                        {
-                                            founded1 = true;
-                                        }
-                                        if (kvp.Key.Equals("ОТК_"))
-                                        {
-                                            founded2 = true;
-                                        }
+                                        minDist = distance;
+                                        edgeLine = p3dI;
                                     }
                                 }
-                            }
 
 
-                            if (founded1 && founded2)//Проверить, что найдены КПЧ и ОТК_
-                            {
-                                //Найти касательную к базовой линии
-                                Vector3d tangentVector = baseLine.Poly2d.GetFirstDerivative(pickedParameterBase);
+                                
+                                Point3d nearestPtOnEdge = edgeLine.Poly2d.GetClosestPointTo(pickedPt, true);//найти ближайшую точку бровки
+
+                                double pickedParameterEdge = edgeLine.Poly2d.GetParameterAtPoint(nearestPtOnEdge);//параметр бровки в этой точке
+
+                                //Найти касательную к бровке
+                                Vector3d tangentVector = edgeLine.Poly2d.GetFirstDerivative(pickedParameterEdge);
 
                                 double rotateAngle = toTheRight.Value ? -Math.PI / 2 : Math.PI / 2;
 
-                                Vector3d spillWayVector = tangentVector.RotateBy(rotateAngle, Vector3d.ZAxis).GetNormal();
-                                Line spillWayAxis = new Line(nearestPtOnBasePt, nearestPtOnBasePt + spillWayVector);
+                                Vector3d spillWayVector = tangentVector.RotateBy(rotateAngle, Vector3d.ZAxis).GetNormal();//вектор водосброса, перпендикулярный бровке
+                                Line spillWayAxis = new Line(nearestPtOnEdge, nearestPtOnEdge + spillWayVector);
                                 Point3dCollection intersections = new Point3dCollection();
-                                edgeLine.Poly2d.IntersectWith(spillWayAxis, Intersect.ExtendArgument,
+                                baseLine.Poly2d.IntersectWith(spillWayAxis, Intersect.ExtendArgument,
                                     horizontalPlane, intersections,
                                     new IntPtr(0), new IntPtr(0));
                                 if (intersections.Count > 0)
                                 {
-                                    Point3d basePt = intersections[0];//Точка пересечения с КПЧ
+                                    Point3d basePt = intersections[0];//Точка пересечения оси водосброса с КПЧ
                                     //Найти точки пересечения перпендикуляра к ОТК0 и остальными линиями откоса
                                     //Отсортировать все линии по удаленности от КПЧ в этой точке
                                     SortedDictionary<Point3d, Polyline3dInfo> intersectionPts
@@ -342,6 +341,10 @@ namespace Civil3DInfoTools.Spillway
 
                                         using (Transaction tr = db.TransactionManager.StartTransaction())
                                         {
+                                            //Регистрация приложения
+                                            Utils.RegisterApp(db, tr);
+
+
                                             ObjectId layerId = Utils.CreateLayerIfNotExists("ВОДОСБРОС", db, tr, null, 150, LineWeight.LineWeight030);
 
 
@@ -355,56 +358,52 @@ namespace Civil3DInfoTools.Spillway
                                             //tr.AddNewlyCreatedDBObject(spillWayAxis, true);
 
                                             //Вычерчивание 3d полилинии по линии водосброса
-                                            //using (Polyline3d poly3d = new Polyline3d())
-                                            //{
-                                            //    poly3d.LayerId = layerId;
-                                            //    poly3d.PolyType = Poly3dType.SimplePoly;
-                                            //    ms.AppendEntity(poly3d);
-                                            //    tr.AddNewlyCreatedDBObject(poly3d, true);
+                                            using (Polyline3d poly3d = new Polyline3d())
+                                            {
+                                                poly3d.LayerId = layerId;
+                                                poly3d.PolyType = Poly3dType.SimplePoly;
+                                                ms.AppendEntity(poly3d);
+                                                tr.AddNewlyCreatedDBObject(poly3d, true);
 
-                                            //    foreach (Point3d pt in pts)
-                                            //    {
-                                            //        PolylineVertex3d vertex = new PolylineVertex3d(pt);
-                                            //        poly3d.AppendVertex(vertex);
-                                            //    }
+                                                foreach (Point3d pt in pts)
+                                                {
+                                                    PolylineVertex3d vertex = new PolylineVertex3d(pt);
+                                                    poly3d.AppendVertex(vertex);
+                                                    tr.AddNewlyCreatedDBObject(vertex, true);
+                                                }
 
-                                            //    //Почему-то не прорисовывается полилиния полностью (не прорисовывается последняя вершина)
-                                            //    //ничего не помогает
-                                            //    //TODO: Попоробовать решить эту проблему с помощью различных манипуляций (другие транзакции, другие объекты, хз)
-                                            //    //Point3d lastPt = pts[pts.Count - 1];
-                                            //    //Point3d dummyPt = new Point3d(lastPt.X+1, lastPt.Y+1, lastPt.Z+1);
-                                            //    //PolylineVertex3d dummyVertex = new PolylineVertex3d(dummyPt);
-                                            //    //poly3d.AppendVertex(dummyVertex);
-                                            //    //dummyVertex.Erase();
-                                            //    //poly3d.Draw();
-                                            //    //ed.Regen();
-                                            //    //ed.UpdateScreen();
-                                            //}
+
+                                                //В расширенные данные записать название водосброса
+                                                poly3d.XData = new ResultBuffer(
+                                                    new TypedValue(1001, Constants.AppName),
+                                                    new TypedValue(1000, spillwayNum.ToString()));
+                                                
+                                                //Почему-то не прорисовывается полилиния полностью (не прорисовывается последняя вершина)
+                                                //ничего не помогает
+                                                //TODO: Попоробовать решить эту проблему с помощью различных манипуляций (другие транзакции, другие объекты, хз)
+                                                //Point3d lastPt = pts[pts.Count - 1];
+                                                //Point3d dummyPt = new Point3d(lastPt.X+1, lastPt.Y+1, lastPt.Z+1);
+                                                //PolylineVertex3d dummyVertex = new PolylineVertex3d(dummyPt);
+                                                //poly3d.AppendVertex(dummyVertex);
+                                                //dummyVertex.Erase();
+                                                //poly3d.Draw();
+                                                //ed.Regen();
+                                                //ed.UpdateScreen();
+                                            }
 
                                             //Вычерчивание отдельных отрезков
-                                            for (int i = 0; i < pts.Count - 1; i++)
-                                            {
-                                                Point3d pt1 = pts[i];
-                                                Point3d pt2 = pts[i + 1];
+                                            //for (int i = 0; i < pts.Count - 1; i++)
+                                            //{
+                                            //    Point3d pt1 = pts[i];
+                                            //    Point3d pt2 = pts[i + 1];
 
-                                                AcadDb.Entity previous = null;
-                                                using (Line line = new Line(pt1, pt2))
-                                                {
-                                                    line.LayerId = layerId;
-                                                    ms.AppendEntity(line);
-                                                    tr.AddNewlyCreatedDBObject(line, true);
-
-                                                    //Объединять линии (не работает)
-                                                    //if (previous == null)
-                                                    //{
-                                                    //    previous = line;
-                                                    //}
-                                                    //else
-                                                    //{
-                                                    //    previous.JoinEntity(line);
-                                                    //}
-                                                }
-                                            }
+                                            //    using (Line line = new Line(pt1, pt2))
+                                            //    {
+                                            //        line.LayerId = layerId;
+                                            //        ms.AppendEntity(line);
+                                            //        tr.AddNewlyCreatedDBObject(line, true);
+                                            //    }
+                                            //}
 
                                             tr.Commit();
                                         }
@@ -434,6 +433,7 @@ namespace Civil3DInfoTools.Spillway
 
                                         SpillwayPosition spillwayPosition = new SpillwayPosition()
                                         {
+                                            Name = spillwayNum.ToString(),
                                             X = pts[0].X,
                                             Y = pts[0].Y,
                                             Z = pts[0].Z,
@@ -441,6 +441,7 @@ namespace Civil3DInfoTools.Spillway
                                             ToTheRight = toTheRight.Value,
                                             Slopes = slopes
                                         };
+                                        spillwayNum++;
                                         positionData.SpillwayPositions.Add(spillwayPosition);
                                     }
 
@@ -456,7 +457,8 @@ namespace Civil3DInfoTools.Spillway
                         }
                         else
                         {
-                            ed.WriteMessage("\nвыбор закончен");
+                            //ed.WriteMessage("\nвыбор закончен");
+
                             break;
                         }
 
@@ -483,13 +485,22 @@ namespace Civil3DInfoTools.Spillway
                         {
                             xmlSerializer.Serialize(sw, positionData);
                         }
-                        //TODO!!!!!: Добавить сообщение о том, что все выполнено
+                        //Cообщение о том, что все выполнено
+                        ed.WriteMessage("\nПоложение водосбросов сохранено в файле " + filename);
                     }
                 }
             }
             catch (System.Exception ex)
             {
-                Utils.ErrorToCommandLine(ed, "Ошибка при извлечении расположений водосбросов", ex);
+                //Utils.ErrorToCommandLine(ed, "Ошибка при извлечении расположений водосбросов", ex);
+                CommonException(ex, "Ошибка при извлечении расположений водосбросов");
+            }
+            finally
+            {
+                foreach (Polyline3d p3d in highlighted)
+                {
+                    p3d.Unhighlight();
+                }
             }
 
         }
@@ -533,13 +544,12 @@ namespace Civil3DInfoTools.Spillway
                     string message = "НЕВЕРНЫЙ ВЫБОР ПОЛИЛИНИЙ.";
                     if (Mistakes.HasFlag(Mistake.NotEnoughLayers))
                     {
-                        message += "\n - Набор выбора должен содержать служебные слои (минимальный набор \"КПЧ\", \"ОТК0\", \"ОТК_\")."
-                            + "Для каждого из переломов откоса должна быть линия в слое \"ОТК##\", где ## - цифра или набор цифр.";
+                        message += "\n - Набор выбора должен содержать служебные слои \"КПЧ\" и \"ОТК0\"";
                     }
 
                     if (Mistakes.HasFlag(Mistake.TooManyLinesInOneLayer))
                     {
-                        message += "\n - Набор выбора должен содержать максимум по одной линии в слоях \"КПЧ\", \"ОТК0\", \"ОТК_\"";
+                        message += "\n - Набор выбора должен содержать максимум 1 линию в слое \"КПЧ\"";
                     }
 
                     if (Mistakes.HasFlag(Mistake.LinesAreIntersecting))

@@ -3,7 +3,7 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio 15
 VisualStudioVersion = 15.0.27703.2026
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "InfoTools", "InfoTools\InfoTools.csproj", "{2A73D95B-2743-4EAA-8299-C86E32EAD31E}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Civil3DInfoTools", "InfoTools\Civil3DInfoTools.csproj", "{2A73D95B-2743-4EAA-8299-C86E32EAD31E}"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "IWScripts", "IWScripts", "{78A68C2D-98BA-453D-87C9-38495183C90A}"
 	ProjectSection(SolutionItems) = preProject

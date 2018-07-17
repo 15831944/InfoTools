@@ -77,8 +77,10 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="App.cs" />
+    <Compile Include="Constants.cs" />
     <Compile Include="ObjectInsertion\InsertByCoordinatesCommand.cs" />
-    <Compile Include="Spillway\Constants.cs" />
+    <Compile Include="PolylineCaptionOverrule.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="RoadMarking\CreateBoundariesCommand.cs" />
     <Compile Include="Spillway\ExtractSpillwayPositionsCommand.cs" />

@@ -8,6 +8,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using static Common.ExceptionHandling.ExeptionHandlingProcedures;
 
 [assembly: CommandClass(typeof(Civil3DInfoTools.Spillway.Poly3DFromCorridorFeatureLinesCommand))]
 
@@ -62,24 +63,21 @@ namespace Civil3DInfoTools.Spillway
                                         //Все 3d полилинии переносятся в слой, который называется так же как код линии
                                         short colorIndex = 3;
                                         LineWeight lineWeight = LineWeight.ByLayer;
+                                        string layerName = codeName;
                                         if (codeName.Equals("КПЧ"))
                                         {
                                             colorIndex = 30;
                                             lineWeight = LineWeight.LineWeight030;
                                         }
-                                        else if (codeName.Equals("ОТК_"))
-                                        {
-                                            colorIndex = 4;
-                                            lineWeight = LineWeight.LineWeight030;
-                                        }
-                                        else if (Constants.SlopeLayerRegex.IsMatch(codeName))
+                                        else if (codeName.Equals("ОТК") || codeName.Equals("Hinge") || codeName.Equals("Daylight"))
                                         {
                                             colorIndex = 50;
                                             lineWeight = LineWeight.LineWeight030;
+                                            layerName = "ОТК";
                                         }
 
 
-                                        ObjectId layerId = Utils.CreateLayerIfNotExists(codeName, db, tr, null, colorIndex, lineWeight);
+                                        ObjectId layerId = Utils.CreateLayerIfNotExists(layerName, db, tr, null, colorIndex, lineWeight);
                                         foreach (ObjectId polyId in polyColl)
                                         {
                                             Polyline3d polyline = tr.GetObject(polyId, OpenMode.ForWrite) as Polyline3d;
@@ -103,7 +101,8 @@ namespace Civil3DInfoTools.Spillway
             }
             catch (System.Exception ex)
             {
-                Utils.ErrorToCommandLine(ed, "Ошибка при построении полилиний по линиям корридора", ex);
+                //Utils.ErrorToCommandLine(ed, "Ошибка при построении полилиний по линиям корридора", ex);
+                CommonException(ex, "Ошибка при построении полилиний по линиям корридора");
             }
         }
     }

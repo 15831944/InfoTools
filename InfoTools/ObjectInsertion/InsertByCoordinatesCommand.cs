@@ -12,6 +12,7 @@ using System.IO;
 using System.Xml.Serialization;
 using Autodesk.AutoCAD.Geometry;
 using Common.XMLClasses;
+using static Common.ExceptionHandling.ExeptionHandlingProcedures;
 
 [assembly: CommandClass(typeof(Civil3DInfoTools.ObjectInsertion.InsertByCoordinatesCommand))]
 
@@ -189,7 +190,8 @@ namespace Civil3DInfoTools.ObjectInsertion
             }
             catch (System.Exception ex)
             {
-                Utils.ErrorToCommandLine(ed, "Ошибка при выполнении команды InsertByCoordinates", ex);
+                CommonException(ex, "Ошибка при выполнении команды InsertByCoordinates");
+                //Utils.ErrorToCommandLine(ed, "Ошибка при выполнении команды InsertByCoordinates", ex);
             }
         }
 

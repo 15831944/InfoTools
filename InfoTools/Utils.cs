@@ -145,5 +145,40 @@ namespace Civil3DInfoTools
             return ((pt1.X - pt0.X) * (pt2.Y - pt0.Y) - (pt2.X - pt0.X) * (pt1.Y - pt0.Y));
         }
 
+
+        public static void RegisterApp(Database db, Transaction tr)
+        {
+            //Таблица приложений
+            RegAppTable regTable = (RegAppTable)tr.GetObject(db.RegAppTableId, OpenMode.ForRead);
+
+            //Создать имя приложения в таблице если еще нет
+            if (!regTable.Has(Constants.AppName))
+            {
+                regTable.UpgradeOpen();
+
+                RegAppTableRecord app = new RegAppTableRecord();
+                app.Name = Constants.AppName;
+                regTable.Add(app);
+                tr.AddNewlyCreatedDBObject(app, true);
+            }
+        }
+
+
+        public static string GetCaptionFromXData(DBObject dbo)
+        {
+            string returnVal = null;
+            ResultBuffer buffer = dbo.GetXDataForApplication(Constants.AppName);
+            if (buffer != null)
+            {
+                List<TypedValue> xdataList = new List<TypedValue>(buffer.AsArray());
+                List<TypedValue> xdataStringList = xdataList.FindAll(x => x.TypeCode == 1000);
+                if (xdataStringList.Count == 1)
+                {
+                    returnVal = (string)xdataStringList[0].Value;
+                }
+            }
+            return returnVal;
+        }
+
     }
 }

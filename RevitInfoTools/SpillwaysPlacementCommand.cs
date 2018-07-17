@@ -84,10 +84,18 @@ namespace RevitInfoTools
                                 {
                                     ElementId symId = spillwayFamily.GetFamilySymbolIds().First();
                                     FamilySymbol familySymbol = (FamilySymbol)doc.GetElement(symId);
+                                    
 
                                     using (Transaction tr = new Transaction(doc))
                                     {
                                         tr.Start("CreateSpillway");
+
+                                        //активировать типоразмер
+                                        if (!familySymbol.IsActive)
+                                        {
+                                            familySymbol.Activate();
+                                            doc.Regenerate();
+                                        }
                                         //Вставка водосбросов в заданные координаты
                                         //Поворот на заданный угол
                                         //Если водосброс направлен направо, то использовать отражение (с поворотом в противоположную сторону)
