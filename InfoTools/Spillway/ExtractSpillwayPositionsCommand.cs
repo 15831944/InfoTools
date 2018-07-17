@@ -20,8 +20,8 @@ using Common.XMLClasses;
 
 namespace Civil3DInfoTools.Spillway
 {
-    //TODO: Проверить как это будет работать не на виде в плане
-    //TODO: Переделать на вариант, при котором будет только 3 слоя: КПЧ, ОТК0(для бровки) и ОТК1(для всех переломов)
+    //TODO: Проверить как это будет работать не на виде в плане (низкий приоритет)
+    //TODO: Переделать на вариант, при котором будет только 3 слоя: КПЧ, ОТК0(для бровки) и ОТК1(Hinge, Daylight)(для всех переломов и выхода на рельеф)
     //TODO: Сделать DrawOverrule - подписи для маркеров водосбросов, соответствующие именам в XML
     class ExtractSpillwayPositionsCommand
     {
@@ -105,6 +105,7 @@ namespace Civil3DInfoTools.Spillway
                             wrongPolylinesException.Mistakes = wrongPolylinesException.Mistakes | Mistake.TooManyLinesInOneLayer;
                         }
 
+                        #region Проперка непересечения
                         //Проверить что линии откоса не пересекают друг друга в плане
                         //TODO: ВРЕМЕННО отказался от проверки взаимного пересечения линий откоса. Нужно учесть возможность частичного совпадения линий
                         /*
@@ -142,7 +143,8 @@ namespace Civil3DInfoTools.Spillway
                             if (exitLoop)
                                 break;
                         }
-                        */
+                        */ 
+                        #endregion
 
                         //Проверить, что все точки откоса расположены с одной стороны от КПЧ
                         //Определить водосброс направо или налево

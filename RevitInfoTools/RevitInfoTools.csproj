@@ -2,6 +2,12 @@
 <Project ToolsVersion="15.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <Import Project="$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props" Condition="Exists('$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props')" />
   <PropertyGroup>
+    <ResolveAssemblyWarnOrErrorOnTargetArchitectureMismatch>
+      None
+    </ResolveAssemblyWarnOrErrorOnTargetArchitectureMismatch>
+    <TargetFrameworkProfile />
+  </PropertyGroup>
+  <PropertyGroup>
     <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
     <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
     <ProjectGuid>{72166630-ED93-46C9-9459-C646AF6BB41F}</ProjectGuid>
@@ -29,15 +35,53 @@
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
   </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Debug 2019|AnyCPU'">
+    <TargetFrameworkVersion>v4.7</TargetFrameworkVersion>
+    <DebugSymbols>true</DebugSymbols>
+    <OutputPath>bin\Debug 2019\</OutputPath>
+    <DefineConstants>DEBUG;TRACE;VERSION2019</DefineConstants>
+    <DebugType>full</DebugType>
+    <PlatformTarget>AnyCPU</PlatformTarget>
+    <ErrorReport>prompt</ErrorReport>
+    <CodeAnalysisRuleSet>MinimumRecommendedRules.ruleset</CodeAnalysisRuleSet>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Release 2019|AnyCPU'">
+    <TargetFrameworkVersion>v4.7</TargetFrameworkVersion>
+    <OutputPath>bin\Release 2019\</OutputPath>
+    <DefineConstants>TRACE</DefineConstants>
+    <Optimize>true</Optimize>
+    <DebugType>pdbonly</DebugType>
+    <PlatformTarget>AnyCPU</PlatformTarget>
+    <ErrorReport>prompt</ErrorReport>
+    <CodeAnalysisRuleSet>MinimumRecommendedRules.ruleset</CodeAnalysisRuleSet>
+  </PropertyGroup>
+  <Choose>
+    <When Condition="'$(Configuration)' == 'Release 2019' or '$(Configuration)' == 'Debug 2019'">
+      <ItemGroup>
+        <Reference Include="RevitAPI">
+          <HintPath>C:\REVIT2019\Revit 2019\RevitAPI.dll</HintPath>
+          <Private>False</Private>
+        </Reference>
+        <Reference Include="RevitAPIUI">
+          <HintPath>C:\REVIT2019\Revit 2019\RevitAPIUI.dll</HintPath>
+          <Private>False</Private>
+        </Reference>
+      </ItemGroup>
+    </When>
+    <Otherwise>
+      <ItemGroup>
+        <Reference Include="RevitAPI">
+          <HintPath>C:\Program Files\Autodesk\Revit 2018\RevitAPI.dll</HintPath>
+          <Private>False</Private>
+        </Reference>
+        <Reference Include="RevitAPIUI">
+          <HintPath>C:\Program Files\Autodesk\Revit 2018\RevitAPIUI.dll</HintPath>
+          <Private>False</Private>
+        </Reference>
+      </ItemGroup>
+    </Otherwise>
+  </Choose>
   <ItemGroup>
-    <Reference Include="RevitAPI">
-      <HintPath>C:\Program Files\Autodesk\Revit 2018\RevitAPI.dll</HintPath>
-      <Private>False</Private>
-    </Reference>
-    <Reference Include="RevitAPIUI">
-      <HintPath>C:\Program Files\Autodesk\Revit 2018\RevitAPIUI.dll</HintPath>
-      <Private>False</Private>
-    </Reference>
     <Reference Include="System" />
     <Reference Include="System.Core" />
     <Reference Include="System.Windows.Forms" />
@@ -74,6 +118,14 @@
 copy "$(ProjectDir)Families\*rfa" "$(AppData)\Autodesk\REVIT\Addins\2018\RevitInfoTools\Families"
 
 copy "$(TargetDir)*.dll" "$(AppData)\Autodesk\REVIT\Addins\2018\RevitInfoTools"
-copy "$(TargetDir)*.pdb" "$(AppData)\Autodesk\REVIT\Addins\2018\RevitInfoTools"</PostBuildEvent>
+copy "$(TargetDir)*.pdb" "$(AppData)\Autodesk\REVIT\Addins\2018\RevitInfoTools"
+
+
+copy "$(ProjectDir)*.addin" "$(AppData)\Autodesk\REVIT\Addins\2019"
+
+copy "$(ProjectDir)Families\*rfa" "$(AppData)\Autodesk\REVIT\Addins\2019\RevitInfoTools\Families"
+
+copy "$(TargetDir)*.dll" "$(AppData)\Autodesk\REVIT\Addins\2019\RevitInfoTools"
+copy "$(TargetDir)*.pdb" "$(AppData)\Autodesk\REVIT\Addins\2019\RevitInfoTools"</PostBuildEvent>
   </PropertyGroup>
 </Project>

@@ -18,7 +18,8 @@ namespace RevitInfoTools
         /// <summary>
         /// Путь относительно расположения загруженной сборки в котором расположена библиотека семейств
         /// </summary>
-        public static string FamilyLibRelativePath { get; } = @".\_Families\";
+        public static string FamilyLibRelativePath { get; } = @".\Families\";
+
 
 
         public Result OnShutdown(UIControlledApplication application)
