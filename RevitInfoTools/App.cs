@@ -1,10 +1,12 @@
 ﻿using Autodesk.Revit.UI;
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Reflection;
 using System.Text;
 using System.Threading.Tasks;
+using System.Windows.Media.Imaging;
 
 namespace RevitInfoTools
 {
@@ -29,7 +31,75 @@ namespace RevitInfoTools
 
         public Result OnStartup(UIControlledApplication application)
         {
+            //Создание панелей и кнопок
+            AddRibbonPanel(application);
+
+
             return Result.Succeeded;
+        }
+
+
+        /// <summary>
+        /// http://archi-lab.net/create-your-own-tab-and-buttons-in-revit/
+        /// Создание панелей и кнопок
+        /// </summary>
+        /// <param name="application"></param>
+        private static void AddRibbonPanel(UIControlledApplication application)
+        {
+            // Create a custom ribbon tab
+            String tabName = "InfoTools";
+            application.CreateRibbonTab(tabName);
+
+            // Add a new ribbon panel
+            RibbonPanel ribbonPanel = application.CreateRibbonPanel(tabName, "InfoTools");
+
+            // Get dll assembly path
+            string thisAssemblyPath = Assembly.GetExecutingAssembly().Location;
+
+            {
+                PushButtonData pbData = new PushButtonData(
+                "Draw3DLine",
+                "Draw3DLine",
+                thisAssemblyPath,
+                "RevitInfoTools.Draw3DLineCommand");
+                BitmapSource bitmap = GetEmbeddedImage("RevitInfoTools.Icons.Draw3DLine.png");
+                pbData.LargeImage = bitmap;
+                pbData.Image = bitmap;
+
+                PushButton pb = ribbonPanel.AddItem(pbData) as PushButton;
+                pb.ToolTip = "Создание 3d линий по координатам в файлах CSV";
+            }
+
+
+            {
+                PushButtonData pbData = new PushButtonData(
+                "SpillwaysPlacement",
+                "SpillwaysPlacement",
+                thisAssemblyPath,
+                "RevitInfoTools.SpillwaysPlacementCommand");
+                BitmapSource bitmap = GetEmbeddedImage("RevitInfoTools.Icons.SpillwaysPlacement.png");
+                pbData.LargeImage = bitmap;
+                pbData.Image = bitmap;
+
+                PushButton pb = ribbonPanel.AddItem(pbData) as PushButton;
+                pb.ToolTip = "Расстановка водосбросов в Revit";
+            }
+            
+
+        }
+
+        static BitmapSource GetEmbeddedImage(string name)
+        {
+            try
+            {
+                Assembly a = Assembly.GetExecutingAssembly();
+                Stream s = a.GetManifestResourceStream(name);
+                return BitmapFrame.Create(s);
+            }
+            catch
+            {
+                return null;
+            }
         }
     }
 }

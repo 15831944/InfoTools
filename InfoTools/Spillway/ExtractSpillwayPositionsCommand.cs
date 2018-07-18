@@ -21,8 +21,6 @@ using static Common.ExceptionHandling.ExeptionHandlingProcedures;
 
 namespace Civil3DInfoTools.Spillway
 {
-
-    //TODO: Сделать DrawOverrule - подписи для маркеров водосбросов, соответствующие именам в XML
     class ExtractSpillwayPositionsCommand
     {
         [CommandMethod("S1NF0_ExtractSpillwayPositions", CommandFlags.Modal)]
@@ -352,11 +350,6 @@ namespace Civil3DInfoTools.Spillway
                                             BlockTableRecord ms
                                                     = (BlockTableRecord)tr.GetObject(bt[BlockTableRecord.ModelSpace], OpenMode.ForWrite);
 
-                                            //Вычерчивание вектора
-                                            //spillWayAxis.LayerId=layerId;
-                                            //ms.AppendEntity(spillWayAxis);
-                                            //tr.AddNewlyCreatedDBObject(spillWayAxis, true);
-
                                             //Вычерчивание 3d полилинии по линии водосброса
                                             using (Polyline3d poly3d = new Polyline3d())
                                             {
@@ -378,32 +371,7 @@ namespace Civil3DInfoTools.Spillway
                                                     new TypedValue(1001, Constants.AppName),
                                                     new TypedValue(1000, spillwayNum.ToString()));
                                                 
-                                                //Почему-то не прорисовывается полилиния полностью (не прорисовывается последняя вершина)
-                                                //ничего не помогает
-                                                //TODO: Попоробовать решить эту проблему с помощью различных манипуляций (другие транзакции, другие объекты, хз)
-                                                //Point3d lastPt = pts[pts.Count - 1];
-                                                //Point3d dummyPt = new Point3d(lastPt.X+1, lastPt.Y+1, lastPt.Z+1);
-                                                //PolylineVertex3d dummyVertex = new PolylineVertex3d(dummyPt);
-                                                //poly3d.AppendVertex(dummyVertex);
-                                                //dummyVertex.Erase();
-                                                //poly3d.Draw();
-                                                //ed.Regen();
-                                                //ed.UpdateScreen();
                                             }
-
-                                            //Вычерчивание отдельных отрезков
-                                            //for (int i = 0; i < pts.Count - 1; i++)
-                                            //{
-                                            //    Point3d pt1 = pts[i];
-                                            //    Point3d pt2 = pts[i + 1];
-
-                                            //    using (Line line = new Line(pt1, pt2))
-                                            //    {
-                                            //        line.LayerId = layerId;
-                                            //        ms.AppendEntity(line);
-                                            //        tr.AddNewlyCreatedDBObject(line, true);
-                                            //    }
-                                            //}
 
                                             tr.Commit();
                                         }

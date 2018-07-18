@@ -9,6 +9,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using WinForms = System.Windows.Forms;
+using static Common.ExceptionHandling.ExeptionHandlingProcedures;
 
 namespace RevitInfoTools
 {
@@ -23,76 +24,110 @@ namespace RevitInfoTools
             Application app = uiapp.Application;
             Document doc = uidoc.Document;
 
-            //Выбрать несколько файлов CSV с координатами
-            Transform projectTransform = Utils.GetProjectCoordinatesTransform(doc);
-
-            string[] filenames = null;
-            WinForms.OpenFileDialog openFileDialog1 = new WinForms.OpenFileDialog();
-
-
-            string curDocPath = doc.PathName;
-            if (!String.IsNullOrEmpty(curDocPath))
-                openFileDialog1.InitialDirectory = Path.GetDirectoryName(curDocPath);
-            openFileDialog1.Filter = "csv files (*.csv)|*.csv";
-            openFileDialog1.FilterIndex = 1;
-            openFileDialog1.RestoreDirectory = true;
-            openFileDialog1.Multiselect = true;
-            openFileDialog1.Title = "Выберите таблицы CSV с координатами 3d-полилиний";
-
-            if (openFileDialog1.ShowDialog() == WinForms.DialogResult.OK)
+            if (doc.IsFamilyDocument)
             {
-                filenames = openFileDialog1.FileNames;
+                TaskDialog.Show("ОТМЕНЕНО", "Данная команда предназначена для запуска в документе проекта");
+                return Result.Cancelled;
+            }
 
-                List<List<XYZ>> lines3d = new List<List<XYZ>>();
+            try
+            {
+                //Выбрать несколько файлов CSV с координатами
+                Transform projectTransform = Utils.GetProjectCoordinatesTransform(doc);
 
-                foreach (string filename in filenames)
+                string[] filenames = null;
+                WinForms.OpenFileDialog openFileDialog1 = new WinForms.OpenFileDialog();
+
+
+                string curDocPath = doc.PathName;
+                if (!String.IsNullOrEmpty(curDocPath))
+                    openFileDialog1.InitialDirectory = Path.GetDirectoryName(curDocPath);
+                openFileDialog1.Filter = "csv files (*.csv)|*.csv";
+                openFileDialog1.FilterIndex = 1;
+                openFileDialog1.RestoreDirectory = true;
+                openFileDialog1.Multiselect = true;
+                openFileDialog1.Title = "Выберите таблицы CSV с координатами 3d-полилиний";
+
+                if (openFileDialog1.ShowDialog() == WinForms.DialogResult.OK)
                 {
-                    List<double[]> inputList = Utils.ReadCoordinates(filename);
+                    filenames = openFileDialog1.FileNames;
 
-                    if (inputList != null && inputList.Count > 0)
+                    List<List<XYZ>> lines3d = new List<List<XYZ>>();
+
+                    foreach (string filename in filenames)
                     {
-                        List<XYZ> ptList = new List<XYZ>();
-
-                        foreach (double[] coordArr in inputList)
+                        List<double[]> inputList = null;
+                        try
                         {
-                            XYZ globalPoint = Utils.PointByMeters(coordArr[0], coordArr[1], coordArr[2]);//Перевод в футы из метров
-                            XYZ projectPoint = projectTransform.OfPoint(globalPoint);//Пересчет координат в проектную систему проекта Revit
-                            ptList.Add(projectPoint);
+                            inputList = Utils.ReadCoordinates(filename);
+                        }
+                        catch (IOException ex)
+                        {
+                            if (ex.Message.StartsWith("The process cannot access the file"))
+                            {
+                                AccessException(ex as IOException);
+                                return Result.Succeeded;
+                            }
+                            else
+                            {
+                                throw ex;
+                            }
                         }
 
-                        lines3d.Add(ptList);
-                    }
-
-                }
-
-                //Загрузить семейство 3d линии если нет
-                Family line3dFamily = Utils.GetFamily(doc, "3d line");
-                ElementId symId = line3dFamily.GetFamilySymbolIds().First();
-                FamilySymbol familySymbol = (FamilySymbol)doc.GetElement(symId);
-
-                //Расставить линии по координатам
-                using (Transaction tr = new Transaction(doc))
-                {
-                    tr.Start("Draw 3D line");
-
-                    foreach (List<XYZ> ptList in lines3d)
-                    {
-                        for (int i = 0; i < ptList.Count - 1; i++)
+                        if (inputList != null && inputList.Count > 0)
                         {
-                            FamilyInstance instance = AdaptiveComponentInstanceUtils.CreateAdaptiveComponentInstance(doc, familySymbol);
-                            IList<ElementId> placePointIds = AdaptiveComponentInstanceUtils.GetInstancePlacementPointElementRefIds(instance);
-                            ReferencePoint point1 = (ReferencePoint)doc.GetElement(placePointIds[0]);
-                            point1.Position = ptList[i];
-                            ReferencePoint point2 = (ReferencePoint)doc.GetElement(placePointIds[1]);
-                            point2.Position = ptList[i + 1];
+                            List<XYZ> ptList = new List<XYZ>();
 
+                            foreach (double[] coordArr in inputList)
+                            {
+                                XYZ globalPoint = Utils.PointByMeters(coordArr[0], coordArr[1], coordArr[2]);//Перевод в футы из метров
+                                XYZ projectPoint = projectTransform.OfPoint(globalPoint);//Пересчет координат в проектную систему проекта Revit
+                                ptList.Add(projectPoint);
+                            }
+
+                            lines3d.Add(ptList);
                         }
+
                     }
 
-                    tr.Commit();
-                }
-                    
+                    //Загрузить семейство 3d линии если нет
+                    Family line3dFamily = Utils.GetFamily(doc, "3d line");
+                    ElementId symId = line3dFamily.GetFamilySymbolIds().First();
+                    FamilySymbol familySymbol = (FamilySymbol)doc.GetElement(symId);
 
+                    //Расставить линии по координатам
+                    using (Transaction tr = new Transaction(doc))
+                    {
+                        tr.Start("Draw 3D line");
+
+                        foreach (List<XYZ> ptList in lines3d)
+                        {
+                            for (int i = 0; i < ptList.Count - 1; i++)
+                            {
+                                FamilyInstance instance = AdaptiveComponentInstanceUtils.CreateAdaptiveComponentInstance(doc, familySymbol);
+                                IList<ElementId> placePointIds = AdaptiveComponentInstanceUtils.GetInstancePlacementPointElementRefIds(instance);
+                                ReferencePoint point1 = (ReferencePoint)doc.GetElement(placePointIds[0]);
+                                point1.Position = ptList[i];
+                                ReferencePoint point2 = (ReferencePoint)doc.GetElement(placePointIds[1]);
+                                point2.Position = ptList[i + 1];
+
+                            }
+                        }
+
+                        tr.Commit();
+                    }
+
+
+                }
+            }
+            catch (Autodesk.Revit.Exceptions.OperationCanceledException)
+            {
+                return Result.Succeeded;
+            }
+            catch (Exception ex)
+            {
+                CommonException(ex, "Ошибка при вычерчивании 3d линии в Revit");
+                return Result.Succeeded;
             }
 
 

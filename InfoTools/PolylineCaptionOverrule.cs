@@ -7,10 +7,11 @@ using System.Linq;
 using static Common.ExceptionHandling.ExeptionHandlingProcedures;
 using System.Text;
 using System.Threading.Tasks;
+using Autodesk.AutoCAD.Runtime;
 
 namespace Civil3DInfoTools
 {
-    class PolylineCaptionOverrule : DrawableOverrule
+    public class PolylineCaptionOverrule : DrawableOverrule
     {
         public Dictionary<ObjectId, Point3d> position = null;
 
@@ -76,9 +77,10 @@ namespace Civil3DInfoTools
                     }
                 }
             }
-            catch (Exception ex)
+            catch (System.Exception ex)
             {
                 CommonException(ex, "Ошибка PolylineCaptionOverrule");
+                Overrule.RemoveOverrule(RXClass.GetClass(typeof(Polyline3d)), this);//снять Overrule если возникла ошибка
                 ret = false;
             }
 
