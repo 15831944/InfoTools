@@ -24,7 +24,7 @@
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
     <DebugType>pdbonly</DebugType>
     <Optimize>true</Optimize>
-    <OutputPath>bin\Release\</OutputPath>
+    <OutputPath>..\..\InfoTools_Установка\Civil3DInfoTools.bundle\</OutputPath>
     <DefineConstants>TRACE</DefineConstants>
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
@@ -62,9 +62,11 @@
     </Reference>
     <Reference Include="AecBaseMgd">
       <HintPath>C:\Program Files\Autodesk\AutoCAD 2018\ACA\AecBaseMgd.dll</HintPath>
+      <Private>False</Private>
     </Reference>
     <Reference Include="AeccDbMgd">
       <HintPath>C:\Program Files\Autodesk\AutoCAD 2018\C3D\AeccDbMgd.dll</HintPath>
+      <Private>False</Private>
     </Reference>
     <Reference Include="System" />
     <Reference Include="System.Core" />
@@ -101,9 +103,13 @@
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <PropertyGroup>
-    <PostBuildEvent>copy "$(ProjectDir)\PackageContents.xml" "$(AppData)\Autodesk\ApplicationPlugins\Civil3DInfoTools.bundle"
-copy "$(ProjectDir)\InfoTools.cuix" "$(AppData)\Autodesk\ApplicationPlugins\Civil3DInfoTools.bundle"
-copy "$(ProjectDir)bin\debug\*.dll" "$(AppData)\Autodesk\ApplicationPlugins\Civil3DInfoTools.bundle"
-copy "$(ProjectDir)bin\debug\*.pdb" "$(AppData)\Autodesk\ApplicationPlugins\Civil3DInfoTools.bundle"</PostBuildEvent>
+    <PostBuildEvent>copy "$(ProjectDir)\PackageContents.xml" "$(TargetDir)"
+copy "$(ProjectDir)\InfoTools.cuix" "$(TargetDir)"
+
+
+copy "$(TargetDir)\PackageContents.xml" "$(AppData)\Autodesk\ApplicationPlugins\Civil3DInfoTools.bundle"
+copy "$(TargetDir)\InfoTools.cuix" "$(AppData)\Autodesk\ApplicationPlugins\Civil3DInfoTools.bundle"
+copy "$(TargetDir)*.dll" "$(AppData)\Autodesk\ApplicationPlugins\Civil3DInfoTools.bundle"
+copy "$(TargetDir)*.pdb" "$(AppData)\Autodesk\ApplicationPlugins\Civil3DInfoTools.bundle"</PostBuildEvent>
   </PropertyGroup>
 </Project>
