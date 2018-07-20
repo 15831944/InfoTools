@@ -9,6 +9,7 @@ using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using static Common.ExceptionHandling.ExeptionHandlingProcedures;
 
 [assembly: CommandClass(typeof(Civil3DInfoTools.RoadMarking.CreateBoundariesCommand))]
 
@@ -18,6 +19,7 @@ namespace Civil3DInfoTools.RoadMarking
     {
 
         int n = 0;
+        Editor ed = null;
 
         ObjectId continuousLtype;
 
@@ -31,7 +33,7 @@ namespace Civil3DInfoTools.RoadMarking
 
             Database db = adoc.Database;
 
-            Editor ed = adoc.Editor;
+            ed = adoc.Editor;
 
             Database dbTarget = null;
 
@@ -223,10 +225,15 @@ namespace Civil3DInfoTools.RoadMarking
                 }
 
 
-                //TODO: Учесть возможные ошибки из-за отсутствия прав или занятости файла
-                //TODO: Придумать именование создаваемого чертежа
+                //TODO: Учесть возможные ошибки из-за отсутствия прав
                 //Создание нового чертежа и открытие его
-                string targetDocFullPath = Path.Combine(Path.GetDirectoryName(adoc.Name), "test.dwg");
+                string targetDocFullPath = null;
+                int n = 0;
+                do
+                {
+                    targetDocFullPath = Path.Combine(Path.GetDirectoryName(adoc.Name), "RoadMarkingBoundaries" + n + ".dwg");
+                    n++;
+                } while (File.Exists(targetDocFullPath));
                 dbTarget.SaveAs(targetDocFullPath, DwgVersion.Current);
                 adocTarget = Application.DocumentManager.Open(targetDocFullPath, false);
 
@@ -237,8 +244,8 @@ namespace Civil3DInfoTools.RoadMarking
             }
             catch (System.Exception ex)
             {
-                Utils.ErrorToCommandLine(ed, "Ошибка при выполнении команды InsertByCoordinates", ex);
-
+                //Utils.ErrorToCommandLine(ed, "Ошибка при создании контуров разметки", ex);
+                CommonException(ex, "Ошибка при создании контуров разметки");
             }
             finally
             {
@@ -414,8 +421,7 @@ namespace Civil3DInfoTools.RoadMarking
                                     }
                                     catch (System.Exception ex)
                                     {
-
-
+                                        ed.WriteMessage("\nВНИМАНИЕ: Возникла ошибка при попытке создания контура в блоке "+ btr.Name);
                                     }
                                 }
                                 else//Если кривая замкнута, то просто создать левую и правую кривую

@@ -69,7 +69,8 @@ namespace Civil3DInfoTools.Spillway
                                             colorIndex = 30;
                                             lineWeight = LineWeight.LineWeight030;
                                         }
-                                        else if (codeName.Equals("ОТК") || codeName.Equals("Hinge") || codeName.Equals("Daylight"))
+                                        else if (codeName.Equals("ОТК") || codeName.Equals("Hinge") || codeName.Equals("Daylight")
+                                            || codeName.Equals("Отсчет") || codeName.Equals("Выход на поверхность"))
                                         {
                                             colorIndex = 50;
                                             lineWeight = LineWeight.LineWeight030;

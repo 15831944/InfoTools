@@ -21,6 +21,7 @@ using static Common.ExceptionHandling.ExeptionHandlingProcedures;
 
 namespace Civil3DInfoTools.Spillway
 {
+    //TODO: В подпись маркера водосброса добавить номер файла xml
     class ExtractSpillwayPositionsCommand
     {
         [CommandMethod("S1NF0_ExtractSpillwayPositions", CommandFlags.Modal)]
@@ -150,37 +151,43 @@ namespace Civil3DInfoTools.Spillway
                         //Для всех кодов определить участки КПЧ. Параметры взаимного расположения расчитываются в горизонтальной проекции
                         //По начальным точкам линий определить расположение линии справа или слева от КПЧ
 
-                        baseLine = slopeLines["КПЧ"].First();//базовая линия - КПЧ
+                         //базовая линия - КПЧ
+                        List<Polyline3dInfo> list = null;
+                        slopeLines.TryGetValue("КПЧ", out list);
 
-                        foreach (KeyValuePair<string, List<Polyline3dInfo>> kvp in slopeLines)
+                        if (list!=null&&list.Count>0)
                         {
-                            if (!kvp.Key.Equals("КПЧ"))
+                            baseLine = list.First();
+
+                            foreach (KeyValuePair<string, List<Polyline3dInfo>> kvp in slopeLines)
                             {
-                                foreach (Polyline3dInfo poly3dInfo in kvp.Value)
+                                if (!kvp.Key.Equals("КПЧ"))
                                 {
-
-                                    poly3dInfo.BaseLine = baseLine.Poly2d;
-                                    poly3dInfo.ComputeParameters();
-                                    poly3dInfo.ComputeOrientation();
-                                    //проверка, что все линии с одной стороны от базовой
-                                    if (toTheRight != null)
+                                    foreach (Polyline3dInfo poly3dInfo in kvp.Value)
                                     {
-                                        if (toTheRight != poly3dInfo.ToTheRightOfBaseLine)
+
+                                        poly3dInfo.BaseLine = baseLine.Poly2d;
+                                        poly3dInfo.ComputeParameters();
+                                        poly3dInfo.ComputeOrientation();
+                                        //проверка, что все линии с одной стороны от базовой
+                                        if (toTheRight != null)
                                         {
-                                            wrongPolylinesException.Mistakes = wrongPolylinesException.Mistakes | Mistake.WrongOrientation;
+                                            if (toTheRight != poly3dInfo.ToTheRightOfBaseLine)
+                                            {
+                                                wrongPolylinesException.Mistakes = wrongPolylinesException.Mistakes | Mistake.WrongOrientation;
+                                            }
                                         }
-                                    }
-                                    else
-                                    {
-                                        toTheRight = poly3dInfo.ToTheRightOfBaseLine;
-                                    }
+                                        else
+                                        {
+                                            toTheRight = poly3dInfo.ToTheRightOfBaseLine;
+                                        }
 
+                                    }
                                 }
                             }
+
                         }
-
-
-
+                        
 
                         if (wrongPolylinesException.Mistakes != Mistake.None)
                         {
@@ -439,11 +446,13 @@ namespace Civil3DInfoTools.Spillway
                     //Сериализация расположений. Сохранить xml в папку рядом с файлом
                     if (positionData.SpillwayPositions.Count > 0)
                     {
+                        //TODO: Учесть возможные ошибки из-за отсутствия прав
                         string filename = null;
                         int n = 0;
                         do
                         {
-                            filename = Path.Combine(Path.GetDirectoryName(adoc.Name), "SpillwayPositions" + n + ".xml");
+                            filename = Path.Combine(Path.GetDirectoryName(adoc.Name),
+                                Path.GetFileNameWithoutExtension(adoc.Name) /*"SpillwayPositions"*/ + "_" + n + ".xml");
                             n++;
                         } while (File.Exists(filename));
 
@@ -512,22 +521,22 @@ namespace Civil3DInfoTools.Spillway
                     string message = "НЕВЕРНЫЙ ВЫБОР ПОЛИЛИНИЙ.";
                     if (Mistakes.HasFlag(Mistake.NotEnoughLayers))
                     {
-                        message += "\n - Набор выбора должен содержать служебные слои \"КПЧ\" и \"ОТК0\"";
+                        message += "\r\n - Набор выбора должен содержать служебные слои \"КПЧ\" и \"ОТК\"";
                     }
 
                     if (Mistakes.HasFlag(Mistake.TooManyLinesInOneLayer))
                     {
-                        message += "\n - Набор выбора должен содержать максимум 1 линию в слое \"КПЧ\"";
+                        message += "\r\n - Набор выбора должен содержать ровно 1 линию в слое \"КПЧ\"";
                     }
 
                     if (Mistakes.HasFlag(Mistake.LinesAreIntersecting))
                     {
-                        message += "\n - Линии в наборе не должны пересекаться в плане";
+                        message += "\r\n - Линии в наборе не должны пересекаться в плане";
                     }
 
                     if (Mistakes.HasFlag(Mistake.WrongOrientation))
                     {
-                        message += "\n - Все линии откоса должны находиться с одной стороны от КПЧ";
+                        message += "\r\n - Все линии откоса должны находиться с одной стороны от КПЧ";
                     }
 
                     return message;

@@ -190,8 +190,8 @@ namespace Civil3DInfoTools.ObjectInsertion
             }
             catch (System.Exception ex)
             {
-                CommonException(ex, "Ошибка при выполнении команды InsertByCoordinates");
-                //Utils.ErrorToCommandLine(ed, "Ошибка при выполнении команды InsertByCoordinates", ex);
+                CommonException(ex, "Ошибка при вставке объектов по координатам");
+                //Utils.ErrorToCommandLine(ed, "Ошибка при вставке объектов по координатам", ex);
             }
         }
 

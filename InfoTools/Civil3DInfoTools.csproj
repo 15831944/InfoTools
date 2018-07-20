@@ -56,6 +56,10 @@
       <HintPath>C:\Program Files\Autodesk\AutoCAD 2018\acdbmgd.dll</HintPath>
       <Private>False</Private>
     </Reference>
+    <Reference Include="acdbmgdbrep">
+      <HintPath>C:\Program Files\Autodesk\AutoCAD 2018\acdbmgdbrep.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
     <Reference Include="acmgd">
       <HintPath>C:\Program Files\Autodesk\AutoCAD 2018\acmgd.dll</HintPath>
       <Private>False</Private>
@@ -87,9 +91,14 @@
     <Compile Include="RoadMarking\CreateBoundariesCommand.cs" />
     <Compile Include="Spillway\ExtractSpillwayPositionsCommand.cs" />
     <Compile Include="Spillway\Poly3DFromCorridorFeatureLinesCommand.cs" />
+    <Compile Include="SurfaceMeshByBoundary\PolylineNesting.cs" />
+    <Compile Include="SurfaceMeshByBoundary\SurfaceMeshByBoundaryCommand.cs" />
+    <Compile Include="SurfaceMeshByBoundary\TinSurfaceVertexS.cs" />
+    <Compile Include="SurfaceMeshByBoundary\TriangleGraph.cs" />
     <Compile Include="Utils.cs" />
   </ItemGroup>
   <ItemGroup>
+    <Content Include="GeometrySubtracting\Info.txt" />
     <Content Include="PackageContents.xml" />
   </ItemGroup>
   <ItemGroup>

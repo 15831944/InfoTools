@@ -10,6 +10,7 @@ namespace Common.ExceptionHandling
 {
     public static class ExeptionHandlingProcedures
     {
+
         public static void CommonException(Exception ex, string comment)
         {
             ExceptionForm exF = new ExceptionForm(comment, ex);

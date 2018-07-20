@@ -1,0 +1,9 @@
+﻿BREP API
+http://www.tek1.com.au/brep-api-basic-primer-autocad-net-api/
+http://adn-cis.org/kak-poluchit-graniczyi-oblasti.html
+http://adndevblog.typepad.com/autocad/2012/08/retrieving-native-curve-geometry-using-brep-api.html
+
+PolyFace Mesh to 3d-Solid
+https://www.youtube.com/watch?v=86-r6mnV97E
+Explode 3d-Solids to 3d-Faces
+Join 3d-Faces - https://knowledge.autodesk.com/support/autocad/troubleshooting/caas/sfdcarticles/sfdcarticles/Converting-3D-faces-into-mesh.html
