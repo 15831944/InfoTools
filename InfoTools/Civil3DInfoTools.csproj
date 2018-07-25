@@ -72,6 +72,9 @@
       <HintPath>C:\Program Files\Autodesk\AutoCAD 2018\C3D\AeccDbMgd.dll</HintPath>
       <Private>False</Private>
     </Reference>
+    <Reference Include="RBush">
+      <HintPath>..\..\Создание поверхностей для обозначения участков\RBush-master\RBush\bin\Debug\netstandard1.2\RBush.dll</HintPath>
+    </Reference>
     <Reference Include="System" />
     <Reference Include="System.Core" />
     <Reference Include="System.Windows.Forms" />
@@ -85,6 +88,7 @@
   <ItemGroup>
     <Compile Include="App.cs" />
     <Compile Include="Constants.cs" />
+    <Compile Include="LayersByColors\LayersByColorsCommand.cs" />
     <Compile Include="ObjectInsertion\InsertByCoordinatesCommand.cs" />
     <Compile Include="PolylineCaptionOverrule.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
@@ -92,6 +96,7 @@
     <Compile Include="Spillway\ExtractSpillwayPositionsCommand.cs" />
     <Compile Include="Spillway\Poly3DFromCorridorFeatureLinesCommand.cs" />
     <Compile Include="SurfaceMeshByBoundary\PolylineNesting.cs" />
+    <Compile Include="SurfaceMeshByBoundary\PolylineVertexPlacementInfo.cs" />
     <Compile Include="SurfaceMeshByBoundary\SurfaceMeshByBoundaryCommand.cs" />
     <Compile Include="SurfaceMeshByBoundary\TinSurfaceVertexS.cs" />
     <Compile Include="SurfaceMeshByBoundary\TriangleGraph.cs" />

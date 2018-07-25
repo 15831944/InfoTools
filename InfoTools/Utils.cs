@@ -140,6 +140,10 @@ namespace Civil3DInfoTools
         /// <param name="pt1"></param>
         /// <param name="pt2"></param>
         /// <returns></returns>
+        public static double IsLeft(Point2d pt0, Point2d pt1, Point2d pt2)
+        {
+            return ((pt1.X - pt0.X) * (pt2.Y - pt0.Y) - (pt2.X - pt0.X) * (pt1.Y - pt0.Y));
+        }
         public static double IsLeft(Point2d pt0, Point2d pt1, Point3d pt2)
         {
             return ((pt1.X - pt0.X) * (pt2.Y - pt0.Y) - (pt2.X - pt0.X) * (pt1.Y - pt0.Y));
@@ -293,5 +297,127 @@ namespace Civil3DInfoTools
             return wn != 0;
         }
 
+
+        /// <summary>
+        /// Проверка, что точка внутри треугольника
+        /// Расчет барицентрических координат
+        /// https://www.youtube.com/watch?v=wSZp8ydgWGw
+        /// Если одна координата равна нулю, то точка лежит на ребре
+        /// Если две координаты равны нулю, то точка лежит на вершине треугольника
+        /// </summary>
+        /// <param name="p"></param>
+        /// <param name="p0"></param>
+        /// <param name="p1"></param>
+        /// <param name="p2"></param>
+        /// <returns></returns>
+        public static bool BarycentricCoordinates
+            (Point3d p, Point3d p1, Point3d p2, Point3d p3,
+            out double lambda1, out double lambda2)
+        {
+            double y2_y3 = p2.Y - p3.Y;
+            double x1_x3 = p1.X - p3.X;
+            double x3_x2 = p3.X - p2.X;
+            double y1_y3 = p1.Y - p3.Y;
+            double denominator = y2_y3 * x1_x3 + x3_x2 * y1_y3;
+
+            double x_x3 = p.X - p3.X;
+            double y_y3 = p.Y - p3.Y;
+            lambda1 = (y2_y3 * x_x3 + x3_x2 * y_y3) / denominator;
+
+            double y3_y1 = p3.Y - p1.Y;
+            lambda2 = (y3_y1 * x_x3 + x1_x3 * y_y3) / denominator;
+
+
+            if (lambda1 != 0 && Math.Abs(lambda1 - 0) < 0.0000000001)
+            {
+                lambda1 = 0;
+            }
+            if (lambda2 != 0 && Math.Abs(lambda2 - 0) < 0.0000000001)
+            {
+                lambda2 = 0;
+            }
+            if (lambda1 + lambda2 != 1 && Math.Abs(lambda1 + lambda2 - 1) < 0.0000000001)
+            {
+                lambda2 = 1 - lambda1;
+            }
+
+
+            return
+                lambda1 >= 0
+                && lambda2 >= 0
+                && lambda1 + lambda2 <= 1;
+        }
+
+
+
+        /// <summary>
+        /// 2 BoundingBox накладываются друг на друга в плане
+        /// </summary>
+        /// <param name="maxPt1"></param>
+        /// <param name="minPt1"></param>
+        /// <param name="maxPt2"></param>
+        /// <param name="minPt2"></param>
+        /// <returns></returns>
+        public static bool BoxesAreSuperimposed
+            (Point3d maxPt1, Point3d minPt1, Point3d maxPt2, Point3d minPt2)
+        {
+            //Характеристики двух прямоугольников
+            double dX1 = maxPt1.X - minPt1.X;
+            double dY1 = maxPt1.Y - minPt1.Y;
+            Point2d midPt1 = new Point2d
+                (
+                    (maxPt1.X + minPt1.X) / 2,
+                    (maxPt1.Y + minPt1.Y) / 2
+                );
+
+            double dX2 = maxPt2.X - minPt2.X;
+            double dY2 = maxPt2.Y - minPt2.Y;
+            Point2d midPt2 = new Point2d
+                (
+                    (maxPt2.X + minPt2.X) / 2,
+                    (maxPt2.Y + minPt2.Y) / 2
+                );
+            //Проверка их перекрытия
+            if
+                (
+                Math.Abs(midPt1.X - midPt2.X) <= dX1 / 2 + dX2 / 2 &&
+                Math.Abs(midPt1.Y - midPt2.Y) <= dY1 / 2 + dY2 / 2
+                )
+            {
+                return true;
+            }
+            else
+                return false;
+        }
+
+        /// <summary>
+        /// Проверяет два отрезка на наличие пересечений
+        /// </summary>
+        /// <param name="p1"></param>
+        /// <param name="p2"></param>
+        /// <param name="p3"></param>
+        /// <param name="p4"></param>
+        /// <returns></returns>
+        public static bool LineSegmentsAreIntersecting(Point2d p1, Point2d p2, Point2d p3, Point2d p4, out bool overlaying)
+        {
+            overlaying = false;
+
+            int p3IsLeft = Math.Sign(IsLeft(p1, p2, p3));
+            int p4IsLeft = Math.Sign(IsLeft(p1, p2, p4));
+            int p1IsLeft = Math.Sign(IsLeft(p3, p4, p1));
+            int p2IsLeft = Math.Sign(IsLeft(p3, p4, p2));
+
+            if ((p3IsLeft == 0 && p4IsLeft == 0) || (p1IsLeft == 0 && p2IsLeft == 0))
+            {
+                overlaying = true;
+                return false;
+            }
+
+            return
+            p3IsLeft != p4IsLeft//Точки второй линии находятся по разные стороны от первой
+            && p1IsLeft != p2IsLeft//Точки первой линии находятся по разные стороны от второй
+            ;
+
+        }
     }
 }

@@ -50,7 +50,7 @@ namespace Civil3DInfoTools.SurfaceMeshByBoundary
                 if (polylineNesting.InnerVerts.Contains(verts[i]))
                 {
                     int e1Index = (i + 1) % 3;
-                    int e2Index = (i - 1) % 3;
+                    int e2Index = i == 0 ? 2 : i - 1;
 
                     TinSurfaceEdge e1 = edges[e1Index];
                     TinSurfaceEdge e2 = edges[e2Index];

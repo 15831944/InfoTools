@@ -13,6 +13,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using static Common.ExceptionHandling.ExeptionHandlingProcedures;
+using RBush;
 //using RBush;
 
 [assembly: CommandClass(typeof(Civil3DInfoTools.SurfaceMeshByBoundary.SurfaceMeshByBoundaryCommand))]
@@ -23,20 +24,20 @@ namespace Civil3DInfoTools.SurfaceMeshByBoundary
 
     public class SurfaceMeshByBoundaryCommand
     {
-        #region MyRegion
+
         /// <summary>
         /// Все 2dTree во всех открытых документах
         /// Ключ - имя документа
         /// </summary>
-        //public static Dictionary<string, Dictionary<long, RBush<TinSurfaceVertexS>>> Trees
-        //    = new Dictionary<string, Dictionary<long, RBush<TinSurfaceVertexS>>>();
+        public static Dictionary<string, Dictionary<long, RBush<TinSurfaceVertexS>>> Trees
+            = new Dictionary<string, Dictionary<long, RBush<TinSurfaceVertexS>>>();
 
         /// <summary>
         /// 2dTree в текущем документе
         /// Ключ - Handle поверхности
         /// </summary>
-        //public static Dictionary<long, RBush<TinSurfaceVertexS>> TreesCurrDoc = null; 
-        #endregion
+        public static Dictionary<long, RBush<TinSurfaceVertexS>> TreesCurrDoc = null;
+
 
 
         [CommandMethod("SurfaceMeshByBoundary", CommandFlags.Modal | CommandFlags.UsePickSet)]
@@ -45,16 +46,14 @@ namespace Civil3DInfoTools.SurfaceMeshByBoundary
             Document adoc = Application.DocumentManager.MdiActiveDocument;
             if (adoc == null) return;
 
-            #region MyRegion
             //Обновление ссылки на набор 2dTree текущего документа
-            //TreesCurrDoc = null;
-            //Trees.TryGetValue(adoc.Name, out TreesCurrDoc);
-            //if (TreesCurrDoc == null)
-            //{
-            //    TreesCurrDoc = new Dictionary<long, RBush<TinSurfaceVertexS>>();
-            //    Trees.Add(adoc.Name, TreesCurrDoc);
-            //} 
-            #endregion
+            TreesCurrDoc = null;
+            Trees.TryGetValue(adoc.Name, out TreesCurrDoc);
+            if (TreesCurrDoc == null)
+            {
+                TreesCurrDoc = new Dictionary<long, RBush<TinSurfaceVertexS>>();
+                Trees.Add(adoc.Name, TreesCurrDoc);
+            }
 
             Database db = adoc.Database;
 
@@ -138,28 +137,27 @@ namespace Civil3DInfoTools.SurfaceMeshByBoundary
 
                                             if (polylines.Count > 0)
                                             {
-                                                #region MyRegion
                                                 //Проверить, что структура данных вершин выбранной поверхности уже существует
-                                                //if (!TreesCurrDoc.ContainsKey(tinSurf.Handle.Value))
-                                                //{
-                                                //    RBush<TinSurfaceVertexS> tree = new RBush<TinSurfaceVertexS>();
-                                                //    List<TinSurfaceVertexS> list = new List<TinSurfaceVertexS>();
-                                                //    TinSurfaceVertexCollection vc = tinSurf.Vertices;
-                                                //    foreach (TinSurfaceVertex v in vc)
-                                                //    {
+                                                if (!TreesCurrDoc.ContainsKey(tinSurf.Handle.Value))
+                                                {
+                                                    RBush<TinSurfaceVertexS> tree = new RBush<TinSurfaceVertexS>();
+                                                    List<TinSurfaceVertexS> list = new List<TinSurfaceVertexS>();
+                                                    TinSurfaceVertexCollection vc = tinSurf.Vertices;
+                                                    foreach (TinSurfaceVertex v in vc)
+                                                    {
 
-                                                //        list.Add(new TinSurfaceVertexS(v));
-                                                //    }
+                                                        list.Add(new TinSurfaceVertexS(v));
+                                                    }
 
-                                                //    tree.BulkLoad(list);
+                                                    tree.BulkLoad(list);
 
-                                                //    TreesCurrDoc.Add(tinSurf.Handle.Value, tree);
-                                                //    //При изменении поверхности удалять R-tree
-                                                //    tinSurf.Modified += SurfModified_EventHandler;
-                                                //    //При закрытии чертежа удалять R-tree
-                                                //    Application.DocumentManager.DocumentDestroyed += DocDestroyed;
-                                                //} 
-                                                #endregion
+                                                    TreesCurrDoc.Add(tinSurf.Handle.Value, tree);
+                                                    //При изменении поверхности удалять R-tree
+                                                    tinSurf.Modified += SurfModified_EventHandler;
+                                                    //При закрытии чертежа удалять R-tree
+                                                    Application.DocumentManager.DocumentDestroyed += DocDestroyed;
+                                                }
+
                                                 #region MyRegion
                                                 //Test///////////////////////////////
                                                 ////!!!нахождение треугольника в точке
@@ -191,14 +189,23 @@ namespace Civil3DInfoTools.SurfaceMeshByBoundary
                                                 {
                                                     for (int j = i + 1; j < polylines.Count; j++)
                                                     {
-                                                        Point3dCollection intersectionPts = new Point3dCollection();
-                                                        polylines[i].IntersectWith(polylines[j], Intersect.OnBothOperands,
+                                                        Extents3d? ext1 = polylines[i].Bounds;
+                                                        Extents3d? ext2 = polylines[j].Bounds;
+                                                        if (ext1 != null && ext2 != null
+                                                            && Utils
+                                                            .BoxesAreSuperimposed(ext1.Value.MaxPoint, ext1.Value.MinPoint, ext2.Value.MaxPoint, ext2.Value.MinPoint))
+                                                        {
+                                                            //Сначала проверяем перекрываются ли BoundingBox.
+                                                            //Во многих случаях это гораздо производительнее и затем считаем пеерсечения
+                                                            Point3dCollection intersectionPts = new Point3dCollection();
+                                                            polylines[i].IntersectWith(polylines[j], Intersect.OnBothOperands,
                                                             new Plane(Point3d.Origin, Vector3d.ZAxis),
                                                             intersectionPts, IntPtr.Zero, IntPtr.Zero);
-                                                        if (intersectionPts.Count > 0)
-                                                        {
-                                                            polylinesWithNoIntersections.Remove(polylines[i]);
-                                                            polylinesWithNoIntersections.Remove(polylines[j]);
+                                                            if (intersectionPts.Count > 0)
+                                                            {
+                                                                polylinesWithNoIntersections.Remove(polylines[i]);
+                                                                polylinesWithNoIntersections.Remove(polylines[j]);
+                                                            }
                                                         }
                                                     }
                                                 }
@@ -219,9 +226,11 @@ namespace Civil3DInfoTools.SurfaceMeshByBoundary
                                                     polylineNesting.Insert(poly);
                                                 }
 
+                                                //Расчет полигонов
                                                 polylineNesting.CalculatePoligons();
                                             }
                                         }
+
 
                                         tr1.Commit();
                                     }
@@ -298,27 +307,26 @@ namespace Civil3DInfoTools.SurfaceMeshByBoundary
         }
 
 
-        #region MyRegion
-        ///// <summary>
-        ///// При изменении поверхности удалить ее старое R-tree 
-        ///// </summary>
-        ///// <param name="sender"></param>
-        ///// <param name="e"></param>
-        //public void SurfModified_EventHandler(object sender, EventArgs e)
-        //{
-        //    TinSurface tinSurf = sender as TinSurface;
-        //    TreesCurrDoc.Remove(tinSurf.Handle.Value);
-        //}
+        /// <summary>
+        /// При изменении поверхности удалить ее старое R-tree 
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="e"></param>
+        public void SurfModified_EventHandler(object sender, EventArgs e)
+        {
+            TinSurface tinSurf = sender as TinSurface;
+            TreesCurrDoc.Remove(tinSurf.Handle.Value);
+        }
 
-        ///// <summary>
-        ///// При закрытии документа удалить все R-tree, относящиеся к нему
-        ///// </summary>
-        ///// <param name="obj"></param>
-        ///// <param name="acDocDesEvtArgs"></param>
-        //public static void DocDestroyed(object obj, DocumentDestroyedEventArgs acDocDesEvtArgs)
-        //{
-        //    Trees.Remove(acDocDesEvtArgs.FileName);
-        //} 
-        #endregion
+        /// <summary>
+        /// При закрытии документа удалить все R-tree, относящиеся к нему
+        /// </summary>
+        /// <param name="obj"></param>
+        /// <param name="acDocDesEvtArgs"></param>
+        public static void DocDestroyed(object obj, DocumentDestroyedEventArgs acDocDesEvtArgs)
+        {
+            Trees.Remove(acDocDesEvtArgs.FileName);
+        }
+
     }
 }
