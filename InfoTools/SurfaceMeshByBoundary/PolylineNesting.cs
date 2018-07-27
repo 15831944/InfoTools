@@ -1,4 +1,6 @@
-﻿using Autodesk.AutoCAD.DatabaseServices;
+﻿using Autodesk.AutoCAD.Colors;
+using Autodesk.AutoCAD.DatabaseServices;
+using Autodesk.AutoCAD.EditorInput;
 using Autodesk.AutoCAD.Geometry;
 using Autodesk.Civil.DatabaseServices;
 using System;
@@ -48,11 +50,31 @@ namespace Civil3DInfoTools.SurfaceMeshByBoundary
         public Dictionary<TinSurfaceTriangle, TriangleGraph> TriangleGraphs
             = new Dictionary<TinSurfaceTriangle, TriangleGraph>();
 
-        public PolylineNesting(/*Matrix3d transform,*/ TinSurface tinSurf)
+
+        public Editor ed;//TEST
+        public Database db;//TEST
+        public BlockTableRecord ms;//TEST
+
+        public PolylineNesting(/*Matrix3d transform,*/ TinSurface tinSurf,
+            Database db,//TEST
+            Editor ed//TEST
+            )
         {
             Root = new Node(null, this);
             //Transform = transform;
             TinSurf = tinSurf;
+
+            //TEST
+            this.db = db;
+            this.ed = ed;
+            using (Transaction tr = db.TransactionManager.StartTransaction())
+            {
+                BlockTable bt = tr.GetObject(db.BlockTableId, OpenMode.ForWrite) as BlockTable;
+                ms = (BlockTableRecord)tr.GetObject(bt[BlockTableRecord.ModelSpace], OpenMode.ForWrite);
+                tr.Commit();
+            }
+
+            //TEST
         }
 
         /// <summary>
@@ -176,10 +198,15 @@ namespace Civil3DInfoTools.SurfaceMeshByBoundary
             }
 
 
-            //Определить пересечения всех полилиний с ребрами поверхностей. Построение графов треугольников (добавление ребер участков полилиний)
+            //Определить пересечения всех полилиний с ребрами поверхностей. Добавление точек полилиний в графоы треугольников
             TraversePolylines(Root);
 
-            //Обход графов треугольников
+            //Графы треугольников
+            foreach (TriangleGraph trGr in TriangleGraphs.Values)
+            {
+                trGr.PolylineParts();
+            }
+
         }
 
         /// <summary>
@@ -262,11 +289,12 @@ namespace Civil3DInfoTools.SurfaceMeshByBoundary
                 //!Особый случай - сегмент полилинии совпал с ребром поверхности!!!
 
 
-                List<LinkedList<PolylineVertexPlacementInfo>> vertSequences = new List<LinkedList<PolylineVertexPlacementInfo>>();
+                List<LinkedList<PolylinePt>> vertSequences = new List<LinkedList<PolylinePt>>();
 
                 for (int i = 0; i < node.Point3DCollection.Count; i++)
                 {
                     Point3d pt = node.Point3DCollection[i];
+                    Point2d pt2d = new Point2d(pt.X, pt.Y);
                     TinSurfaceTriangle triangle = null;
                     try
                     {
@@ -276,17 +304,17 @@ namespace Civil3DInfoTools.SurfaceMeshByBoundary
                     if (triangle != null)
                     {
                         //Вершина находится на поверхности. Добавить ее в набор
-                        PolylineVertexPlacementInfo pi = new PolylineVertexPlacementInfo() { VertNumber = i };
+                        PolylinePt polyPt = new PolylinePt(node, pt2d) { VertNumber = i };
                         if (vertSequences.Count > 0 && vertSequences.Last().Last().VertNumber == i - 1)
                         {
                             //Продолжить заполнение последовательности
-                            vertSequences.Last().AddLast(pi);
+                            vertSequences.Last().AddLast(polyPt);
                         }
                         else
                         {
                             //Начать заполнение новой последовательности
-                            LinkedList<PolylineVertexPlacementInfo> seq = new LinkedList<PolylineVertexPlacementInfo>();
-                            seq.AddLast(pi);
+                            LinkedList<PolylinePt> seq = new LinkedList<PolylinePt>();
+                            seq.AddLast(polyPt);
                             vertSequences.Add(seq);
                         }
 
@@ -326,32 +354,47 @@ namespace Civil3DInfoTools.SurfaceMeshByBoundary
                         if (oneIndex != -1)
                         {
                             //Точка лежит на вершине
-                            pi.TinSurfaceVertex = vertices[oneIndex];
+                            TinSurfaceVertex vertex = vertices[oneIndex];
+                            polyPt.TinSurfaceVertex = vertex;
+                            //Добавление в граф треугольника
+                            AddPolylinePt(polyPt);
                         }
                         else if (zeroIndex != -1)
                         {
                             //Точка лежит на ребре
-                            pi.TinSurfaceEdge = edges[zeroIndex];
+                            TinSurfaceEdge edge = edges[(zeroIndex + 1) % 3];
+                            polyPt.TinSurfaceEdge = edge;
+                            //Добавление в граф треугольника
+                            AddPolylinePt(polyPt);
                         }
                         else
                         {
                             //Точка лежит внутри треугольника
-                            pi.TinSurfaceTriangle = triangle;
+                            polyPt.TinSurfaceTriangle = triangle;
+                            //Добавление в граф треугольника
+                            AddPolylinePt(polyPt);
                         }
 
                     }
                 }
 
+                if (vertSequences.Count == 0)
+                {
+                    //Еслиполилиния полностью за пределами поверхности, то прервать выполнение
+                    return;
+                }
+
+
                 //Проверить, не требуется ли объединить первую и последнюю последовательности
                 {
-                    LinkedList<PolylineVertexPlacementInfo> firstSeq = vertSequences.First();
-                    LinkedList<PolylineVertexPlacementInfo> lastSeq = vertSequences.Last();
+                    LinkedList<PolylinePt> firstSeq = vertSequences.First();
+                    LinkedList<PolylinePt> lastSeq = vertSequences.Last();
                     if (vertSequences.Count > 1 &&
                         firstSeq.First().VertNumber
                         == (lastSeq.Last().VertNumber + 1) % node.Point3DCollection.Count)
                     {
                         //Объединить первую и последнюю последовательности
-                        for (LinkedListNode<PolylineVertexPlacementInfo> lln = lastSeq.Last; lln != null; lln = lln.Previous)
+                        for (LinkedListNode<PolylinePt> lln = lastSeq.Last; lln != null; lln = lln.Previous)
                         {
                             firstSeq.AddFirst(lln.Value);
                         }
@@ -365,33 +408,58 @@ namespace Civil3DInfoTools.SurfaceMeshByBoundary
 
 
                 //Обход последовательностей
-                foreach (LinkedList<PolylineVertexPlacementInfo> ll in vertSequences)
+                foreach (LinkedList<PolylinePt> ll in vertSequences)
                 {
                     if (!allVertsOnSurface)
                     {
-                        TraversePolylineSegment(node.Polyline, ll.First(), null, false);
+                        TraversePolylineSegment(node, ll.First(), null, false);
                     }
 
-                    for (LinkedListNode<PolylineVertexPlacementInfo> lln = ll.First; lln != null; lln = lln.Next)
+                    for (LinkedListNode<PolylinePt> lln = ll.First; lln != null; lln = lln.Next)
                     {
-                        TraversePolylineSegment(node.Polyline, lln.Value, lln.Next.Value, true);
+                        bool traversed = TraversePolylineSegment(node, lln.Value, lln.Next?.Value, true);
+                        //Если ребро не пройдено полностью и возможен обратный проход, то сделать обратный проход
+                        if (!traversed)//
+                        {
+                            if (lln.Next != null)
+                            {
+                                TraversePolylineSegment(node, lln.Next.Value, lln.Value, true);
+                            }
+                            else if (allVertsOnSurface)
+                            {
+                                TraversePolylineSegment(node, ll.First.Value, lln.Value, true);
+                            }
+
+                        }
                     }
 
                 }
-
             }
 
+            //Рекурсивный вызов для вложенных полилиний
             foreach (Node nn in node.NestedNodes)
             {
                 TraversePolylines(nn);
             }
+
         }
 
-
-        private void TraversePolylineSegment(Polyline polyline, PolylineVertexPlacementInfo start,
-            PolylineVertexPlacementInfo end = null, bool forvard = true)
+        /// <summary>
+        /// Поиск пересечений ребер поверхности с сегментом полилинии
+        /// Возврат false если при проходе ребра был выход за границу поверхности
+        /// </summary>
+        /// <param name="polyline"></param>
+        /// <param name="start"></param>
+        /// <param name="end"></param>
+        /// <param name="forvard"></param>
+        private bool TraversePolylineSegment(Node node, PolylinePt start,
+            PolylinePt end = null, bool forvard = true)
         {
-            //TODO: НЕОБХОДИМО УЧЕСТЬ ВСЕ ЧАСТНЫЕ СЛУЧАИ
+            Polyline polyline = node.Polyline;
+
+            bool entireSegmentTraversed = true;
+
+            //НЕОБХОДИМО УЧЕСТЬ ВСЕ ЧАСТНЫЕ СЛУЧАИ
             Point2d startPt2d = polyline.GetPoint2dAt(start.VertNumber);//первая точка сегмента
             Point2d endPt2d = Point2d.Origin;//вторая точка сегмента
             if (end != null)
@@ -405,107 +473,453 @@ namespace Civil3DInfoTools.SurfaceMeshByBoundary
                     start.VertNumber != 0 ? start.VertNumber - 1 : polyline.NumberOfVertices - 1;
                 endPt2d = polyline.GetPoint2dAt(endNum);
             }
-            //Point3d startPt = new Point3d(startPt2d.X, startPt2d.Y, 0);
-            //Point3d endPt = new Point3d(endPt2d.X, endPt2d.Y, 0);
 
-            //Треугольники, в котороых будет искаться пересечение. Набор треугольников должен обновляться полностью каждую итерацию
-            List<TinSurfaceTriangle> trianglesToSearchIntersection = new List<TinSurfaceTriangle>();
-            //Ребра, которые не подлежат проверке на пересечение (НО ПОДЛЕЖАТ ПРОВЕРКЕ НА СОВПАДЕНИЕ С СЕГМЕНТОМ).
-            //Набор ребер дополняется новыми ребрами каждую итерацию
-            HashSet<TinSurfaceEdge> edgesNotChecking = new HashSet<TinSurfaceEdge>();
-            //Ребра, которые не подлежат проверке ни на наложение, ни на пересечение
-            HashSet<TinSurfaceEdge> edgesNotChecking1 = new HashSet<TinSurfaceEdge>();
-            if (start.TinSurfaceTriangle != null)
+            //ObjectId ptId = ObjectId.Null;//TEST
+
+            try
             {
-                trianglesToSearchIntersection.Add(start.TinSurfaceTriangle);
+                //TEST
+                #region MyRegion
+                //using (Transaction tr = db.TransactionManager.StartTransaction())
+                //using (Line line = new Line(new Point3d(startPt2d.X, startPt2d.Y, 0), new Point3d(endPt2d.X, endPt2d.Y, 0)))
+                //using (Circle circle1 = new Circle(new Point3d(startPt2d.X, startPt2d.Y, 0), Vector3d.ZAxis, 0.3))
+                //{
+                //    ms = tr.GetObject(ms.Id, OpenMode.ForWrite) as BlockTableRecord;
+
+                //    line.Color = Color.FromColorIndex(ColorMethod.ByAci, 4);
+                //    ms.AppendEntity(line);
+                //    tr.AddNewlyCreatedDBObject(line, true);
+
+                //    circle1.Color = Color.FromColorIndex(ColorMethod.ByAci, 8);
+                //    ptId = ms.AppendEntity(circle1);
+                //    tr.AddNewlyCreatedDBObject(circle1, true);
+
+                //    tr.Commit();
+                //    line.Draw();
+                //    ed.Regen();
+                //    ed.UpdateScreen();
+                //}
+                #endregion
+                //TEST
+
+
+
+
+                //Треугольники, в котороых будет искаться пересечение. Набор треугольников должен обновляться полностью каждую итерацию
+                List<TinSurfaceTriangle> trianglesToSearchIntersection = new List<TinSurfaceTriangle>();
+                //Ребра, которые не подлежат проверке на пересечение и наложение.
+                //Набор ребер дополняется новыми ребрами каждую итерацию
+                HashSet<TinSurfaceEdge> edgesAlreadyIntersected = new HashSet<TinSurfaceEdge>();
+                HashSet<TinSurfaceEdge> edgesAlreadyOverlapped = new HashSet<TinSurfaceEdge>();
+                if (start.TinSurfaceTriangle != null)
+                {
+                    trianglesToSearchIntersection.Add(start.TinSurfaceTriangle);
+                }
+                else if (start.TinSurfaceEdge != null)
+                {
+                    trianglesToSearchIntersection.Add(start.TinSurfaceEdge.Triangle1);
+                    trianglesToSearchIntersection.Add(start.TinSurfaceEdge.Triangle2);
+                    edgesAlreadyIntersected.Add(start.TinSurfaceEdge);
+                }
+                else
+                {
+                    trianglesToSearchIntersection.AddRange(start.TinSurfaceVertex.Triangles);
+                    foreach (TinSurfaceEdge edge in start.TinSurfaceVertex.Edges)
+                    {
+                        edgesAlreadyIntersected.Add(edge);
+                    }
+
+                }
+
+                //Основной цикл прохода сегмента полилинии
+                //В каждой итерации требуется найти пересечение с ребром
+                bool intersectionFound = false;
+                while (true)
+                {
+                    intersectionFound = false;
+                    foreach (TinSurfaceTriangle triangle in trianglesToSearchIntersection)
+                    {
+                        if (triangle == null)
+                        {
+                            continue;
+                        }
+
+                        //ObjectId plineId = ObjectId.Null;//TEST
+                        try
+                        {
+                            //TEST
+                            #region MyRegion
+                            //using (Transaction tr = db.TransactionManager.StartTransaction())
+                            //using (Polyline pline = new Polyline())
+                            //{
+                            //    ms = tr.GetObject(ms.Id, OpenMode.ForWrite) as BlockTableRecord;
+
+                            //    Point3d vert1 = triangle.Vertex1.Location;
+                            //    Point3d vert2 = triangle.Vertex2.Location;
+                            //    Point3d vert3 = triangle.Vertex3.Location;
+
+                            //    pline.Color = Color.FromColorIndex(ColorMethod.ByAci, 5);
+                            //    pline.AddVertexAt(0, new Point2d(vert1.X, vert1.Y), 0, 0, 0);
+                            //    pline.AddVertexAt(1, new Point2d(vert2.X, vert2.Y), 0, 0, 0);
+                            //    pline.AddVertexAt(2, new Point2d(vert3.X, vert3.Y), 0, 0, 0);
+                            //    pline.Closed = true;
+
+                            //    plineId = ms.AppendEntity(pline);
+                            //    tr.AddNewlyCreatedDBObject(pline, true);
+
+                            //    tr.Commit();
+                            //    pline.Draw();
+                            //    ed.Regen();
+                            //    ed.UpdateScreen();
+                            //}
+                            #endregion
+                            //TEST
+
+
+                            //Искать пересечения с каждым ребром
+                            TinSurfaceEdge[] edges = new TinSurfaceEdge[] { triangle.Edge1, triangle.Edge2, triangle.Edge3 };
+
+                            foreach (TinSurfaceEdge edge in edges)
+                            {
+                                //ObjectId lineId = ObjectId.Null;//TEST
+
+
+                                try
+                                {
+                                    if (!edgesAlreadyOverlapped.Contains(edge))
+                                    {
+                                        //Необходимо проверить каждое ребро на наложение даже если с ним не может быть пересечения
+                                        Point3d edgePt1 = edge.Vertex1.Location;
+                                        Point3d edgePt2 = edge.Vertex2.Location;
+
+
+                                        //TEST
+                                        #region MyRegion
+                                        //using (Transaction tr = db.TransactionManager.StartTransaction())
+                                        //using (Line line = new Line(edge.Vertex1.Location, edge.Vertex2.Location))
+                                        //{
+                                        //    ms = tr.GetObject(ms.Id, OpenMode.ForWrite) as BlockTableRecord;
+
+                                        //    line.Color = Color.FromColorIndex(ColorMethod.ByAci, 6);
+                                        //    line.LineWeight = LineWeight.LineWeight040;
+                                        //    lineId = ms.AppendEntity(line);
+                                        //    tr.AddNewlyCreatedDBObject(line, true);
+
+                                        //    tr.Commit();
+                                        //    line.Draw();
+                                        //    ed.Regen();
+                                        //    ed.UpdateScreen();
+                                        //}
+                                        #endregion
+                                        //TEST
+
+
+
+                                        Point2d edgePt1_2d = new Point2d(edgePt1.X, edgePt1.Y);
+                                        Point2d edgePt2_2d = new Point2d(edgePt2.X, edgePt2.Y);
+                                        bool overlapping = false;
+                                        Point2d? intersection = Utils
+                                            .GetLinesIntersectionAcad(startPt2d, endPt2d, edgePt1_2d, edgePt2_2d, out overlapping);
+
+
+
+                                        if (overlapping)
+                                        {
+                                            //Это ребро больше не должно подвергаться проверке
+                                            //edgesAlreadyIntersected.Add(edge);
+                                            edgesAlreadyOverlapped.Add(edge);
+                                            //Если обнаружилось, что сегмент полилинии совпал с ребром поверхности
+                                            //то нужно взять точку ребра дальнюю от начала сегмента и переходить к следующей итерации
+                                            //как если бы произошло пересечение в вершине поверхности
+                                            double dist1 = startPt2d.GetDistanceTo(edgePt1_2d);
+                                            double dist2 = startPt2d.GetDistanceTo(edgePt2_2d);
+                                            double maxDist = dist1 > dist2 ? dist1 : dist2;
+                                            double distNextPt = startPt2d.GetDistanceTo(endPt2d);
+                                            if (distNextPt > maxDist)//Сегмент полилинии проходит через все ребро?
+                                            {
+                                                TinSurfaceVertex vertex = dist1 > dist2 ? edge.Vertex1 : edge.Vertex2;
+                                                //Проверка на совпадение с конечной точкой сегмента.
+                                                Point2d vertexLoc = new Point2d(vertex.Location.X, vertex.Location.Y);
+                                                if (!vertexLoc.IsEqualTo(endPt2d))
+                                                {
+                                                    trianglesToSearchIntersection = vertex.Triangles.ToList();
+                                                    foreach (TinSurfaceEdge edge1 in vertex.Edges)
+                                                    {
+                                                        edgesAlreadyIntersected.Add(edge1);
+                                                    }
+                                                    AddPolylinePt(new PolylinePt(node, vertexLoc) {TinSurfaceVertex = vertex });
+                                                    //TEST
+                                                    #region MyRegion
+                                                    //using (Transaction tr = db.TransactionManager.StartTransaction())
+                                                    //using (Circle circle1 = new Circle(edgePt1, Vector3d.ZAxis, 0.1))
+                                                    //using (Circle circle2 = new Circle(edgePt2, Vector3d.ZAxis, 0.1))
+                                                    //{
+                                                    //    ms = tr.GetObject(ms.Id, OpenMode.ForWrite) as BlockTableRecord;
+
+
+                                                    //    circle1.Color = Color.FromColorIndex(ColorMethod.ByAci, 1);
+                                                    //    circle2.Color = Color.FromColorIndex(ColorMethod.ByAci, 1);
+                                                    //    ms.AppendEntity(circle1);
+                                                    //    ms.AppendEntity(circle2);
+                                                    //    tr.AddNewlyCreatedDBObject(circle1, true);
+                                                    //    tr.AddNewlyCreatedDBObject(circle2, true);
+
+                                                    //    tr.Commit();
+                                                    //    circle1.Draw();
+                                                    //    circle2.Draw();
+                                                    //    ed.Regen();
+                                                    //    ed.UpdateScreen();
+                                                    //}
+                                                    #endregion
+                                                    //TEST
+                                                    intersectionFound = true;
+                                                    break;
+                                                }
+
+                                            }
+
+
+                                        }
+                                        else if (!edgesAlreadyIntersected.Contains(edge) && intersection != null)
+                                        {
+                                            //Это ребро больше не должно подвергаться проверке
+                                            edgesAlreadyIntersected.Add(edge);
+                                            //Если обнарушено пересечение, то расчитать точку пересечения
+                                            //Если она совпала с вершиной поверхности, то в следующей итерации проверять все треугольники, примыкающие к этой вершине
+                                            //ИЛИ нужно как-то найти точно тот треугольник, в котором будет продолжение линии????
+                                            //Если пересечение не совпало с вершиной поверхности, то переход к соседнему треугольнику
+                                            //!!!Здесь должен быть обнаружен выход за пределы поверхности
+                                            Point2d intersectionPt = intersection.Value;
+                                            if (!intersectionPt.IsEqualTo(endPt2d))//Проверка на совпадение с конечной точкой сегмента
+                                            {
+                                                if (intersectionPt.IsEqualTo(edgePt1_2d))//пересечение совпало с 1-й вершиной ребра
+                                                {
+                                                    trianglesToSearchIntersection = edge.Vertex1.Triangles.ToList();
+                                                    foreach (TinSurfaceEdge edge1 in edge.Vertex1.Edges)
+                                                    {
+                                                        edgesAlreadyIntersected.Add(edge1);
+                                                    }
+                                                    AddPolylinePt(new PolylinePt(node, intersectionPt) { TinSurfaceVertex = edge.Vertex1 });
+                                                    //TEST
+                                                    #region MyRegion
+                                                    //using (Transaction tr = db.TransactionManager.StartTransaction())
+                                                    //using (Circle circle1 = new Circle(edgePt1, Vector3d.ZAxis, 0.1))
+                                                    //{
+                                                    //    ms = tr.GetObject(ms.Id, OpenMode.ForWrite) as BlockTableRecord;
+
+                                                    //    circle1.Color = Color.FromColorIndex(ColorMethod.ByAci, 2);
+                                                    //    ms.AppendEntity(circle1);
+                                                    //    tr.AddNewlyCreatedDBObject(circle1, true);
+
+                                                    //    tr.Commit();
+                                                    //    circle1.Draw();
+                                                    //    ed.Regen();
+                                                    //    ed.UpdateScreen();
+                                                    //}
+                                                    #endregion
+                                                    //TEST
+                                                }
+                                                else if (intersectionPt.IsEqualTo(edgePt2_2d))//пересечение совпало с 2-й вершиной ребра
+                                                {
+                                                    trianglesToSearchIntersection = edge.Vertex2.Triangles.ToList();
+                                                    foreach (TinSurfaceEdge edge1 in edge.Vertex2.Edges)
+                                                    {
+                                                        edgesAlreadyIntersected.Add(edge1);
+                                                    }
+                                                    AddPolylinePt(new PolylinePt(node, intersectionPt) { TinSurfaceVertex = edge.Vertex2 });
+                                                    //TEST
+                                                    #region MyRegion
+                                                    //using (Transaction tr = db.TransactionManager.StartTransaction())
+                                                    //using (Circle circle1 = new Circle(edgePt2, Vector3d.ZAxis, 0.1))
+                                                    //{
+                                                    //    ms = tr.GetObject(ms.Id, OpenMode.ForWrite) as BlockTableRecord;
+
+                                                    //    circle1.Color = Color.FromColorIndex(ColorMethod.ByAci, 2);
+                                                    //    ms.AppendEntity(circle1);
+                                                    //    tr.AddNewlyCreatedDBObject(circle1, true);
+
+                                                    //    tr.Commit();
+                                                    //    circle1.Draw();
+                                                    //    ed.Regen();
+                                                    //    ed.UpdateScreen();
+                                                    //}
+                                                    #endregion
+                                                    //TEST
+                                                }
+                                                else//пересечение не совпало с вершиной
+                                                {
+                                                    trianglesToSearchIntersection = new List<TinSurfaceTriangle>();
+                                                    //Взять соседний треугольник если он есть
+                                                    TinSurfaceTriangle nextTriangle =
+                                                    !edge.Triangle1.Equals(triangle) ? edge.Triangle1 : edge.Triangle2;
+                                                    if (nextTriangle != null)
+                                                    {
+                                                        trianglesToSearchIntersection.Add(nextTriangle);
+                                                    }
+                                                    else
+                                                    {
+                                                        entireSegmentTraversed = false;
+                                                    }
+                                                    AddPolylinePt(new PolylinePt(node, intersectionPt) { TinSurfaceEdge = edge });
+                                                    //TEST
+                                                    #region MyRegion
+                                                    //using (Transaction tr = db.TransactionManager.StartTransaction())
+                                                    //using (Circle circle1 = new Circle(new Point3d(intersectionPt.X, intersectionPt.Y, 0), Vector3d.ZAxis, 0.1))
+                                                    //{
+                                                    //    ms = tr.GetObject(ms.Id, OpenMode.ForWrite) as BlockTableRecord;
+
+                                                    //    circle1.Color = Color.FromColorIndex(ColorMethod.ByAci, 3);
+                                                    //    ms.AppendEntity(circle1);
+                                                    //    tr.AddNewlyCreatedDBObject(circle1, true);
+
+                                                    //    tr.Commit();
+                                                    //    circle1.Draw();
+                                                    //    ed.Regen();
+                                                    //    ed.UpdateScreen();
+                                                    //}
+                                                    #endregion
+                                                    //TEST
+                                                }
+
+
+                                                //переход к следующей итерации цикла while
+                                                intersectionFound = true;
+                                                break;
+                                            }
+
+                                        }
+                                    }
+
+
+                                }
+                                finally
+                                {
+                                    //TEST
+                                    #region MyRegion
+                                    //if (!lineId.IsNull)
+                                    //    using (Transaction tr = db.TransactionManager.StartTransaction())
+                                    //    {
+                                    //        Line line = tr.GetObject(lineId, OpenMode.ForWrite) as Line;
+                                    //        line.Erase();
+                                    //        tr.Commit();
+                                    //        ed.Regen();
+                                    //        ed.UpdateScreen();
+                                    //    }
+                                    #endregion
+                                    //TEST
+                                }
+
+                            }
+                            if (intersectionFound)
+                                break;
+                        }
+                        finally
+                        {
+                            //TEST
+                            #region MyRegion
+                            //if (!plineId.IsNull)
+                            //    using (Transaction tr = db.TransactionManager.StartTransaction())
+                            //    {
+                            //        Polyline pline = tr.GetObject(plineId, OpenMode.ForWrite) as Polyline;
+                            //        pline.Erase();
+                            //        tr.Commit();
+                            //        ed.Regen();
+                            //        ed.UpdateScreen();
+                            //    }
+                            #endregion
+                            //TEST
+                        }
+                    }
+                    if (intersectionFound)
+                        continue;
+                    else
+                    {
+                        //выход из цикла если при обходе всех треугольников, подлежащих проверке пересечений не обнаружено.
+                        //TODO?: КАК ОТСЛЕДИТЬ ВЫХОД ЗА ГРАНИЦУ ПОВЕРХНОСТИ ЧЕРЕЗ ВЕРШИНУ ПОВЕРХНОСТИ??? (entireSegmentTraversed = false)
+                        //TODO?: Учесть этот недостаток и подобные нестыковки на стадии построени я и обхода графов
+                        break;
+                    }
+
+                }
             }
-            else if (start.TinSurfaceEdge != null)
+            finally
             {
-                trianglesToSearchIntersection.Add(start.TinSurfaceEdge.Triangle1);
-                trianglesToSearchIntersection.Add(start.TinSurfaceEdge.Triangle2);
-                edgesNotChecking.Add(start.TinSurfaceEdge);
+                //TEST
+                #region MyRegion
+                //if (!ptId.IsNull)
+                //    using (Transaction tr = db.TransactionManager.StartTransaction())
+                //    {
+                //        Circle pt = tr.GetObject(ptId, OpenMode.ForWrite) as Circle;
+                //        pt.Erase();
+                //        tr.Commit();
+                //        ed.Regen();
+                //        ed.UpdateScreen();
+                //    } 
+                #endregion
+                //TEST
+            }
+
+            return entireSegmentTraversed;
+
+        }
+
+
+
+        /// <summary>
+        /// Точка полилинии совпавшая с вершиной треугольника
+        /// </summary>
+        private void AddPolylinePt(PolylinePt pt)
+        {
+            if (pt.TinSurfaceVertex!=null)
+            {
+                //Добавить точку во все примыкающие треугольники
+                foreach (TinSurfaceTriangle triangle in pt.TinSurfaceVertex.Triangles)
+                {
+                    AddPolylinePt1(triangle, pt);
+                }
+            }
+            else if (pt.TinSurfaceEdge!=null)
+            {
+                //Добавить точку в 2 треугольника (или 1 если это граница поверхности)
+                TinSurfaceTriangle triangle1 = pt.TinSurfaceEdge.Triangle1;
+                if (triangle1 != null)
+                {
+                    AddPolylinePt1(triangle1, pt);
+                }
+                TinSurfaceTriangle triangle2 = pt.TinSurfaceEdge.Triangle2;
+                if (triangle2 != null)
+                {
+                    AddPolylinePt1(triangle2, pt);
+                }
+            }
+            else if(pt.TinSurfaceTriangle!=null)
+            {
+                AddPolylinePt1(pt.TinSurfaceTriangle, pt);
             }
             else
             {
-                trianglesToSearchIntersection.AddRange(start.TinSurfaceVertex.Triangles);
-                //нельзя исключать из рассмотрения ни одного из ребер
-                foreach (TinSurfaceEdge edge in start.TinSurfaceVertex.Edges)
-                {
-                    edgesNotChecking.Add(edge);
-                }
-
+                throw new Exception("Точка полилинии не привязана к треугольнику");
             }
 
-            //Основной цикл прохода сегмента полилинии
-            //В каждой итерации требуется найти пересечение с ребром
-            bool intersectionFound = false;
-            while (true)
+        }
+
+
+        /// <summary>
+        /// Точка полилинии внутри треугольника
+        /// </summary>
+        /// <param name="triangle"></param>
+        /// <param name="pt"></param>
+        private void AddPolylinePt1(TinSurfaceTriangle triangle, PolylinePt pt)
+        {
+            TriangleGraph triangleGraph = null;
+            //Добавить в один треугольник
+            TriangleGraphs.TryGetValue(triangle, out triangleGraph);
+            if (triangleGraph == null)
             {
-                intersectionFound = false;
-                foreach (TinSurfaceTriangle triangle in trianglesToSearchIntersection)
-                {
-                    //Искать пересечения с каждым ребром
-                    TinSurfaceEdge[] edges = new TinSurfaceEdge[] { triangle.Edge1, triangle.Edge2, triangle.Edge3 };
-
-                    foreach (TinSurfaceEdge edge in edges)
-                    {
-                        if (!edgesNotChecking1.Contains(edge))
-                        {
-                            //Необходимо проверить каждое ребро на наложение даже если с ним не может быть пересечения
-                            Point3d edgePt1 = edge.Vertex1.Location;
-                            Point3d edgePt2 = edge.Vertex2.Location;
-                            Point2d edgePt1_2d = new Point2d(edgePt1.X, edgePt1.Y);
-                            Point2d edgePt2_2d = new Point2d(edgePt2.X, edgePt2.Y);
-                            bool overlaying = false;
-                            bool intersecting
-                                = Utils.LineSegmentsAreIntersecting(startPt2d, endPt2d, edgePt1_2d, edgePt2_2d, out overlaying);
-
-                            //Это ребро больше не должно подвергаться проверке
-                            edgesNotChecking.Add(edge);
-                            edgesNotChecking1.Add(edge);
-
-                            if (overlaying)
-                            {
-                                //Если обнаружилось, что сегмент полилинии совпал с ребром поверхности
-                                //то нужно взять точку ребра дальнюю от начала сегмента и переходить к следующей итерации
-                                //как если бы произошло пересечение в вершине поверхности
-                                double dist1 = startPt2d.GetDistanceTo(edgePt1_2d);
-                                double dist2 = startPt2d.GetDistanceTo(edgePt2_2d);
-                                TinSurfaceVertex vertex = dist1 > dist2 ? edge.Vertex1 : edge.Vertex2;
-                                trianglesToSearchIntersection = vertex.Triangles.ToList();
-                                foreach (TinSurfaceEdge edge1 in vertex.Edges)
-                                {
-                                    edgesNotChecking.Add(edge1);
-                                }
-                                intersectionFound = true;
-                                break;
-                            }
-                            else if (!edgesNotChecking.Contains(edge) && intersecting)
-                            {
-                                //Если обнарушено пересечение, то расчитать точку пересечения
-                                //Если она совпала с вершиной поверхности, то в следующей итерации проверять все треугольники, примыкающие к этой вершине
-                                //ИЛИ нужно как-то найти точно тот треугольник, в котором будет продолжение линии????
-                                //Если пересечение не совпало с вершиной поверхности, то переход к соседнему треугольнику
-                                //!!!Здесь должен быть обнаружен выход за пределы поверхности
-                                //!!
-                                //переход к следующей итерации цикла while
-                                intersectionFound = true;
-                                break;
-                            }
-                        }
-
-                    }
-                    if (intersectionFound)
-                        break;
-                }
-                if (intersectionFound)
-                    continue;
-                else
-                    //Если пролистали все треугольники и не нашли пересечений с ребрами, значит вышли за границы поверхности через вершину поверхности
-                    //Можно прерывать цикл while
-                    break;
+                triangleGraph = new TriangleGraph(this, triangle);
+                TriangleGraphs.Add(triangle, triangleGraph);
             }
-
+            triangleGraph.AddPolylinePoint(pt);
         }
 
 
@@ -597,6 +1011,11 @@ namespace Civil3DInfoTools.SurfaceMeshByBoundary
             {
                 //Проверка по одной точке, так как предполагается, что полилинии не пересекаются
                 return Utils.PointIsInsidePolylineWindingNumber(node.Point3DCollection[0], this.Point3DCollection);
+            }
+
+            public override int GetHashCode()
+            {
+                return Polyline.Id.GetHashCode();
             }
         }
 

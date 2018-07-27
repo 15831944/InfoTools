@@ -86,8 +86,18 @@ namespace Civil3DInfoTools
             return pattern;
         }
 
+        /// <summary>
+        /// Убрать все недопустимые символы из имени слоя
+        /// </summary>
+        /// <param name="layername"></param>
+        /// <returns></returns>
+        public static string GetSafeLayername(string layername)
+        {
+            return string.Join("_", layername.Split(new char[] { '<', '>', '/', '\\', '"', '"', ':', ';', '?', '*', '|', ',', '=', '`' }));
+        }
+
         public static ObjectId CreateLayerIfNotExists(string layerName, Database db, Transaction tr,
-            LayerTableRecord layerSample = null, short colorIndex = -1, LineWeight lineWeight = LineWeight.ByLayer)
+            LayerTableRecord layerSample = null, Color color = null,/*short colorIndex = -1,*/ LineWeight lineWeight = LineWeight.ByLayer)
         {
             LayerTable lt = tr.GetObject(db.LayerTableId, OpenMode.ForRead) as LayerTable;
             ObjectId layerId = ObjectId.Null;
@@ -102,9 +112,9 @@ namespace Civil3DInfoTools
                 else
                 {
                     ltrNew = new LayerTableRecord();
-                    if (colorIndex != -1)
+                    if (color != null/*colorIndex != -1*/)
                     {
-                        Color color = Color.FromColorIndex(ColorMethod.ByAci, colorIndex);
+                        //Color color = Color.FromColorIndex(ColorMethod.ByAci, colorIndex);
                         ltrNew.Color = color;
                     }
                     if (lineWeight != LineWeight.ByLayer)
@@ -328,15 +338,15 @@ namespace Civil3DInfoTools
             lambda2 = (y3_y1 * x_x3 + x1_x3 * y_y3) / denominator;
 
 
-            if (lambda1 != 0 && Math.Abs(lambda1 - 0) < 0.0000000001)
+            if (lambda1 != 0 && Math.Abs(lambda1) < 0.000000001)
             {
                 lambda1 = 0;
             }
-            if (lambda2 != 0 && Math.Abs(lambda2 - 0) < 0.0000000001)
+            if (lambda2 != 0 && Math.Abs(lambda2) < 0.000000001)
             {
                 lambda2 = 0;
             }
-            if (lambda1 + lambda2 != 1 && Math.Abs(lambda1 + lambda2 - 1) < 0.0000000001)
+            if (lambda1 + lambda2 != 1 && Math.Abs(lambda1 + lambda2 - 1) < 0.000000001)
             {
                 lambda2 = 1 - lambda1;
             }
@@ -398,26 +408,182 @@ namespace Civil3DInfoTools
         /// <param name="p3"></param>
         /// <param name="p4"></param>
         /// <returns></returns>
-        public static bool LineSegmentsAreIntersecting(Point2d p1, Point2d p2, Point2d p3, Point2d p4, out bool overlaying)
+        public static bool LineSegmentsAreIntersecting(Point2d p1, Point2d p2, Point2d p3, Point2d p4/*, out bool overlaying*/)
         {
-            overlaying = false;
+            //overlaying = false;
 
-            int p3IsLeft = Math.Sign(IsLeft(p1, p2, p3));
-            int p4IsLeft = Math.Sign(IsLeft(p1, p2, p4));
-            int p1IsLeft = Math.Sign(IsLeft(p3, p4, p1));
-            int p2IsLeft = Math.Sign(IsLeft(p3, p4, p2));
+            double p3IsLeft = IsLeft(p1, p2, p3);
+            double p4IsLeft = IsLeft(p1, p2, p4);
+            double p1IsLeft = IsLeft(p3, p4, p1);
+            double p2IsLeft = IsLeft(p3, p4, p2);
 
-            if ((p3IsLeft == 0 && p4IsLeft == 0) || (p1IsLeft == 0 && p2IsLeft == 0))
+            //Невозможно определить допуск
+            //p3IsLeft = Math.Abs(p3IsLeft) > 1.0E-9 ? p3IsLeft : 0;
+            //p4IsLeft = Math.Abs(p4IsLeft) > 1.0E-9 ? p4IsLeft : 0;
+            //p1IsLeft = Math.Abs(p1IsLeft) > 1.0E-9 ? p1IsLeft : 0;
+            //p2IsLeft = Math.Abs(p2IsLeft) > 1.0E-9 ? p2IsLeft : 0;
+
+
+            int p3IsLeftSign = Math.Sign(p3IsLeft);
+            int p4IsLeftSign = Math.Sign(p4IsLeft);
+            int p1IsLeftSign = Math.Sign(p1IsLeft);
+            int p2IsLeftSign = Math.Sign(p2IsLeft);
+
+            if ((p3IsLeftSign == 0 && p4IsLeftSign == 0) || (p1IsLeftSign == 0 && p2IsLeftSign == 0))
             {
-                overlaying = true;
+                //overlaying = true;
                 return false;
             }
 
             return
-            p3IsLeft != p4IsLeft//Точки второй линии находятся по разные стороны от первой
-            && p1IsLeft != p2IsLeft//Точки первой линии находятся по разные стороны от второй
+            p3IsLeftSign != p4IsLeftSign//Точки второй линии находятся по разные стороны от первой
+            && p1IsLeftSign != p2IsLeftSign//Точки первой линии находятся по разные стороны от второй
             ;
 
         }
+
+        /// <summary>
+        /// Пересечение двух бесконечных прямых линий
+        /// </summary>
+        /// <param name="p1"></param>
+        /// <param name="p2"></param>
+        /// <param name="p3"></param>
+        /// <param name="p4"></param>
+        public static Point2d? GetLinesIntersection(Point2d p1, Point2d p2,
+            Point2d p3, Point2d p4)
+        {
+            Point2d? intersectionPt = null;
+            double intersectX = 0;
+            double intersectY = 0;
+
+            double x1_x2 = p1.X - p2.X;
+            double y3_y4 = p3.Y - p4.Y;
+            double y1_y2 = p1.Y - p2.Y;
+            double x3_x4 = p3.X - p4.X;
+            double denominator = x1_x2 * y3_y4 - y1_y2 * x3_x4;
+            if (denominator != 0)
+            {
+                double x1y2_y1x2 = p1.X * p2.Y - p1.Y * p2.X;
+                double x3y4_y3x4 = p3.X * p4.Y - p3.Y * p4.X;
+                intersectX = (x1y2_y1x2 * x3_x4 - x1_x2 * x3y4_y3x4)
+                    / denominator;
+                intersectY = (x1y2_y1x2 * y3_y4 - y1_y2 * x3y4_y3x4)
+                    / denominator;
+                intersectionPt = new Point2d(intersectX, intersectY);
+            }
+
+            return intersectionPt;
+        }
+
+
+
+
+        public static Point2d? GetLinesIntersectionCramer(Point2d p1, Point2d p2, Point2d p3, Point2d p4, out bool overlapping)
+        {
+
+            Point2d? pt = null;
+            overlapping = false;
+
+            double a1 = p1.Y - p2.Y;
+            double b1 = p2.X - p1.X;
+            double c1 = p2.X * p1.Y - p1.X * p2.Y;
+            double a2 = p3.Y - p4.Y;
+            double b2 = p4.X - p3.X;
+            double c2 = p4.X * p3.Y - p3.X * p4.Y;
+
+            double determinant1 = a1 * b2 - a2 * b1;
+            double determinantX = c1 * b2 - c2 * b1;
+            double determinantY = a1 * c2 - a2 * c1;
+            if (determinant1 != 0)
+            {
+                pt = new Point2d(determinantX / determinant1, determinantY / determinant1);
+            }
+
+            if (determinant1 == 0 && determinantX == 0 && determinantY == 0)
+            {
+                overlapping = true;
+            }
+
+            return pt;
+        }
+
+
+        /// <summary>
+        /// Проверка двух линий на пересечение с использованием методов API автокада
+        /// </summary>
+        /// <param name="p1"></param>
+        /// <param name="p2"></param>
+        /// <param name="p3"></param>
+        /// <param name="p4"></param>
+        /// <param name="overlapping"></param>
+        /// <returns></returns>
+        public static Point2d? GetLinesIntersectionAcad(Point2d p1, Point2d p2, Point2d p3, Point2d p4, out bool overlapping)
+        {
+            Point2d? pt = null;
+            overlapping = false;
+
+            using (Line line1 = new Line(new Point3d(p1.X, p1.Y, 0), new Point3d(p2.X, p2.Y, 0)))
+            using (Line line2 = new Line(new Point3d(p3.X, p3.Y, 0), new Point3d(p4.X, p4.Y, 0)))
+            {
+                Point3dCollection intersectPts = new Point3dCollection();
+                line1.IntersectWith(line2, Intersect.ExtendBoth, intersectPts, IntPtr.Zero, IntPtr.Zero);
+                if (intersectPts.Count == 0)
+                {
+                    //Линии параллельны
+                    //Проверить расстояние между линиями
+                    double dist = line2.GetClosestPointTo(line1.StartPoint, true).DistanceTo(line1.StartPoint);
+                    if (dist == 0)
+                    {
+                        overlapping = true;
+                    }
+                }
+                else
+                {
+
+                    //Бесконечные линии пересекаются, но нужно проверить, что они пересекаются без продления
+                    //Для этого точка пересечения должна попадать в BoudingBox обоих линий
+                    Point2d testingPt = new Point2d(intersectPts[0].X, intersectPts[0].Y);
+                    Extents3d? ext1 = line1.Bounds;
+                    Extents3d? ext2 = line2.Bounds;
+                    if (ext1!=null && ext2!=null
+                        && PointInsideBoundingBox(ext1.Value.MaxPoint, ext1.Value.MinPoint, testingPt)
+                        && PointInsideBoundingBox(ext2.Value.MaxPoint, ext2.Value.MinPoint, testingPt))
+                    {
+                        pt = testingPt;
+                    }
+
+
+
+                    //intersectPts = new Point3dCollection();
+                    //line1.IntersectWith(line2, Intersect.OnBothOperands, intersectPts, IntPtr.Zero, IntPtr.Zero);
+                    //if (intersectPts.Count > 0)
+                    //{
+                    //    pt = new Point2d(intersectPts[0].X, intersectPts[0].Y);
+                    //}
+                }
+            }
+
+            return pt;
+        }
+
+
+        /// <summary>
+        /// Точка внутри BoundingBox в плане
+        ///
+        /// </summary>
+        /// <param name="maxPt"></param>
+        /// <param name="minPt"></param>
+        /// <param name="testingPt"></param>
+        /// <returns></returns>
+        public static bool PointInsideBoundingBox(Point3d maxPt, Point3d minPt, Point2d testingPt)
+        {
+            return
+                (testingPt.X <= maxPt.X)
+                && (testingPt.X >= minPt.X)
+                &&
+                (testingPt.Y <= maxPt.Y)
+                && (testingPt.Y >= minPt.Y);
+        }
+
     }
 }

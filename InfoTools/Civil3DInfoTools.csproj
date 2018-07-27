@@ -95,8 +95,9 @@
     <Compile Include="RoadMarking\CreateBoundariesCommand.cs" />
     <Compile Include="Spillway\ExtractSpillwayPositionsCommand.cs" />
     <Compile Include="Spillway\Poly3DFromCorridorFeatureLinesCommand.cs" />
+    <Compile Include="SurfaceMeshByBoundary\LineIntersectionTestCommand.cs" />
     <Compile Include="SurfaceMeshByBoundary\PolylineNesting.cs" />
-    <Compile Include="SurfaceMeshByBoundary\PolylineVertexPlacementInfo.cs" />
+    <Compile Include="SurfaceMeshByBoundary\PolylinePt.cs" />
     <Compile Include="SurfaceMeshByBoundary\SurfaceMeshByBoundaryCommand.cs" />
     <Compile Include="SurfaceMeshByBoundary\TinSurfaceVertexS.cs" />
     <Compile Include="SurfaceMeshByBoundary\TriangleGraph.cs" />

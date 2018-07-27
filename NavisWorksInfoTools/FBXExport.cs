@@ -136,18 +136,8 @@ namespace NavisWorksInfoTools
         /// <returns></returns>
         public string GetSafeFilename(string filename)
         {
-
             return string.Join("", filename.Split(Path.GetInvalidFileNameChars()));
-
         }
 
-        //private string DeleteInvalidCharsFileName(string path)
-        //{
-        //    foreach (char invChar in Path.GetInvalidFileNameChars())
-        //    {
-        //        path = path.Replace(new String(new char[] { invChar }), "");
-        //    }
-        //    return path;
-        //}
     }
 }

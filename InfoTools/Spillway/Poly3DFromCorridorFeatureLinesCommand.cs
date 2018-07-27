@@ -1,4 +1,5 @@
 ﻿using Autodesk.AutoCAD.ApplicationServices;
+using Autodesk.AutoCAD.Colors;
 using Autodesk.AutoCAD.DatabaseServices;
 using Autodesk.AutoCAD.EditorInput;
 using Autodesk.AutoCAD.Runtime;
@@ -78,7 +79,8 @@ namespace Civil3DInfoTools.Spillway
                                         }
 
 
-                                        ObjectId layerId = Utils.CreateLayerIfNotExists(layerName, db, tr, null, colorIndex, lineWeight);
+                                        ObjectId layerId = Utils.CreateLayerIfNotExists(layerName, db, tr, null,
+                                            Color.FromColorIndex(ColorMethod.ByAci, colorIndex), lineWeight);
                                         foreach (ObjectId polyId in polyColl)
                                         {
                                             Polyline3d polyline = tr.GetObject(polyId, OpenMode.ForWrite) as Polyline3d;

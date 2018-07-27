@@ -350,7 +350,8 @@ namespace Civil3DInfoTools.Spillway
                                             Utils.RegisterApp(db, tr);
 
 
-                                            ObjectId layerId = Utils.CreateLayerIfNotExists("ВОДОСБРОС", db, tr, null, 150, LineWeight.LineWeight030);
+                                            ObjectId layerId = Utils.CreateLayerIfNotExists("ВОДОСБРОС", db, tr, null,
+                                                Color.FromColorIndex(ColorMethod.ByAci, 150), LineWeight.LineWeight030);
 
 
                                             BlockTable bt = tr.GetObject(db.BlockTableId, OpenMode.ForRead) as BlockTable;
