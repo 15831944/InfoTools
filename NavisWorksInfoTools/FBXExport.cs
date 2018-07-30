@@ -25,41 +25,44 @@ namespace NavisWorksInfoTools
         {
             //n = 0;//TEST
 
+            Win.MessageBoxResult result = Win.MessageBox.Show("Начать выгрузку FBX по слоям?", "Выгрузка FBX", Win.MessageBoxButton.YesNo);
 
-            try
+            if(result == Win.MessageBoxResult.Yes)
             {
-                PluginRecord FBXPluginrecord = Application.Plugins.
-                        FindPlugin("NativeExportPluginAdaptor_LcFbxExporterPlugin_Export.Navisworks");
-                if (FBXPluginrecord != null)
+                try
                 {
-                    if (!FBXPluginrecord.IsLoaded)
+                    PluginRecord FBXPluginrecord = Application.Plugins.
+                            FindPlugin("NativeExportPluginAdaptor_LcFbxExporterPlugin_Export.Navisworks");
+                    if (FBXPluginrecord != null)
                     {
-                        FBXPluginrecord.LoadPlugin();
+                        if (!FBXPluginrecord.IsLoaded)
+                        {
+                            FBXPluginrecord.LoadPlugin();
+                        }
+
+                        NativeExportPluginAdaptor FBXplugin = FBXPluginrecord.LoadedPlugin as NativeExportPluginAdaptor;
+
+                        Document doc = Application.ActiveDocument;
+
+                        string fbxPath = Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments);
+                        string docPath = doc.FileName;
+                        if (!String.IsNullOrEmpty(docPath))
+                        {
+                            fbxPath = Path.GetDirectoryName(docPath);
+                        }
+
+                        DocumentModels docModels = doc.Models;
+                        ModelItemEnumerableCollection rootItems = docModels.RootItems;
+                        ExportByLayers(rootItems, fbxPath, docModels, FBXplugin);
+
+                        Win.MessageBox.Show("Готово", "Готово", Win.MessageBoxButton.OK, Win.MessageBoxImage.Information);
                     }
-
-                    NativeExportPluginAdaptor FBXplugin = FBXPluginrecord.LoadedPlugin as NativeExportPluginAdaptor;
-
-                    Document doc = Application.ActiveDocument;
-
-                    string fbxPath = Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments);
-                    string docPath = doc.FileName;
-                    if (!String.IsNullOrEmpty(docPath))
-                    {
-                        fbxPath = Path.GetDirectoryName(docPath);
-                    }
-
-                    DocumentModels docModels = doc.Models;
-                    ModelItemEnumerableCollection rootItems = docModels.RootItems;
-                    ExportByLayers(rootItems, fbxPath, docModels, FBXplugin);
-
-                    Win.MessageBox.Show("Готово", "Готово", Win.MessageBoxButton.OK, Win.MessageBoxImage.Information);
+                }
+                catch (Exception ex)
+                {
+                    CommonException(ex, "Ошибка при экспорте в FBX по слоям");
                 }
             }
-            catch (Exception ex)
-            {
-                CommonException(ex, "Ошибка при экспорте в FBX по слоям");
-            }
-
 
             return 0;
         }

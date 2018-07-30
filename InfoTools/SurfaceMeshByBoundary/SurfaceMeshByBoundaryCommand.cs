@@ -20,19 +20,20 @@ using RBush;
 namespace Civil3DInfoTools.SurfaceMeshByBoundary
 {
     //TODO: Команду можно вызывать только из пространства модели документа
+    //TODO: Выдавать предупреждение если обнаружены пересекающиеся прямые
 
     public class SurfaceMeshByBoundaryCommand
     {
 
         /// <summary>
-        /// Все 2dTree во всех открытых документах
+        /// Все R-Tree во всех открытых документах
         /// Ключ - имя документа
         /// </summary>
         public static Dictionary<string, Dictionary<long, RBush<TinSurfaceVertexS>>> Trees
             = new Dictionary<string, Dictionary<long, RBush<TinSurfaceVertexS>>>();
 
         /// <summary>
-        /// 2dTree в текущем документе
+        /// R-Tree в текущем документе
         /// Ключ - Handle поверхности
         /// </summary>
         public static Dictionary<long, RBush<TinSurfaceVertexS>> TreesCurrDoc = null;
@@ -234,6 +235,26 @@ namespace Civil3DInfoTools.SurfaceMeshByBoundary
                                         foreach (Polyline poly in polylinesWithNoIntersections)
                                         {
                                             polylinesWithNoBulges.Add(ApproximatePolyBulges(poly, 0.02));
+                                        }
+
+                                        //Удалить все повторяющиеся подряд точки полилинии
+                                        foreach (Polyline poly in polylinesWithNoBulges)
+                                        {
+                                            for (int i =0;i< poly.NumberOfVertices;)
+                                            {
+                                                Point2d curr = poly.GetPoint2dAt(i);
+                                                int nextIndex = (i + 1) % poly.NumberOfVertices;
+                                                Point2d next = poly.GetPoint2dAt(nextIndex);
+
+                                                if (next.IsEqualTo(curr))
+                                                {
+                                                    poly.RemoveVertexAt(nextIndex);
+                                                }
+                                                else
+                                                {
+                                                    i++;
+                                                }
+                                            }
                                         }
 
 

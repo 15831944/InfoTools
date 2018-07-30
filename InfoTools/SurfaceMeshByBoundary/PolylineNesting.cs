@@ -11,6 +11,7 @@ using System.Threading.Tasks;
 
 namespace Civil3DInfoTools.SurfaceMeshByBoundary
 {
+    //TODO: Обратить внимание на то, что должна быть расчитана координата Z для всех найденных точек
 
     /// <summary>
     /// Дерево для хранения данных о вложенности полилиний
@@ -319,61 +320,10 @@ namespace Civil3DInfoTools.SurfaceMeshByBoundary
                         }
 
                         //Определить расположение вершины - внутри треугольника, на ребре или на вершине
-                        double lambda1 = 0;
-                        double lambda2 = 0;
-                        bool isInside = Utils.BarycentricCoordinates(pt,
-                            triangle.Vertex1.Location, triangle.Vertex2.Location, triangle.Vertex3.Location,
-                            out lambda1, out lambda2);
-                        if (!isInside)
-                        {
-                            throw new Exception("Положение вершины полилинии относительно поверхности не определено");
-                        }
+                        PtPositionInTriangle(pt, triangle, polyPt);
 
-                        double lambda3 = 1 - lambda1 - lambda2;
-
-                        //Проверить, равна ли хоть одна координата нулю или единице,
-                        double[] coords = new double[] { lambda1, lambda2, lambda3 };
-                        TinSurfaceVertex[] vertices = new TinSurfaceVertex[] { triangle.Vertex1, triangle.Vertex2, triangle.Vertex3 };
-                        TinSurfaceEdge[] edges = new TinSurfaceEdge[] { triangle.Edge1, triangle.Edge2, triangle.Edge3 };
-
-
-                        int oneIndex = -1;
-                        int zeroIndex = -1;
-                        for (int cn = 0; cn < 3; cn++)
-                        {
-                            if (coords[cn] == 1)
-                            {
-                                oneIndex = cn;
-                            }
-                            else
-                            if (coords[cn] == 0)
-                            {
-                                zeroIndex = cn;
-                            }
-                        }
-                        if (oneIndex != -1)
-                        {
-                            //Точка лежит на вершине
-                            TinSurfaceVertex vertex = vertices[oneIndex];
-                            polyPt.TinSurfaceVertex = vertex;
-                            //Добавление в граф треугольника
-                            AddPolylinePt(polyPt);
-                        }
-                        else if (zeroIndex != -1)
-                        {
-                            //Точка лежит на ребре
-                            TinSurfaceEdge edge = edges[(zeroIndex + 1) % 3];
-                            polyPt.TinSurfaceEdge = edge;
-                            //Добавление в граф треугольника
-                            AddPolylinePt(polyPt);
-                        }
-                        else
-                        {
-                            //Точка лежит внутри треугольника
-                            polyPt.TinSurfaceTriangle = triangle;
-                            //Добавление в граф треугольника
-                            AddPolylinePt(polyPt);
-                        }
+                        //Добавление в граф треугольника
+                        AddPolylinePt(polyPt);
 
                     }
                 }
@@ -408,29 +358,37 @@ namespace Civil3DInfoTools.SurfaceMeshByBoundary
 
 
                 //Обход последовательностей
-                foreach (LinkedList<PolylinePt> ll in vertSequences)
+                foreach (LinkedList<PolylinePt> seq in vertSequences)
                 {
                     if (!allVertsOnSurface)
                     {
-                        TraversePolylineSegment(node, ll.First(), null, false);
+                        TraversePolylineSegment(node, seq.First, /*seq.First(), null,*/ false);
                     }
 
-                    for (LinkedListNode<PolylinePt> lln = ll.First; lln != null; lln = lln.Next)
+                    bool prevTraversed = true;
+                    for (LinkedListNode<PolylinePt> lln = seq.First; lln != null; lln = lln.Next)
                     {
-                        bool traversed = TraversePolylineSegment(node, lln.Value, lln.Next?.Value, true);
-                        //Если ребро не пройдено полностью и возможен обратный проход, то сделать обратный проход
-                        if (!traversed)//
+                        if (!prevTraversed)
                         {
-                            if (lln.Next != null)
-                            {
-                                TraversePolylineSegment(node, lln.Next.Value, lln.Value, true);
-                            }
-                            else if (allVertsOnSurface)
-                            {
-                                TraversePolylineSegment(node, ll.First.Value, lln.Value, true);
-                            }
-
+                            //Сделать обратный проход, а затем прямой
+                            TraversePolylineSegment(node, lln, false);
                         }
+                        prevTraversed = TraversePolylineSegment(node, lln, true);
+
+                        //prevTraversed = TraversePolylineSegment(node, lln.Value, lln.Next?.Value, true);
+                        //Если ребро не пройдено полностью и возможен обратный проход, то сделать обратный проход
+                        //if (!traversed)//
+                        //{
+                        //    if (lln.Next != null)
+                        //    {
+                        //        TraversePolylineSegment(node, lln.Next.Value, lln.Value, true);
+                        //    }
+                        //    else if (allVertsOnSurface)
+                        //    {
+                        //        TraversePolylineSegment(node, seq.First.Value, lln.Value, true);
+                        //    }
+
+                        //}
                     }
 
                 }
@@ -444,6 +402,65 @@ namespace Civil3DInfoTools.SurfaceMeshByBoundary
 
         }
 
+        private void PtPositionInTriangle(Point3d pt, TinSurfaceTriangle triangle, PolylinePt polyPt)
+        {
+            double lambda1 = 0;
+            double lambda2 = 0;
+            bool isInside = Utils.BarycentricCoordinates(pt,
+                triangle.Vertex1.Location, triangle.Vertex2.Location, triangle.Vertex3.Location,
+                out lambda1, out lambda2);
+            if (!isInside)
+            {
+                throw new Exception("Положение вершины полилинии относительно поверхности не определено");
+            }
+
+            double lambda3 = 1 - lambda1 - lambda2;
+
+            //Проверить, равна ли хоть одна координата нулю или единице,
+            double[] coords = new double[] { lambda1, lambda2, lambda3 };
+            TinSurfaceVertex[] vertices = new TinSurfaceVertex[] { triangle.Vertex1, triangle.Vertex2, triangle.Vertex3 };
+            TinSurfaceEdge[] edges = new TinSurfaceEdge[] { triangle.Edge1, triangle.Edge2, triangle.Edge3 };
+            //TODO: В алгоритме расчета барицентрических координат есть допуск для значений координат близких к нулю. Проверить наскольно он надежен
+            //Альтернатива б к - проверять точку на совпадение с вершинами треугольника, а для проверки на совпадение с ребром и зпользовать проверку на пересечение
+
+
+            int oneIndex = -1;
+            int zeroIndex = -1;
+            for (int cn = 0; cn < 3; cn++)
+            {
+                if (coords[cn] == 1)
+                {
+                    oneIndex = cn;
+                }
+                else
+                if (coords[cn] == 0)
+                {
+                    zeroIndex = cn;
+                }
+            }
+
+
+
+            if (oneIndex != -1)
+            {
+                //Точка лежит на вершине
+                TinSurfaceVertex vertex = vertices[oneIndex];
+                polyPt.TinSurfaceVertex = vertex;
+            }
+            else if (zeroIndex != -1)
+            {
+                //Точка лежит на ребре
+                TinSurfaceEdge edge = edges[(zeroIndex + 1) % 3];
+                polyPt.TinSurfaceEdge = edge;
+            }
+            else
+            {
+                //Точка лежит внутри треугольника
+                polyPt.TinSurfaceTriangle = triangle;
+            }
+        }
+
+        //TODO: НЕОБХОДИМО УЧЕСТЬ ВСЕ ЧАСТНЫЕ СЛУЧАИ
         /// <summary>
         /// Поиск пересечений ребер поверхности с сегментом полилинии
         /// Возврат false если при проходе ребра был выход за границу поверхности
@@ -452,27 +469,61 @@ namespace Civil3DInfoTools.SurfaceMeshByBoundary
         /// <param name="start"></param>
         /// <param name="end"></param>
         /// <param name="forvard"></param>
-        private bool TraversePolylineSegment(Node node, PolylinePt start,
-            PolylinePt end = null, bool forvard = true)
+        private bool TraversePolylineSegment(Node node,
+            LinkedListNode<PolylinePt> lln,
+            //PolylinePt start, PolylinePt end = null,
+            bool forvard = true)
         {
+            PolylinePt start = lln.Value;
+            PolylinePt next = lln.Next?.Value;
+            PolylinePt prev = lln.Previous?.Value;
             Polyline polyline = node.Polyline;
+            bool segmentTraversedAsPossible = true;
 
-            bool entireSegmentTraversed = true;
 
-            //НЕОБХОДИМО УЧЕСТЬ ВСЕ ЧАСТНЫЕ СЛУЧАИ
             Point2d startPt2d = polyline.GetPoint2dAt(start.VertNumber);//первая точка сегмента
             Point2d endPt2d = Point2d.Origin;//вторая точка сегмента
-            if (end != null)
+            if (forvard)
             {
-                endPt2d = polyline.GetPoint2dAt(end.VertNumber);
+                if (next != null)
+                {
+                    endPt2d = next.Point2D;
+                }
+                else
+                {
+                    //TODO: Сделать ошибку если не задан start.VertNumber
+                    int endNum = (start.VertNumber + 1) % polyline.NumberOfVertices;
+                    endPt2d = polyline.GetPoint2dAt(endNum);
+                }
             }
             else
             {
-                int endNum = forvard ? (start.VertNumber + 1) % polyline.NumberOfVertices
-                    :
-                    start.VertNumber != 0 ? start.VertNumber - 1 : polyline.NumberOfVertices - 1;
-                endPt2d = polyline.GetPoint2dAt(endNum);
+                if (prev != null)
+                {
+                    endPt2d = prev.Point2D;
+                }
+                else
+                {
+                    int endNum = start.VertNumber != 0 ? start.VertNumber - 1 : polyline.NumberOfVertices - 1;
+                    endPt2d = polyline.GetPoint2dAt(endNum);
+                }
+                
             }
+
+
+
+
+            //if (end != null)
+            //{
+            //    endPt2d = polyline.GetPoint2dAt(end.VertNumber);
+            //}
+            //else
+            //{
+            //    int endNum = forvard ? (start.VertNumber + 1) % polyline.NumberOfVertices
+            //        :
+            //        start.VertNumber != 0 ? start.VertNumber - 1 : polyline.NumberOfVertices - 1;
+            //    endPt2d = polyline.GetPoint2dAt(endNum);
+            //}
 
             //ObjectId ptId = ObjectId.Null;//TEST
 
@@ -647,29 +698,29 @@ namespace Civil3DInfoTools.SurfaceMeshByBoundary
                                                     {
                                                         edgesAlreadyIntersected.Add(edge1);
                                                     }
-                                                    AddPolylinePt(new PolylinePt(node, vertexLoc) {TinSurfaceVertex = vertex });
+                                                    AddPolylinePt(new PolylinePt(node, vertexLoc) { TinSurfaceVertex = vertex });
                                                     //TEST
                                                     #region MyRegion
-                                                    //using (Transaction tr = db.TransactionManager.StartTransaction())
-                                                    //using (Circle circle1 = new Circle(edgePt1, Vector3d.ZAxis, 0.1))
-                                                    //using (Circle circle2 = new Circle(edgePt2, Vector3d.ZAxis, 0.1))
-                                                    //{
-                                                    //    ms = tr.GetObject(ms.Id, OpenMode.ForWrite) as BlockTableRecord;
+                                                    using (Transaction tr = db.TransactionManager.StartTransaction())
+                                                    using (Circle circle1 = new Circle(edgePt1, Vector3d.ZAxis, 0.1))
+                                                    using (Circle circle2 = new Circle(edgePt2, Vector3d.ZAxis, 0.1))
+                                                    {
+                                                        ms = tr.GetObject(ms.Id, OpenMode.ForWrite) as BlockTableRecord;
 
 
-                                                    //    circle1.Color = Color.FromColorIndex(ColorMethod.ByAci, 1);
-                                                    //    circle2.Color = Color.FromColorIndex(ColorMethod.ByAci, 1);
-                                                    //    ms.AppendEntity(circle1);
-                                                    //    ms.AppendEntity(circle2);
-                                                    //    tr.AddNewlyCreatedDBObject(circle1, true);
-                                                    //    tr.AddNewlyCreatedDBObject(circle2, true);
+                                                        circle1.Color = Color.FromColorIndex(ColorMethod.ByAci, 1);
+                                                        circle2.Color = Color.FromColorIndex(ColorMethod.ByAci, 1);
+                                                        ms.AppendEntity(circle1);
+                                                        ms.AppendEntity(circle2);
+                                                        tr.AddNewlyCreatedDBObject(circle1, true);
+                                                        tr.AddNewlyCreatedDBObject(circle2, true);
 
-                                                    //    tr.Commit();
-                                                    //    circle1.Draw();
-                                                    //    circle2.Draw();
-                                                    //    ed.Regen();
-                                                    //    ed.UpdateScreen();
-                                                    //}
+                                                        tr.Commit();
+                                                        circle1.Draw();
+                                                        circle2.Draw();
+                                                        ed.Regen();
+                                                        ed.UpdateScreen();
+                                                    }
                                                     #endregion
                                                     //TEST
                                                     intersectionFound = true;
@@ -758,7 +809,42 @@ namespace Civil3DInfoTools.SurfaceMeshByBoundary
                                                     }
                                                     else
                                                     {
-                                                        entireSegmentTraversed = false;
+                                                        if (next != null)
+                                                        {
+                                                            //ЭТО ПЛОХАЯ ИДЕЯ
+                                                            //TODO: Если встречена граница поверхности и известно, что следующая вершина полилинии лежит на поверхности, то использовать метод
+                                                            //TinSurf.FindTriangleAtXY используя точки на ребре с шагом 1 ед длины пока не будет найден треугольник
+                                                            //Если треугольник найден, то сначала выполнить обратный проход от него а затем продолжить прямой проход от него
+                                                            //Для этого в последовательность вставляется новый узел после переданного lln если только найденная точка не совпала с конечной или не перескочила ее
+                                                            Vector2d segmentVector = endPt2d - startPt2d;
+                                                            double overalLength = segmentVector.Length;
+                                                            segmentVector = segmentVector.GetNormal();
+                                                            int n = 1;
+                                                            Point2d testingPt = Point2d.Origin;
+                                                            TinSurfaceTriangle otherTriangle = null;
+                                                            bool overrun = false;
+                                                            do
+                                                            {
+                                                                testingPt = startPt2d + segmentVector * n;
+                                                                n++;
+                                                                overrun = (testingPt - startPt2d).Length > overalLength;
+                                                                try { otherTriangle = TinSurf.FindTriangleAtXY(testingPt.X, testingPt.Y); }
+                                                                catch (System.ArgumentException) { }
+                                                            }
+                                                            while (otherTriangle == null && !overrun);
+
+                                                            if (otherTriangle != null && !overrun)
+                                                            {
+                                                                PolylinePt polyPt = new PolylinePt(node, testingPt);
+                                                                PtPositionInTriangle(new Point3d(testingPt.X, testingPt.Y, 0), otherTriangle, polyPt);
+                                                                
+                                                                lln.List.AddAfter(lln, polyPt);
+
+                                                                if(forvard)
+                                                                    segmentTraversedAsPossible = false;
+                                                            }
+                                                        }
+
                                                     }
                                                     AddPolylinePt(new PolylinePt(node, intersectionPt) { TinSurfaceEdge = edge });
                                                     //TEST
@@ -854,12 +940,12 @@ namespace Civil3DInfoTools.SurfaceMeshByBoundary
                 //        tr.Commit();
                 //        ed.Regen();
                 //        ed.UpdateScreen();
-                //    } 
+                //    }
                 #endregion
                 //TEST
             }
 
-            return entireSegmentTraversed;
+            return segmentTraversedAsPossible;
 
         }
 
@@ -870,7 +956,7 @@ namespace Civil3DInfoTools.SurfaceMeshByBoundary
         /// </summary>
         private void AddPolylinePt(PolylinePt pt)
         {
-            if (pt.TinSurfaceVertex!=null)
+            if (pt.TinSurfaceVertex != null)
             {
                 //Добавить точку во все примыкающие треугольники
                 foreach (TinSurfaceTriangle triangle in pt.TinSurfaceVertex.Triangles)
@@ -878,7 +964,7 @@ namespace Civil3DInfoTools.SurfaceMeshByBoundary
                     AddPolylinePt1(triangle, pt);
                 }
             }
-            else if (pt.TinSurfaceEdge!=null)
+            else if (pt.TinSurfaceEdge != null)
             {
                 //Добавить точку в 2 треугольника (или 1 если это граница поверхности)
                 TinSurfaceTriangle triangle1 = pt.TinSurfaceEdge.Triangle1;
@@ -892,7 +978,7 @@ namespace Civil3DInfoTools.SurfaceMeshByBoundary
                     AddPolylinePt1(triangle2, pt);
                 }
             }
-            else if(pt.TinSurfaceTriangle!=null)
+            else if (pt.TinSurfaceTriangle != null)
             {
                 AddPolylinePt1(pt.TinSurfaceTriangle, pt);
             }
@@ -985,17 +1071,18 @@ namespace Civil3DInfoTools.SurfaceMeshByBoundary
                             MaxY = pt.Y;
                         }
 
+
                         //Если последняя точка равна первой, то не добавлять ее
-                        if (i == polyline.NumberOfVertices - 1 && pt.Equals(Point3DCollection[0]))
-                        {
-                            //Вместо этого отредактировать полилинию, убрав из нее лишнюю точку
-                            polyline.RemoveVertexAt(i);
-                            polyline.Closed = true;
-                        }
-                        else
-                        {
-                            Point3DCollection.Add(pt);
-                        }
+                        //if (i == polyline.NumberOfVertices - 1 && pt.IsEqualTo(Point3DCollection[0]))
+                        //{
+                        //    //Вместо этого отредактировать полилинию, убрав из нее лишнюю точку
+                        //    polyline.RemoveVertexAt(i);
+                        //    polyline.Closed = true;
+                        //}
+                        //else
+                        //{
+                        Point3DCollection.Add(pt);
+                        //}
 
                     }
                 }
