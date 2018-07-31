@@ -14,6 +14,9 @@ namespace Civil3DInfoTools.SurfaceMeshByBoundary
     /// </summary>
     public class PolylinePt : IComparable<PolylinePt>
     {
+        /// <summary>
+        /// Номер вершины, с которой совпадает точка, или номер ближайшей меньшей вершины если точка лежит на ребре 
+        /// </summary>
         public int VertNumber { get; set; }
 
         public Point2d Point2D { get; set; }
@@ -31,11 +34,13 @@ namespace Civil3DInfoTools.SurfaceMeshByBoundary
 
         public PolylinePt(PolylineNesting.Node node, Point2d pt)
         {
+
             Node = node;
             Point2D = pt;
             //Расчет параметра
             Point3d nearestPt = node.Polyline.GetClosestPointTo(new Point3d(pt.X, pt.Y, 0), false);//иначе может ошибка при расчете параметра
             Parameter = node.Polyline.GetParameterAtPoint(nearestPt);
+            VertNumber = Convert.ToInt32(Math.Floor(Parameter));
         }
 
         public int CompareTo(PolylinePt other)

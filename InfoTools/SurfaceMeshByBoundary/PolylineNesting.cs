@@ -304,6 +304,16 @@ namespace Civil3DInfoTools.SurfaceMeshByBoundary
                     catch (System.ArgumentException) { }//Если точка за пределами поверхности, то выбрасывается исключение
                     if (triangle != null)
                     {
+                        //Расчет барицентрических координат для определения координаты Z
+                        Point2d v1_2d = new Point2d(triangle.Vertex1.Location.X, triangle.Vertex1.Location.Y);
+                        Point2d v2_2d = new Point2d(triangle.Vertex2.Location.X, triangle.Vertex2.Location.Y);
+                        Point2d v3_2d = new Point2d(triangle.Vertex3.Location.X, triangle.Vertex3.Location.Y);
+                        double lambda1 = 0;
+                        double lambda2 = 0;
+                        Utils.BarycentricCoordinates(pt2d, v1_2d, v2_2d, v3_2d, out lambda1, out lambda2);
+                        double lambda3 = 1 - lambda1 - lambda2;
+                        //TODO: Расчет координаты Z
+
                         //Вершина находится на поверхности. Добавить ее в набор
                         PolylinePt polyPt = new PolylinePt(node, pt2d) { VertNumber = i };
                         if (vertSequences.Count > 0 && vertSequences.Last().Last().VertNumber == i - 1)
@@ -320,7 +330,7 @@ namespace Civil3DInfoTools.SurfaceMeshByBoundary
                         }
 
                         //Определить расположение вершины - внутри треугольника, на ребре или на вершине
-                        PtPositionInTriangle(pt, triangle, polyPt);
+                        PtPositionInTriangle(pt2d, triangle, polyPt);
 
                         //Добавление в граф треугольника
                         AddPolylinePt(polyPt);
@@ -362,7 +372,7 @@ namespace Civil3DInfoTools.SurfaceMeshByBoundary
                 {
                     if (!allVertsOnSurface)
                     {
-                        TraversePolylineSegment(node, seq.First, /*seq.First(), null,*/ false);
+                        TraversePolylineSegment(node, seq.First, false);
                     }
 
                     bool prevTraversed = true;
@@ -375,20 +385,6 @@ namespace Civil3DInfoTools.SurfaceMeshByBoundary
                         }
                         prevTraversed = TraversePolylineSegment(node, lln, true);
 
-                        //prevTraversed = TraversePolylineSegment(node, lln.Value, lln.Next?.Value, true);
-                        //Если ребро не пройдено полностью и возможен обратный проход, то сделать обратный проход
-                        //if (!traversed)//
-                        //{
-                        //    if (lln.Next != null)
-                        //    {
-                        //        TraversePolylineSegment(node, lln.Next.Value, lln.Value, true);
-                        //    }
-                        //    else if (allVertsOnSurface)
-                        //    {
-                        //        TraversePolylineSegment(node, seq.First.Value, lln.Value, true);
-                        //    }
-
-                        //}
                     }
 
                 }
@@ -402,63 +398,57 @@ namespace Civil3DInfoTools.SurfaceMeshByBoundary
 
         }
 
-        private void PtPositionInTriangle(Point3d pt, TinSurfaceTriangle triangle, PolylinePt polyPt)
+        /// <summary>
+        /// Определение положения точки внутри треугольника, на ребре или на вершине
+        /// </summary>
+        /// <param name="pt"></param>
+        /// <param name="triangle"></param>
+        /// <param name="polyPt"></param>
+        private void PtPositionInTriangle(Point2d pt, TinSurfaceTriangle triangle, PolylinePt polyPt)
         {
-            double lambda1 = 0;
-            double lambda2 = 0;
-            bool isInside = Utils.BarycentricCoordinates(pt,
-                triangle.Vertex1.Location, triangle.Vertex2.Location, triangle.Vertex3.Location,
-                out lambda1, out lambda2);
-            if (!isInside)
-            {
-                throw new Exception("Положение вершины полилинии относительно поверхности не определено");
-            }
-
-            double lambda3 = 1 - lambda1 - lambda2;
-
-            //Проверить, равна ли хоть одна координата нулю или единице,
-            double[] coords = new double[] { lambda1, lambda2, lambda3 };
             TinSurfaceVertex[] vertices = new TinSurfaceVertex[] { triangle.Vertex1, triangle.Vertex2, triangle.Vertex3 };
             TinSurfaceEdge[] edges = new TinSurfaceEdge[] { triangle.Edge1, triangle.Edge2, triangle.Edge3 };
-            //TODO: В алгоритме расчета барицентрических координат есть допуск для значений координат близких к нулю. Проверить наскольно он надежен
-            //Альтернатива б к - проверять точку на совпадение с вершинами треугольника, а для проверки на совпадение с ребром и зпользовать проверку на пересечение
-
-
-            int oneIndex = -1;
-            int zeroIndex = -1;
-            for (int cn = 0; cn < 3; cn++)
+            Point2d[] vert2dLocs = new Point2d[3];
+            for (int i = 0; i < 3; i++)
             {
-                if (coords[cn] == 1)
+                vert2dLocs[i] = new Point2d(vertices[i].Location.X, vertices[i].Location.Y);
+            }
+            //Проверить, совпадает ли точка с одной из вершин или попадет на ребро
+            for (int i = 0; i < 3; i++)
+            {
+                Point2d vert2dLoc = vert2dLocs[i];
+
+                if (pt.IsEqualTo(vert2dLoc))
                 {
-                    oneIndex = cn;
+                    //Точка лежит на вершине
+                    polyPt.TinSurfaceVertex = vertices[i];
+                    return;
                 }
-                else
-                if (coords[cn] == 0)
+            }
+            for (int i = 0; i < 3; i++)
+            {
+                using (Polyline line = new Polyline())
                 {
-                    zeroIndex = cn;
+                    line.AddVertexAt(0, vert2dLocs[i], 0, 0, 0);
+                    line.AddVertexAt(0, vert2dLocs[(i + 1) % 3], 0, 0, 0);
+                    Point3d pt3d = new Point3d(pt.X, pt.Y, 0);
+                    Point3d closestPtOnEdge = line.GetClosestPointTo(pt3d, false);
+
+                    Tolerance tolerance = /*Tolerance.Global;*/new Tolerance(0.001, 0.001);
+                    if (pt3d.IsEqualTo(closestPtOnEdge, tolerance))//Здесь должен быть допуск
+                    {
+                        //Точка лежит на ребре
+                        polyPt.TinSurfaceEdge = edges[i];
+                        return;
+                    }
                 }
             }
-
-
-
-            if (oneIndex != -1)
-            {
-                //Точка лежит на вершине
-                TinSurfaceVertex vertex = vertices[oneIndex];
-                polyPt.TinSurfaceVertex = vertex;
-            }
-            else if (zeroIndex != -1)
-            {
-                //Точка лежит на ребре
-                TinSurfaceEdge edge = edges[(zeroIndex + 1) % 3];
-                polyPt.TinSurfaceEdge = edge;
-            }
-            else
-            {
-                //Точка лежит внутри треугольника
-                polyPt.TinSurfaceTriangle = triangle;
-            }
+            //Если не на ребре и не на вершине, то внутри треугольника
+            polyPt.TinSurfaceTriangle = triangle;
         }
+
+
+        private const bool testDisplay = false;
 
         //TODO: НЕОБХОДИМО УЧЕСТЬ ВСЕ ЧАСТНЫЕ СЛУЧАИ
         /// <summary>
@@ -481,7 +471,7 @@ namespace Civil3DInfoTools.SurfaceMeshByBoundary
             bool segmentTraversedAsPossible = true;
 
 
-            Point2d startPt2d = polyline.GetPoint2dAt(start.VertNumber);//первая точка сегмента
+            Point2d startPt2d = start.Point2D;//первая точка сегмента
             Point2d endPt2d = Point2d.Origin;//вторая точка сегмента
             if (forvard)
             {
@@ -491,7 +481,6 @@ namespace Civil3DInfoTools.SurfaceMeshByBoundary
                 }
                 else
                 {
-                    //TODO: Сделать ошибку если не задан start.VertNumber
                     int endNum = (start.VertNumber + 1) % polyline.NumberOfVertices;
                     endPt2d = polyline.GetPoint2dAt(endNum);
                 }
@@ -507,49 +496,36 @@ namespace Civil3DInfoTools.SurfaceMeshByBoundary
                     int endNum = start.VertNumber != 0 ? start.VertNumber - 1 : polyline.NumberOfVertices - 1;
                     endPt2d = polyline.GetPoint2dAt(endNum);
                 }
-                
+
             }
 
 
-
-
-            //if (end != null)
-            //{
-            //    endPt2d = polyline.GetPoint2dAt(end.VertNumber);
-            //}
-            //else
-            //{
-            //    int endNum = forvard ? (start.VertNumber + 1) % polyline.NumberOfVertices
-            //        :
-            //        start.VertNumber != 0 ? start.VertNumber - 1 : polyline.NumberOfVertices - 1;
-            //    endPt2d = polyline.GetPoint2dAt(endNum);
-            //}
-
-            //ObjectId ptId = ObjectId.Null;//TEST
+            ObjectId ptId = ObjectId.Null;//TEST
 
             try
             {
                 //TEST
                 #region MyRegion
-                //using (Transaction tr = db.TransactionManager.StartTransaction())
-                //using (Line line = new Line(new Point3d(startPt2d.X, startPt2d.Y, 0), new Point3d(endPt2d.X, endPt2d.Y, 0)))
-                //using (Circle circle1 = new Circle(new Point3d(startPt2d.X, startPt2d.Y, 0), Vector3d.ZAxis, 0.3))
-                //{
-                //    ms = tr.GetObject(ms.Id, OpenMode.ForWrite) as BlockTableRecord;
+                if (testDisplay)
+                    using (Transaction tr = db.TransactionManager.StartTransaction())
+                    using (Line line = new Line(new Point3d(startPt2d.X, startPt2d.Y, 0), new Point3d(endPt2d.X, endPt2d.Y, 0)))
+                    using (Circle circle1 = new Circle(new Point3d(startPt2d.X, startPt2d.Y, 0), Vector3d.ZAxis, 0.3))
+                    {
+                        ms = tr.GetObject(ms.Id, OpenMode.ForWrite) as BlockTableRecord;
 
-                //    line.Color = Color.FromColorIndex(ColorMethod.ByAci, 4);
-                //    ms.AppendEntity(line);
-                //    tr.AddNewlyCreatedDBObject(line, true);
+                        line.Color = Color.FromColorIndex(ColorMethod.ByAci, 4);
+                        ms.AppendEntity(line);
+                        tr.AddNewlyCreatedDBObject(line, true);
 
-                //    circle1.Color = Color.FromColorIndex(ColorMethod.ByAci, 8);
-                //    ptId = ms.AppendEntity(circle1);
-                //    tr.AddNewlyCreatedDBObject(circle1, true);
+                        circle1.Color = Color.FromColorIndex(ColorMethod.ByAci, 8);
+                        ptId = ms.AppendEntity(circle1);
+                        tr.AddNewlyCreatedDBObject(circle1, true);
 
-                //    tr.Commit();
-                //    line.Draw();
-                //    ed.Regen();
-                //    ed.UpdateScreen();
-                //}
+                        tr.Commit();
+                        line.Draw();
+                        ed.Regen();
+                        ed.UpdateScreen();
+                    }
                 #endregion
                 //TEST
 
@@ -595,34 +571,35 @@ namespace Civil3DInfoTools.SurfaceMeshByBoundary
                             continue;
                         }
 
-                        //ObjectId plineId = ObjectId.Null;//TEST
+                        ObjectId plineId = ObjectId.Null;//TEST
                         try
                         {
                             //TEST
                             #region MyRegion
-                            //using (Transaction tr = db.TransactionManager.StartTransaction())
-                            //using (Polyline pline = new Polyline())
-                            //{
-                            //    ms = tr.GetObject(ms.Id, OpenMode.ForWrite) as BlockTableRecord;
+                            if (testDisplay)
+                                using (Transaction tr = db.TransactionManager.StartTransaction())
+                                using (Polyline pline = new Polyline())
+                                {
+                                    ms = tr.GetObject(ms.Id, OpenMode.ForWrite) as BlockTableRecord;
 
-                            //    Point3d vert1 = triangle.Vertex1.Location;
-                            //    Point3d vert2 = triangle.Vertex2.Location;
-                            //    Point3d vert3 = triangle.Vertex3.Location;
+                                    Point3d vert1 = triangle.Vertex1.Location;
+                                    Point3d vert2 = triangle.Vertex2.Location;
+                                    Point3d vert3 = triangle.Vertex3.Location;
 
-                            //    pline.Color = Color.FromColorIndex(ColorMethod.ByAci, 5);
-                            //    pline.AddVertexAt(0, new Point2d(vert1.X, vert1.Y), 0, 0, 0);
-                            //    pline.AddVertexAt(1, new Point2d(vert2.X, vert2.Y), 0, 0, 0);
-                            //    pline.AddVertexAt(2, new Point2d(vert3.X, vert3.Y), 0, 0, 0);
-                            //    pline.Closed = true;
+                                    pline.Color = Color.FromColorIndex(ColorMethod.ByAci, 5);
+                                    pline.AddVertexAt(0, new Point2d(vert1.X, vert1.Y), 0, 0, 0);
+                                    pline.AddVertexAt(1, new Point2d(vert2.X, vert2.Y), 0, 0, 0);
+                                    pline.AddVertexAt(2, new Point2d(vert3.X, vert3.Y), 0, 0, 0);
+                                    pline.Closed = true;
 
-                            //    plineId = ms.AppendEntity(pline);
-                            //    tr.AddNewlyCreatedDBObject(pline, true);
+                                    plineId = ms.AppendEntity(pline);
+                                    tr.AddNewlyCreatedDBObject(pline, true);
 
-                            //    tr.Commit();
-                            //    pline.Draw();
-                            //    ed.Regen();
-                            //    ed.UpdateScreen();
-                            //}
+                                    tr.Commit();
+                                    pline.Draw();
+                                    ed.Regen();
+                                    ed.UpdateScreen();
+                                }
                             #endregion
                             //TEST
 
@@ -632,7 +609,7 @@ namespace Civil3DInfoTools.SurfaceMeshByBoundary
 
                             foreach (TinSurfaceEdge edge in edges)
                             {
-                                //ObjectId lineId = ObjectId.Null;//TEST
+                                ObjectId lineId = ObjectId.Null;//TEST
 
 
                                 try
@@ -646,21 +623,22 @@ namespace Civil3DInfoTools.SurfaceMeshByBoundary
 
                                         //TEST
                                         #region MyRegion
-                                        //using (Transaction tr = db.TransactionManager.StartTransaction())
-                                        //using (Line line = new Line(edge.Vertex1.Location, edge.Vertex2.Location))
-                                        //{
-                                        //    ms = tr.GetObject(ms.Id, OpenMode.ForWrite) as BlockTableRecord;
+                                        if (testDisplay)
+                                            using (Transaction tr = db.TransactionManager.StartTransaction())
+                                            using (Line line = new Line(edge.Vertex1.Location, edge.Vertex2.Location))
+                                            {
+                                                ms = tr.GetObject(ms.Id, OpenMode.ForWrite) as BlockTableRecord;
 
-                                        //    line.Color = Color.FromColorIndex(ColorMethod.ByAci, 6);
-                                        //    line.LineWeight = LineWeight.LineWeight040;
-                                        //    lineId = ms.AppendEntity(line);
-                                        //    tr.AddNewlyCreatedDBObject(line, true);
+                                                line.Color = Color.FromColorIndex(ColorMethod.ByAci, 6);
+                                                line.LineWeight = LineWeight.LineWeight040;
+                                                lineId = ms.AppendEntity(line);
+                                                tr.AddNewlyCreatedDBObject(line, true);
 
-                                        //    tr.Commit();
-                                        //    line.Draw();
-                                        //    ed.Regen();
-                                        //    ed.UpdateScreen();
-                                        //}
+                                                tr.Commit();
+                                                line.Draw();
+                                                ed.Regen();
+                                                ed.UpdateScreen();
+                                            }
                                         #endregion
                                         //TEST
 
@@ -669,9 +647,16 @@ namespace Civil3DInfoTools.SurfaceMeshByBoundary
                                         Point2d edgePt1_2d = new Point2d(edgePt1.X, edgePt1.Y);
                                         Point2d edgePt2_2d = new Point2d(edgePt2.X, edgePt2.Y);
                                         bool overlapping = false;
-                                        Point2d? intersection = Utils
+                                        Point2d? intersection = Utils//Расчет точки пересечения с помощью AutoCAD
                                             .GetLinesIntersectionAcad(startPt2d, endPt2d, edgePt1_2d, edgePt2_2d, out overlapping);
 
+
+                                        //if (intersection == null && !overlapping//В некоторых случаях автокад не просчитывает пересечение, хотя оно есть!
+                                        //    && Utils.LineSegmentsAreIntersecting(startPt2d, endPt2d, edgePt1_2d, edgePt2_2d))
+                                        //{
+                                        //    //Тогда расчитать точку пересечения по правилу Крамера
+                                        //    intersection = Utils.GetLinesIntersectionCramer(startPt2d, endPt2d, edgePt1_2d, edgePt2_2d, out overlapping);
+                                        //}
 
 
                                         if (overlapping)
@@ -701,26 +686,27 @@ namespace Civil3DInfoTools.SurfaceMeshByBoundary
                                                     AddPolylinePt(new PolylinePt(node, vertexLoc) { TinSurfaceVertex = vertex });
                                                     //TEST
                                                     #region MyRegion
-                                                    using (Transaction tr = db.TransactionManager.StartTransaction())
-                                                    using (Circle circle1 = new Circle(edgePt1, Vector3d.ZAxis, 0.1))
-                                                    using (Circle circle2 = new Circle(edgePt2, Vector3d.ZAxis, 0.1))
-                                                    {
-                                                        ms = tr.GetObject(ms.Id, OpenMode.ForWrite) as BlockTableRecord;
+                                                    if (testDisplay)
+                                                        using (Transaction tr = db.TransactionManager.StartTransaction())
+                                                        using (Circle circle1 = new Circle(edgePt1, Vector3d.ZAxis, 0.1))
+                                                        using (Circle circle2 = new Circle(edgePt2, Vector3d.ZAxis, 0.1))
+                                                        {
+                                                            ms = tr.GetObject(ms.Id, OpenMode.ForWrite) as BlockTableRecord;
 
 
-                                                        circle1.Color = Color.FromColorIndex(ColorMethod.ByAci, 1);
-                                                        circle2.Color = Color.FromColorIndex(ColorMethod.ByAci, 1);
-                                                        ms.AppendEntity(circle1);
-                                                        ms.AppendEntity(circle2);
-                                                        tr.AddNewlyCreatedDBObject(circle1, true);
-                                                        tr.AddNewlyCreatedDBObject(circle2, true);
+                                                            circle1.Color = Color.FromColorIndex(ColorMethod.ByAci, 1);
+                                                            circle2.Color = Color.FromColorIndex(ColorMethod.ByAci, 1);
+                                                            ms.AppendEntity(circle1);
+                                                            ms.AppendEntity(circle2);
+                                                            tr.AddNewlyCreatedDBObject(circle1, true);
+                                                            tr.AddNewlyCreatedDBObject(circle2, true);
 
-                                                        tr.Commit();
-                                                        circle1.Draw();
-                                                        circle2.Draw();
-                                                        ed.Regen();
-                                                        ed.UpdateScreen();
-                                                    }
+                                                            tr.Commit();
+                                                            circle1.Draw();
+                                                            circle2.Draw();
+                                                            ed.Regen();
+                                                            ed.UpdateScreen();
+                                                        }
                                                     #endregion
                                                     //TEST
                                                     intersectionFound = true;
@@ -753,20 +739,21 @@ namespace Civil3DInfoTools.SurfaceMeshByBoundary
                                                     AddPolylinePt(new PolylinePt(node, intersectionPt) { TinSurfaceVertex = edge.Vertex1 });
                                                     //TEST
                                                     #region MyRegion
-                                                    //using (Transaction tr = db.TransactionManager.StartTransaction())
-                                                    //using (Circle circle1 = new Circle(edgePt1, Vector3d.ZAxis, 0.1))
-                                                    //{
-                                                    //    ms = tr.GetObject(ms.Id, OpenMode.ForWrite) as BlockTableRecord;
+                                                    if (testDisplay)
+                                                        using (Transaction tr = db.TransactionManager.StartTransaction())
+                                                        using (Circle circle1 = new Circle(edgePt1, Vector3d.ZAxis, 0.1))
+                                                        {
+                                                            ms = tr.GetObject(ms.Id, OpenMode.ForWrite) as BlockTableRecord;
 
-                                                    //    circle1.Color = Color.FromColorIndex(ColorMethod.ByAci, 2);
-                                                    //    ms.AppendEntity(circle1);
-                                                    //    tr.AddNewlyCreatedDBObject(circle1, true);
+                                                            circle1.Color = Color.FromColorIndex(ColorMethod.ByAci, 2);
+                                                            ms.AppendEntity(circle1);
+                                                            tr.AddNewlyCreatedDBObject(circle1, true);
 
-                                                    //    tr.Commit();
-                                                    //    circle1.Draw();
-                                                    //    ed.Regen();
-                                                    //    ed.UpdateScreen();
-                                                    //}
+                                                            tr.Commit();
+                                                            circle1.Draw();
+                                                            ed.Regen();
+                                                            ed.UpdateScreen();
+                                                        }
                                                     #endregion
                                                     //TEST
                                                 }
@@ -780,20 +767,21 @@ namespace Civil3DInfoTools.SurfaceMeshByBoundary
                                                     AddPolylinePt(new PolylinePt(node, intersectionPt) { TinSurfaceVertex = edge.Vertex2 });
                                                     //TEST
                                                     #region MyRegion
-                                                    //using (Transaction tr = db.TransactionManager.StartTransaction())
-                                                    //using (Circle circle1 = new Circle(edgePt2, Vector3d.ZAxis, 0.1))
-                                                    //{
-                                                    //    ms = tr.GetObject(ms.Id, OpenMode.ForWrite) as BlockTableRecord;
+                                                    if (testDisplay)
+                                                        using (Transaction tr = db.TransactionManager.StartTransaction())
+                                                        using (Circle circle1 = new Circle(edgePt2, Vector3d.ZAxis, 0.1))
+                                                        {
+                                                            ms = tr.GetObject(ms.Id, OpenMode.ForWrite) as BlockTableRecord;
 
-                                                    //    circle1.Color = Color.FromColorIndex(ColorMethod.ByAci, 2);
-                                                    //    ms.AppendEntity(circle1);
-                                                    //    tr.AddNewlyCreatedDBObject(circle1, true);
+                                                            circle1.Color = Color.FromColorIndex(ColorMethod.ByAci, 2);
+                                                            ms.AppendEntity(circle1);
+                                                            tr.AddNewlyCreatedDBObject(circle1, true);
 
-                                                    //    tr.Commit();
-                                                    //    circle1.Draw();
-                                                    //    ed.Regen();
-                                                    //    ed.UpdateScreen();
-                                                    //}
+                                                            tr.Commit();
+                                                            circle1.Draw();
+                                                            ed.Regen();
+                                                            ed.UpdateScreen();
+                                                        }
                                                     #endregion
                                                     //TEST
                                                 }
@@ -809,13 +797,13 @@ namespace Civil3DInfoTools.SurfaceMeshByBoundary
                                                     }
                                                     else
                                                     {
-                                                        if (next != null)
+                                                        if (next != null && forvard)
                                                         {
-                                                            //ЭТО ПЛОХАЯ ИДЕЯ
-                                                            //TODO: Если встречена граница поверхности и известно, что следующая вершина полилинии лежит на поверхности, то использовать метод
-                                                            //TinSurf.FindTriangleAtXY используя точки на ребре с шагом 1 ед длины пока не будет найден треугольник
+                                                            //Если при прямом проходе встречена граница поверхности и известно, что следующая вершина полилинии лежит на поверхности, то использовать метод
+                                                            //TinSurf.FindTriangleAtXY для точек на ребре с шагом 1 ед длины пока не будет найден треугольник
                                                             //Если треугольник найден, то сначала выполнить обратный проход от него а затем продолжить прямой проход от него
                                                             //Для этого в последовательность вставляется новый узел после переданного lln если только найденная точка не совпала с конечной или не перескочила ее
+                                                            //TODO?: КАК ОТСЛЕДИТЬ ВЫХОД ЗА ГРАНИЦУ ПОВЕРХНОСТИ ЧЕРЕЗ ВЕРШИНУ ПОВЕРХНОСТИ???
                                                             Vector2d segmentVector = endPt2d - startPt2d;
                                                             double overalLength = segmentVector.Length;
                                                             segmentVector = segmentVector.GetNormal();
@@ -825,7 +813,7 @@ namespace Civil3DInfoTools.SurfaceMeshByBoundary
                                                             bool overrun = false;
                                                             do
                                                             {
-                                                                testingPt = startPt2d + segmentVector * n;
+                                                                testingPt = intersectionPt + segmentVector * n;
                                                                 n++;
                                                                 overrun = (testingPt - startPt2d).Length > overalLength;
                                                                 try { otherTriangle = TinSurf.FindTriangleAtXY(testingPt.X, testingPt.Y); }
@@ -836,12 +824,12 @@ namespace Civil3DInfoTools.SurfaceMeshByBoundary
                                                             if (otherTriangle != null && !overrun)
                                                             {
                                                                 PolylinePt polyPt = new PolylinePt(node, testingPt);
-                                                                PtPositionInTriangle(new Point3d(testingPt.X, testingPt.Y, 0), otherTriangle, polyPt);
-                                                                
+                                                                PtPositionInTriangle(testingPt, otherTriangle, polyPt);
+
                                                                 lln.List.AddAfter(lln, polyPt);
 
-                                                                if(forvard)
-                                                                    segmentTraversedAsPossible = false;
+
+                                                                segmentTraversedAsPossible = false;
                                                             }
                                                         }
 
@@ -849,20 +837,21 @@ namespace Civil3DInfoTools.SurfaceMeshByBoundary
                                                     AddPolylinePt(new PolylinePt(node, intersectionPt) { TinSurfaceEdge = edge });
                                                     //TEST
                                                     #region MyRegion
-                                                    //using (Transaction tr = db.TransactionManager.StartTransaction())
-                                                    //using (Circle circle1 = new Circle(new Point3d(intersectionPt.X, intersectionPt.Y, 0), Vector3d.ZAxis, 0.1))
-                                                    //{
-                                                    //    ms = tr.GetObject(ms.Id, OpenMode.ForWrite) as BlockTableRecord;
+                                                    if (testDisplay)
+                                                        using (Transaction tr = db.TransactionManager.StartTransaction())
+                                                        using (Circle circle1 = new Circle(new Point3d(intersectionPt.X, intersectionPt.Y, 0), Vector3d.ZAxis, 0.1))
+                                                        {
+                                                            ms = tr.GetObject(ms.Id, OpenMode.ForWrite) as BlockTableRecord;
 
-                                                    //    circle1.Color = Color.FromColorIndex(ColorMethod.ByAci, 3);
-                                                    //    ms.AppendEntity(circle1);
-                                                    //    tr.AddNewlyCreatedDBObject(circle1, true);
+                                                            circle1.Color = Color.FromColorIndex(ColorMethod.ByAci, 3);
+                                                            ms.AppendEntity(circle1);
+                                                            tr.AddNewlyCreatedDBObject(circle1, true);
 
-                                                    //    tr.Commit();
-                                                    //    circle1.Draw();
-                                                    //    ed.Regen();
-                                                    //    ed.UpdateScreen();
-                                                    //}
+                                                            tr.Commit();
+                                                            circle1.Draw();
+                                                            ed.Regen();
+                                                            ed.UpdateScreen();
+                                                        }
                                                     #endregion
                                                     //TEST
                                                 }
@@ -882,15 +871,16 @@ namespace Civil3DInfoTools.SurfaceMeshByBoundary
                                 {
                                     //TEST
                                     #region MyRegion
-                                    //if (!lineId.IsNull)
-                                    //    using (Transaction tr = db.TransactionManager.StartTransaction())
-                                    //    {
-                                    //        Line line = tr.GetObject(lineId, OpenMode.ForWrite) as Line;
-                                    //        line.Erase();
-                                    //        tr.Commit();
-                                    //        ed.Regen();
-                                    //        ed.UpdateScreen();
-                                    //    }
+                                    if (testDisplay)
+                                        if (!lineId.IsNull)
+                                            using (Transaction tr = db.TransactionManager.StartTransaction())
+                                            {
+                                                Line line = tr.GetObject(lineId, OpenMode.ForWrite) as Line;
+                                                line.Erase();
+                                                tr.Commit();
+                                                ed.Regen();
+                                                ed.UpdateScreen();
+                                            }
                                     #endregion
                                     //TEST
                                 }
@@ -903,15 +893,16 @@ namespace Civil3DInfoTools.SurfaceMeshByBoundary
                         {
                             //TEST
                             #region MyRegion
-                            //if (!plineId.IsNull)
-                            //    using (Transaction tr = db.TransactionManager.StartTransaction())
-                            //    {
-                            //        Polyline pline = tr.GetObject(plineId, OpenMode.ForWrite) as Polyline;
-                            //        pline.Erase();
-                            //        tr.Commit();
-                            //        ed.Regen();
-                            //        ed.UpdateScreen();
-                            //    }
+                            if (testDisplay)
+                                if (!plineId.IsNull)
+                                    using (Transaction tr = db.TransactionManager.StartTransaction())
+                                    {
+                                        Polyline pline = tr.GetObject(plineId, OpenMode.ForWrite) as Polyline;
+                                        pline.Erase();
+                                        tr.Commit();
+                                        ed.Regen();
+                                        ed.UpdateScreen();
+                                    }
                             #endregion
                             //TEST
                         }
@@ -921,8 +912,6 @@ namespace Civil3DInfoTools.SurfaceMeshByBoundary
                     else
                     {
                         //выход из цикла если при обходе всех треугольников, подлежащих проверке пересечений не обнаружено.
-                        //TODO?: КАК ОТСЛЕДИТЬ ВЫХОД ЗА ГРАНИЦУ ПОВЕРХНОСТИ ЧЕРЕЗ ВЕРШИНУ ПОВЕРХНОСТИ??? (entireSegmentTraversed = false)
-                        //TODO?: Учесть этот недостаток и подобные нестыковки на стадии построени я и обхода графов
                         break;
                     }
 
@@ -932,15 +921,16 @@ namespace Civil3DInfoTools.SurfaceMeshByBoundary
             {
                 //TEST
                 #region MyRegion
-                //if (!ptId.IsNull)
-                //    using (Transaction tr = db.TransactionManager.StartTransaction())
-                //    {
-                //        Circle pt = tr.GetObject(ptId, OpenMode.ForWrite) as Circle;
-                //        pt.Erase();
-                //        tr.Commit();
-                //        ed.Regen();
-                //        ed.UpdateScreen();
-                //    }
+                if (testDisplay)
+                    if (!ptId.IsNull)
+                        using (Transaction tr = db.TransactionManager.StartTransaction())
+                        {
+                            Circle pt = tr.GetObject(ptId, OpenMode.ForWrite) as Circle;
+                            pt.Erase();
+                            tr.Commit();
+                            ed.Regen();
+                            ed.UpdateScreen();
+                        }
                 #endregion
                 //TEST
             }

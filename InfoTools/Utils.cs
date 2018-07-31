@@ -321,7 +321,7 @@ namespace Civil3DInfoTools
         /// <param name="p2"></param>
         /// <returns></returns>
         public static bool BarycentricCoordinates
-            (Point3d p, Point3d p1, Point3d p2, Point3d p3,
+            (Point2d p, Point2d p1, Point2d p2, Point2d p3,
             out double lambda1, out double lambda2)
         {
             double y2_y3 = p2.Y - p3.Y;
@@ -338,18 +338,18 @@ namespace Civil3DInfoTools
             lambda2 = (y3_y1 * x_x3 + x1_x3 * y_y3) / denominator;
 
 
-            if (lambda1 != 0 && Math.Abs(lambda1) < 0.000000001)
-            {
-                lambda1 = 0;
-            }
-            if (lambda2 != 0 && Math.Abs(lambda2) < 0.000000001)
-            {
-                lambda2 = 0;
-            }
-            if (lambda1 + lambda2 != 1 && Math.Abs(lambda1 + lambda2 - 1) < 0.000000001)
-            {
-                lambda2 = 1 - lambda1;
-            }
+            //if (lambda1 != 0 && Math.Abs(lambda1) < 0.000000001)
+            //{
+            //    lambda1 = 0;
+            //}
+            //if (lambda2 != 0 && Math.Abs(lambda2) < 0.000000001)
+            //{
+            //    lambda2 = 0;
+            //}
+            //if (lambda1 + lambda2 != 1 && Math.Abs(lambda1 + lambda2 - 1) < 0.000000001)
+            //{
+            //    lambda2 = 1 - lambda1;
+            //}
 
 
             return
