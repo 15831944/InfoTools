@@ -6,7 +6,7 @@
         xmlns:local="clr-namespace:NavisWorksInfoTools"
         mc:Ignorable="d"
         Title="Замена ссылок на файлы" Height="263.5" Width="534.5" ResizeMode="NoResize" 
-        WindowStartupLocation="CenterOwner">
+        WindowStartupLocation="CenterScreen">
     <Grid>
         <Label Content="Введите старый путь до файла" HorizontalAlignment="Left" Margin="10,10,0,0" VerticalAlignment="Top"/>
         <TextBox Name="oldUrlTextBox" HorizontalAlignment="Left" Height="65" Margin="188,14,0,0" TextWrapping="Wrap" Text="https://abc.stpr.ru/DocLib1/A/B/" VerticalAlignment="Top" Width="330"/>

@@ -1,0 +1,31 @@
+﻿<Window x:Class="RevitInfoTools.SelectTypeWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:local="clr-namespace:RevitInfoTools"
+        mc:Ignorable="d"
+        Title="Выбор типоразмера" Height="269" Width="426" Loaded="Window_Loaded"
+        WindowStartupLocation="CenterScreen">
+    <Grid>
+        <DataGrid Name="typeDataGrid" AutoGenerateColumns="False" Margin="10,10,138,10"
+                  SelectionMode="Single"
+                  SelectionUnit="FullRow"
+                  IsReadOnly="True"
+                  SelectionChanged="typeDataGrid_SelectionChanged">
+            <DataGrid.Columns>
+                <DataGridTextColumn Binding="{Binding FamilyName}" Header="Семейство"/>
+                <DataGridTextColumn Binding="{Binding Name}" Header="Тип"/>
+            </DataGrid.Columns>
+        </DataGrid>
+        <Image
+            Name="typeIconImage"
+            Height="100" 
+            Margin="0,23,10,0"
+            VerticalAlignment="Top"
+            OpacityMask="{DynamicResource {x:Static SystemColors.ControlDarkDarkBrushKey}}" HorizontalAlignment="Right" Width="100"
+            />
+        <Button Name="okButton" Content="OK" Margin="0,0,10,10" HorizontalAlignment="Right" Width="75" Height="30" VerticalAlignment="Bottom" Click="okButton_Click"/>
+
+    </Grid>
+</Window>

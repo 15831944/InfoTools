@@ -3,10 +3,20 @@
 
   <AddIn Type="Command">
     <Text>Draw3DLine</Text>
-    <Description>Создание 3d линии по координатам</Description>
+    <Description>Создание 3d линии по координатам. Вставка адаптивных семейств</Description>
     <Assembly>RevitInfoTools\RevitInfoTools.dll</Assembly>
     <FullClassName>RevitInfoTools.Draw3DLineCommand</FullClassName>
     <ClientId>ffcbdf75-b7e7-4940-a77a-85c9d9187b93</ClientId>
+    <VendorId>S-Info</VendorId>
+    <VendorDescription>S-Info</VendorDescription>
+  </AddIn>
+
+  <AddIn Type="Command">
+    <Text>Draw3DLine2</Text>
+    <Description>Создание 3d линии по координатам. Линии модели</Description>
+    <Assembly>RevitInfoTools\RevitInfoTools.dll</Assembly>
+    <FullClassName>RevitInfoTools.Draw3DLine2Command</FullClassName>
+    <ClientId>3d18aef1-275b-4d3b-8ed7-2bc758f9faee</ClientId>
     <VendorId>S-Info</VendorId>
     <VendorDescription>S-Info</VendorDescription>
   </AddIn>
@@ -26,6 +36,16 @@
     <Assembly>RevitInfoTools\RevitInfoTools.dll</Assembly>
     <FullClassName>RevitInfoTools.App</FullClassName>
     <ClientId>557857d5-c7a1-4e01-8e29-132896543402</ClientId>
+    <VendorId>S-Info</VendorId>
+    <VendorDescription>S-Info</VendorDescription>
+  </AddIn>
+
+  <AddIn Type="Command">
+    <Text>PlaceCrossSections</Text>
+    <Description>Расстановка поперечных сечений по координатам</Description>
+    <Assembly>RevitInfoTools\RevitInfoTools.dll</Assembly>
+    <FullClassName>RevitInfoTools.PlaceCrossSectionsCommand</FullClassName>
+    <ClientId>ff418f70-7eff-4663-ad64-63a68a71721a</ClientId>
     <VendorId>S-Info</VendorId>
     <VendorDescription>S-Info</VendorDescription>
   </AddIn>

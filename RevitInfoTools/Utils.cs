@@ -6,6 +6,7 @@ using System.Linq;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
+using static Common.ExceptionHandling.ExeptionHandlingProcedures;
 
 namespace RevitInfoTools
 {
@@ -36,56 +37,55 @@ namespace RevitInfoTools
             return finalTransform;
         }
 
+        
         /// <summary>
-        /// Чтение координат из файла CSV
+        /// Чтение координат из нескольких файлов CSV с пересчетом координат в проектную систему и переводом в футы
         /// </summary>
-        /// <param name="csvFileName"></param>
+        /// <param name="filenames"></param>
+        /// <param name="projectTransform"></param>
+        /// <param name="lines3d"></param>
         /// <returns></returns>
-        public static List<double[]> ReadCoordinates(string csvFileName)
+        public static bool ReadCoordinatesFromCSV(string[] filenames, Transform projectTransform, List<List<XYZ>> lines3d)
         {
-            string[] csvLines = null;
-
-
-            csvLines = File.ReadAllLines(csvFileName, Encoding.UTF8);
-
-
-            List<double[]> ptList = new List<double[]>();
-            foreach (string csvLine in csvLines)
+            foreach (string filename in filenames)
             {
-                string[] xyzLine = csvLine.Split(';');
-
-                List<string> xyzLineTrim = new List<string>();
-                Regex regex = new Regex("^.*\\w+.*$");//Содержит хотябы один любой символ кроме пропусков
-                foreach (string str in xyzLine)
+                List<double[]> inputList = null;
+                try
                 {
-                    if (regex.IsMatch(str))
+                    inputList = Common.Utils.ReadCoordinates(filename);
+                }
+                catch (IOException ex)
+                {
+                    if (ex.Message.StartsWith("The process cannot access the file"))
                     {
-                        xyzLineTrim.Add(str);
+                        AccessException(ex as IOException);
+                        return false;
+                    }
+                    else
+                    {
+                        throw ex;
                     }
                 }
 
-                if (xyzLineTrim.Count == 0)//Строка содержит только пропуски. Переход к следующей строке
-                    continue;
-
-                if (xyzLineTrim.Count == 3)
+                if (inputList != null && inputList.Count > 0)
                 {
-                    double[] globalPoint = new double[]
+                    List<XYZ> ptList = new List<XYZ>();
+
+                    foreach (double[] coordArr in inputList)
                     {
-                            Convert.ToDouble(xyzLineTrim[0].Replace(" ", "").Replace(",",".")),
-                            Convert.ToDouble(xyzLineTrim[1].Replace(" ", "").Replace(",",".")),
-                            Convert.ToDouble(xyzLineTrim[2].Replace(" ", "").Replace(",","."))
-                    };
+                        XYZ globalPoint = Utils.PointByMeters(coordArr[0], coordArr[1], coordArr[2]);//Перевод в футы из метров
+                        XYZ projectPoint = projectTransform.OfPoint(globalPoint);//Пересчет координат в проектную систему проекта Revit
+                        ptList.Add(projectPoint);
+                    }
 
-                    ptList.Add(globalPoint);
-                }
-                else
-                {
-                    throw new FormatException("Неверный формат данных");
+                    lines3d.Add(ptList);
                 }
 
             }
-            return ptList;
+            return true;
         }
+
+
 
 
         public static XYZ PointByMeters(double x, double y, double z)
@@ -139,6 +139,20 @@ namespace RevitInfoTools
                 }
             }
             return searchedfamily;
+        }
+
+        /// <summary>
+        /// Активировать типоразмер
+        /// </summary>
+        /// <param name="doc"></param>
+        /// <param name="familySymbol"></param>
+        public static void ActivateFamSym(Document doc, FamilySymbol familySymbol)
+        {
+            if (!familySymbol.IsActive)
+            {
+                familySymbol.Activate();
+                doc.Regenerate();
+            }
         }
     }
 }

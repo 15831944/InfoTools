@@ -227,13 +227,16 @@ namespace Civil3DInfoTools.RoadMarking
 
                 //TODO: Учесть возможные ошибки из-за отсутствия прав
                 //Создание нового чертежа и открытие его
-                string targetDocFullPath = null;
-                int n = 0;
-                do
-                {
-                    targetDocFullPath = Path.Combine(Path.GetDirectoryName(adoc.Name), "RoadMarkingBoundaries" + n + ".dwg");
-                    n++;
-                } while (File.Exists(targetDocFullPath));
+                //string targetDocFullPath = null;
+                //int n = 0;
+                //do
+                //{
+                //    targetDocFullPath = Path.Combine(Path.GetDirectoryName(adoc.Name), "RoadMarkingBoundaries" + n + ".dwg");
+                //    n++;
+                //} while (File.Exists(targetDocFullPath));
+
+                string targetDocFullPath
+                    = Common.Utils.GetNonExistentFileName(Path.GetDirectoryName(adoc.Name), "RoadMarkingBoundaries", "dwg");
                 dbTarget.SaveAs(targetDocFullPath, DwgVersion.Current);
                 adocTarget = Application.DocumentManager.Open(targetDocFullPath, false);
 

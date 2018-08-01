@@ -15,6 +15,7 @@
     <AppDesignerFolder>Properties</AppDesignerFolder>
     <RootNamespace>RevitInfoTools</RootNamespace>
     <AssemblyName>RevitInfoTools</AssemblyName>
+    <ProjectTypeGuids>{60dc8134-eba5-43b8-bcc9-bb4bc16c2548};{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}</ProjectTypeGuids>
     <TargetFrameworkVersion>v4.6</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
   </PropertyGroup>
@@ -83,9 +84,12 @@
   </Choose>
   <ItemGroup>
     <Reference Include="PresentationCore" />
+    <Reference Include="PresentationFramework" />
     <Reference Include="System" />
     <Reference Include="System.Core" />
+    <Reference Include="System.Drawing" />
     <Reference Include="System.Windows.Forms" />
+    <Reference Include="System.Xaml" />
     <Reference Include="System.Xml.Linq" />
     <Reference Include="System.Data.DataSetExtensions" />
     <Reference Include="Microsoft.CSharp" />
@@ -96,8 +100,13 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="App.cs" />
+    <Compile Include="Draw3DLine2Command.cs" />
     <Compile Include="Draw3DLineCommand.cs" />
+    <Compile Include="PlaceCrossSectionsCommand.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="SelectTypeWindow.xaml.cs">
+      <DependentUpon>SelectTypeWindow.xaml</DependentUpon>
+    </Compile>
     <Compile Include="SpillwaysPlacementCommand.cs" />
     <Compile Include="Utils.cs" />
   </ItemGroup>
@@ -119,11 +128,24 @@
   <ItemGroup>
     <EmbeddedResource Include="Icons\Draw3DLine.png" />
   </ItemGroup>
+  <ItemGroup>
+    <EmbeddedResource Include="Icons\Draw3DLine2.png" />
+  </ItemGroup>
+  <ItemGroup>
+    <Page Include="SelectTypeWindow.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+  </ItemGroup>
+  <ItemGroup>
+    <EmbeddedResource Include="Icons\PlaceCrossSections.png" />
+  </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <PropertyGroup>
     <PostBuildEvent>copy "$(ProjectDir)*.addin" "$(AppData)\Autodesk\REVIT\Addins\2018"
 
 copy "$(ProjectDir)Families\*rfa" "$(AppData)\Autodesk\REVIT\Addins\2018\RevitInfoTools\Families"
+copy "$(ProjectDir)Families\*rft" "$(AppData)\Autodesk\REVIT\Addins\2018\RevitInfoTools\Families"
 
 copy "$(TargetDir)*.dll" "$(AppData)\Autodesk\REVIT\Addins\2018\RevitInfoTools"
 copy "$(TargetDir)*.pdb" "$(AppData)\Autodesk\REVIT\Addins\2018\RevitInfoTools"
@@ -132,6 +154,7 @@ copy "$(TargetDir)*.pdb" "$(AppData)\Autodesk\REVIT\Addins\2018\RevitInfoTools"
 copy "$(ProjectDir)*.addin" "$(AppData)\Autodesk\REVIT\Addins\2019"
 
 copy "$(ProjectDir)Families\*rfa" "$(AppData)\Autodesk\REVIT\Addins\2019\RevitInfoTools\Families"
+copy "$(ProjectDir)Families\*rft" "$(AppData)\Autodesk\REVIT\Addins\2019\RevitInfoTools\Families"
 
 copy "$(TargetDir)*.dll" "$(AppData)\Autodesk\REVIT\Addins\2019\RevitInfoTools"
 copy "$(TargetDir)*.pdb" "$(AppData)\Autodesk\REVIT\Addins\2019\RevitInfoTools"
@@ -140,6 +163,7 @@ copy "$(TargetDir)*.pdb" "$(AppData)\Autodesk\REVIT\Addins\2019\RevitInfoTools"
 
 copy "$(ProjectDir)*.addin" "$(TargetDir)\.."
 copy "$(ProjectDir)Families\*rfa" "$(TargetDir)\Families"
+copy "$(ProjectDir)Families\*rft" "$(TargetDir)\Families"
 </PostBuildEvent>
   </PropertyGroup>
 </Project>

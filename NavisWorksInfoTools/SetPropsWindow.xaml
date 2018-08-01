@@ -5,7 +5,8 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:local="clr-namespace:NavisWorksInfoTools"
         mc:Ignorable="d"
-        Title="Добавить атрибуты" Height="385" Width="443" Loaded="Window_Loaded">
+        Title="Добавить атрибуты" Height="385" Width="443" Loaded="Window_Loaded"
+        WindowStartupLocation="CenterScreen">
     <Grid>
         <DataGrid Name="propsDataGrid" AutoGenerateColumns="False" Margin="10,40,10,57">
             <DataGrid.Columns>

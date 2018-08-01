@@ -67,7 +67,22 @@ namespace RevitInfoTools
                 pbData.Image = bitmap;
 
                 PushButton pb = ribbonPanel.AddItem(pbData) as PushButton;
-                pb.ToolTip = "Создание 3d линий по координатам в файлах CSV";
+                pb.ToolTip = "Создание 3d линии по координатам. Вставка адаптивных семейств";
+            }
+
+
+            {
+                PushButtonData pbData = new PushButtonData(
+                "Draw3DLine2",
+                "Draw3DLine2",
+                thisAssemblyPath,
+                "RevitInfoTools.Draw3DLine2Command");
+                BitmapSource bitmap = GetEmbeddedImage("RevitInfoTools.Icons.Draw3DLine2.png");
+                pbData.LargeImage = bitmap;
+                pbData.Image = bitmap;
+
+                PushButton pb = ribbonPanel.AddItem(pbData) as PushButton;
+                pb.ToolTip = "Создание 3d линии по координатам. Линии модели";
             }
 
 
@@ -84,7 +99,21 @@ namespace RevitInfoTools
                 PushButton pb = ribbonPanel.AddItem(pbData) as PushButton;
                 pb.ToolTip = "Расстановка водосбросов в Revit";
             }
-            
+
+            {
+                PushButtonData pbData = new PushButtonData(
+                "PlaceCrossSections",
+                "PlaceCrossSections",
+                thisAssemblyPath,
+                "RevitInfoTools.PlaceCrossSectionsCommand");
+                BitmapSource bitmap = GetEmbeddedImage("RevitInfoTools.Icons.PlaceCrossSections.png");
+                pbData.LargeImage = bitmap;
+                pbData.Image = bitmap;
+
+                PushButton pb = ribbonPanel.AddItem(pbData) as PushButton;
+                pb.ToolTip = "Расстановка поперечных сечений по координатам";
+            }
+
 
         }
 

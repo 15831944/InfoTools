@@ -8,19 +8,16 @@ using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
-using WinForms = System.Windows.Forms;
 using static Common.ExceptionHandling.ExeptionHandlingProcedures;
+using WinForms = System.Windows.Forms;
+using RCreation = Autodesk.Revit.Creation;
 
 namespace RevitInfoTools
 {
     [Transaction(TransactionMode.Manual)]
     [Regeneration(RegenerationOption.Manual)]
-    public class Draw3DLineCommand : IExternalCommand
+    public class Draw3DLine2Command : IExternalCommand
     {
-
-        
-
-
         public Result Execute(ExternalCommandData commandData, ref string message, ElementSet elements)
         {
             UIApplication uiapp = commandData.Application;
@@ -33,6 +30,7 @@ namespace RevitInfoTools
                 TaskDialog.Show("ОТМЕНЕНО", "Данная команда предназначена для запуска в документе проекта");
                 return Result.Cancelled;
             }
+
 
             try
             {
@@ -58,20 +56,11 @@ namespace RevitInfoTools
 
                     List<List<XYZ>> lines3d = new List<List<XYZ>>();
 
-                    if(Utils.ReadCoordinatesFromCSV(filenames, projectTransform, lines3d))
+                    if (Utils.ReadCoordinatesFromCSV(filenames, projectTransform, lines3d))
                     {
-                        //Загрузить семейство 3d линии если нет
-                        Family line3dFamily = Utils.GetFamily(doc, "3d line");
-                        ElementId symId = line3dFamily.GetFamilySymbolIds().First();
-                        FamilySymbol familySymbol = (FamilySymbol)doc.GetElement(symId);
-                        //активировать типоразмер
-                        if (!familySymbol.IsActive)
-                        {
-                            familySymbol.Activate();
-                            doc.Regenerate();
-                        }
+                        //Создать линии модели по координатам
+                        RCreation.Document crDoc = doc.Create;
 
-                        //Расставить линии по координатам
                         using (Transaction tr = new Transaction(doc))
                         {
                             tr.Start("Draw 3D line");
@@ -80,12 +69,21 @@ namespace RevitInfoTools
                             {
                                 for (int i = 0; i < ptList.Count - 1; i++)
                                 {
-                                    FamilyInstance instance = AdaptiveComponentInstanceUtils.CreateAdaptiveComponentInstance(doc, familySymbol);
-                                    IList<ElementId> placePointIds = AdaptiveComponentInstanceUtils.GetInstancePlacementPointElementRefIds(instance);
-                                    ReferencePoint point1 = (ReferencePoint)doc.GetElement(placePointIds[0]);
-                                    point1.Position = ptList[i];
-                                    ReferencePoint point2 = (ReferencePoint)doc.GetElement(placePointIds[1]);
-                                    point2.Position = ptList[i + 1];
+                                    XYZ startPt = ptList[i];
+                                    XYZ endPt = ptList[i + 1];
+
+                                    if (!startPt.IsAlmostEqualTo(endPt))
+                                    {
+                                        Line line = Line.CreateBound(startPt, endPt);
+
+                                        XYZ lineVector = (endPt - startPt).Normalize();
+                                        XYZ horizontal = XYZ.BasisZ.CrossProduct(lineVector).Normalize();
+                                        XYZ norm = lineVector.CrossProduct(horizontal).Normalize();
+                                        Plane plane = Plane.CreateByNormalAndOrigin(norm, startPt);
+                                        SketchPlane sketchPlane = SketchPlane.Create(doc, plane);
+                                        crDoc.NewModelCurve(line, sketchPlane);
+                                    }
+
 
                                 }
                             }
@@ -96,12 +94,13 @@ namespace RevitInfoTools
 
                 }
             }
-            catch (Autodesk.Revit.Exceptions.OperationCanceledException){}
+            catch (Autodesk.Revit.Exceptions.OperationCanceledException)
+            {
+            }
             catch (Exception ex)
             {
                 CommonException(ex, "Ошибка при вычерчивании 3d линии в Revit");
             }
-
 
 
             return Result.Succeeded;
