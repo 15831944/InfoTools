@@ -14,6 +14,7 @@ using System.Text;
 using System.Threading.Tasks;
 using static Common.ExceptionHandling.ExeptionHandlingProcedures;
 using RBush;
+using Autodesk.AutoCAD.Colors;
 
 [assembly: CommandClass(typeof(Civil3DInfoTools.SurfaceMeshByBoundary.SurfaceMeshByBoundaryCommand))]
 
@@ -23,6 +24,15 @@ namespace Civil3DInfoTools.SurfaceMeshByBoundary
     //TODO: Выдавать предупреждение если обнаружены пересекающиеся прямые
     //TODO: Сеть создавать не внутри блока, а в пространстве модели. Если у блока были привязаны данные Map3d, то привязать их к сети
 
+    //TODO: Подробно изучить CurveCurveIntersector2d Class для расчета пересечений между кривыми!  IsTangential если линии только касаются в точке пересечения?
+    //Подумать об изменении процедуры проверки на пересечение с учетом того, что я узнал о Tolerance  Curve2d
+
+    //TODO: Обратить внимание на то, что должна быть расчитана координата Z для всех найденных точек
+
+    //TODO: Учесть  eCannotScaleNonUniformly из-за растянутых блоков. Такие блоки не должны учитываться, так как иначе придется как-то пересчитывать дуги полилинии
+    //Возможно следует предусмотреть, чтобы все блоки имели масштаб 1?
+
+
     public class SurfaceMeshByBoundaryCommand
     {
 
@@ -30,18 +40,17 @@ namespace Civil3DInfoTools.SurfaceMeshByBoundary
         /// Все R-Tree во всех открытых документах
         /// Ключ - имя документа
         /// </summary>
-        public static Dictionary<string, Dictionary<long, RBush<TinSurfaceVertexS>>> Trees
-            = new Dictionary<string, Dictionary<long, RBush<TinSurfaceVertexS>>>();
+        //public static Dictionary<string, Dictionary<long, RBush<TinSurfaceVertexS>>> Trees
+        //    = new Dictionary<string, Dictionary<long, RBush<TinSurfaceVertexS>>>();
 
         /// <summary>
         /// R-Tree в текущем документе
         /// Ключ - Handle поверхности
         /// </summary>
-        public static Dictionary<long, RBush<TinSurfaceVertexS>> TreesCurrDoc = null;
+        //public static Dictionary<long, RBush<TinSurfaceVertexS>> TreesCurrDoc = null;
 
 
-
-        [CommandMethod("SurfaceMeshByBoundary", CommandFlags.Modal | CommandFlags.UsePickSet)]
+        [CommandMethod("S1NF0_SurfaceMeshByBoundary", CommandFlags.Modal | CommandFlags.UsePickSet)]
         public void SurfaceMeshByBoundary()
         {
 
@@ -49,13 +58,13 @@ namespace Civil3DInfoTools.SurfaceMeshByBoundary
             if (adoc == null) return;
 
             //Обновление ссылки на набор 2dTree текущего документа
-            TreesCurrDoc = null;
-            Trees.TryGetValue(adoc.Name, out TreesCurrDoc);
-            if (TreesCurrDoc == null)
-            {
-                TreesCurrDoc = new Dictionary<long, RBush<TinSurfaceVertexS>>();
-                Trees.Add(adoc.Name, TreesCurrDoc);
-            }
+            //TreesCurrDoc = null;
+            //Trees.TryGetValue(adoc.Name, out TreesCurrDoc);
+            //if (TreesCurrDoc == null)
+            //{
+            //    TreesCurrDoc = new Dictionary<long, RBush<TinSurfaceVertexS>>();
+            //    Trees.Add(adoc.Name, TreesCurrDoc);
+            //}
 
             Database db = adoc.Database;
 
@@ -153,31 +162,31 @@ namespace Civil3DInfoTools.SurfaceMeshByBoundary
                                     if (polylines.Count > 0)
                                     {
                                         //Проверить, что структура данных вершин выбранной поверхности уже существует
-                                        if (!TreesCurrDoc.ContainsKey(tinSurf.Handle.Value))
-                                        {
-                                            RBush<TinSurfaceVertexS> tree = new RBush<TinSurfaceVertexS>();
-                                            List<TinSurfaceVertexS> list = new List<TinSurfaceVertexS>();
-                                            TinSurfaceVertexCollection vc = tinSurf.Vertices;
-                                            foreach (TinSurfaceVertex v in vc)
-                                            {
+                                        //if (!TreesCurrDoc.ContainsKey(tinSurf.Handle.Value))
+                                        //{
+                                        //    RBush<TinSurfaceVertexS> tree = new RBush<TinSurfaceVertexS>();
+                                        //    List<TinSurfaceVertexS> list = new List<TinSurfaceVertexS>();
+                                        //    TinSurfaceVertexCollection vc = tinSurf.Vertices;
+                                        //    foreach (TinSurfaceVertex v in vc)
+                                        //    {
 
-                                                list.Add(new TinSurfaceVertexS(v));
-                                            }
+                                        //        list.Add(new TinSurfaceVertexS(v));
+                                        //    }
 
-                                            tree.BulkLoad(list);
+                                        //    tree.BulkLoad(list);
 
-                                            TreesCurrDoc.Add(tinSurf.Handle.Value, tree);
-                                            using (Transaction tr = db.TransactionManager.StartTransaction())
-                                            {
+                                        //    TreesCurrDoc.Add(tinSurf.Handle.Value, tree);
+                                        //    using (Transaction tr = db.TransactionManager.StartTransaction())
+                                        //    {
 
-                                                tinSurf = tr.GetObject(tinSurf.Id, OpenMode.ForWrite) as TinSurface;
-                                                //При изменении поверхности удалять R-tree
-                                                tinSurf.Modified += SurfModified_EventHandler;
-                                                //При закрытии чертежа удалять R-tree
-                                                Application.DocumentManager.DocumentDestroyed += DocDestroyed;
-                                                tr.Commit();
-                                            }
-                                        }
+                                        //        tinSurf = tr.GetObject(tinSurf.Id, OpenMode.ForWrite) as TinSurface;
+                                        //        //При изменении поверхности удалять R-tree
+                                        //        tinSurf.Modified += SurfModified_EventHandler;
+                                        //        //При закрытии чертежа удалять R-tree
+                                        //        Application.DocumentManager.DocumentDestroyed += DocDestroyed;
+                                        //        tr.Commit();
+                                        //    }
+                                        //}
 
                                         #region MyRegion
                                         //Test///////////////////////////////
@@ -212,22 +221,29 @@ namespace Civil3DInfoTools.SurfaceMeshByBoundary
                                             {
                                                 Extents3d? ext1 = polylines[i].Bounds;
                                                 Extents3d? ext2 = polylines[j].Bounds;
-                                                if (ext1 != null && ext2 != null
-                                                    && Utils
-                                                    .BoxesAreSuperimposed(ext1.Value.MaxPoint, ext1.Value.MinPoint, ext2.Value.MaxPoint, ext2.Value.MinPoint))
+                                                if (ext1 != null && ext2 != null)
                                                 {
-                                                    //Сначала проверяем перекрываются ли BoundingBox.
-                                                    //Во многих случаях это гораздо производительнее и затем считаем пеерсечения
-                                                    Point3dCollection intersectionPts = new Point3dCollection();
-                                                    polylines[i].IntersectWith(polylines[j], Intersect.OnBothOperands,
-                                                    new Plane(Point3d.Origin, Vector3d.ZAxis),
-                                                    intersectionPts, IntPtr.Zero, IntPtr.Zero);
-                                                    if (intersectionPts.Count > 0)
+                                                    Extents2d ext1_2d = Utils.Extents2DBy3D(ext1.Value);
+                                                    Extents2d ext2_2d = Utils.Extents2DBy3D(ext2.Value);
+
+                                                    if (Utils.BoxesAreSuperimposed(ext1_2d, ext2_2d))
                                                     {
-                                                        polylinesWithNoIntersections.Remove(polylines[i]);
-                                                        polylinesWithNoIntersections.Remove(polylines[j]);
+                                                        //Сначала проверяем перекрываются ли BoundingBox.
+                                                        //Во многих случаях это гораздо производительнее и затем считаем персечения
+                                                        Point3dCollection intersectionPts = new Point3dCollection();
+                                                        polylines[i].IntersectWith(polylines[j], Intersect.OnBothOperands,
+                                                        new Plane(Point3d.Origin, Vector3d.ZAxis),
+                                                        intersectionPts, IntPtr.Zero, IntPtr.Zero);
+                                                        if (intersectionPts.Count > 0)
+                                                        {
+                                                            polylinesWithNoIntersections.Remove(polylines[i]);
+                                                            polylinesWithNoIntersections.Remove(polylines[j]);
+                                                        }
                                                     }
+
                                                 }
+
+
                                             }
                                         }
 
@@ -241,7 +257,7 @@ namespace Civil3DInfoTools.SurfaceMeshByBoundary
                                         //Удалить все повторяющиеся подряд точки полилинии
                                         foreach (Polyline poly in polylinesWithNoBulges)
                                         {
-                                            for (int i =0;i< poly.NumberOfVertices;)
+                                            for (int i = 0; i < poly.NumberOfVertices;)
                                             {
                                                 Point2d curr = poly.GetPoint2dAt(i);
                                                 int nextIndex = (i + 1) % poly.NumberOfVertices;
@@ -280,7 +296,7 @@ namespace Civil3DInfoTools.SurfaceMeshByBoundary
                                             int colorIndex = 1;
                                             foreach (TriangleGraph tg in polylineNesting.TriangleGraphs.Values)
                                             {
-                                                foreach (LinkedList<PolylinePt> seq in tg.Sequences)
+                                                foreach (LinkedList<PolylinePt> seq in tg.PolylineParts)
                                                 {
                                                     using (Polyline poly = new Polyline())
                                                     {
@@ -298,6 +314,32 @@ namespace Civil3DInfoTools.SurfaceMeshByBoundary
                                                     }
                                                 }
 
+                                            }
+
+
+
+                                            foreach (TinSurfaceVertex vert in polylineNesting.InnerVerts)
+                                            {
+                                                using (Circle circle1 = new Circle(vert.Location, Vector3d.ZAxis, 0.3))
+                                                {
+                                                    circle1.ColorIndex = 7;
+                                                    ms.AppendEntity(circle1);
+                                                    tr.AddNewlyCreatedDBObject(circle1, true);
+                                                }
+                                            }
+
+                                            foreach (TinSurfaceTriangle triangle in polylineNesting.InnerTriangles)
+                                            {
+                                                using (Polyline poly = new Polyline())
+                                                {
+                                                    poly.AddVertexAt(0, new Point2d(triangle.Vertex1.Location.X, triangle.Vertex1.Location.Y), 0, 0, 0);
+                                                    poly.AddVertexAt(1, new Point2d(triangle.Vertex2.Location.X, triangle.Vertex2.Location.Y), 0, 0, 0);
+                                                    poly.AddVertexAt(2, new Point2d(triangle.Vertex3.Location.X, triangle.Vertex3.Location.Y), 0, 0, 0);
+                                                    poly.Closed = true;
+                                                    poly.ColorIndex = 6;
+                                                    ms.AppendEntity(poly);
+                                                    tr.AddNewlyCreatedDBObject(poly, true);
+                                                }
                                             }
 
                                             tr.Commit();
@@ -359,7 +401,7 @@ namespace Civil3DInfoTools.SurfaceMeshByBoundary
                         while (!exitLoop)
                         {
                             currDist += maxArcLength;
-                            if (currDist < endDist || (endDist==0 && currDist < poly.Length))
+                            if (currDist < endDist || (endDist == 0 && currDist < poly.Length))
                             {
                                 Point3d ptOnArc = poly.GetPointAtDist(currDist);
                                 approxPoly.AddVertexAt(n, new Point2d(ptOnArc.X, ptOnArc.Y), 0, 0, 0);
@@ -398,21 +440,21 @@ namespace Civil3DInfoTools.SurfaceMeshByBoundary
         /// </summary>
         /// <param name="sender"></param>
         /// <param name="e"></param>
-        public void SurfModified_EventHandler(object sender, EventArgs e)
-        {
-            TinSurface tinSurf = sender as TinSurface;
-            TreesCurrDoc.Remove(tinSurf.Handle.Value);
-        }
+        //public void SurfModified_EventHandler(object sender, EventArgs e)
+        //{
+        //    TinSurface tinSurf = sender as TinSurface;
+        //    TreesCurrDoc.Remove(tinSurf.Handle.Value);
+        //}
 
         /// <summary>
         /// При закрытии документа удалить все R-tree, относящиеся к нему
         /// </summary>
         /// <param name="obj"></param>
         /// <param name="acDocDesEvtArgs"></param>
-        public static void DocDestroyed(object obj, DocumentDestroyedEventArgs acDocDesEvtArgs)
-        {
-            Trees.Remove(acDocDesEvtArgs.FileName);
-        }
+        //public static void DocDestroyed(object obj, DocumentDestroyedEventArgs acDocDesEvtArgs)
+        //{
+        //    Trees.Remove(acDocDesEvtArgs.FileName);
+        //}
 
     }
 }

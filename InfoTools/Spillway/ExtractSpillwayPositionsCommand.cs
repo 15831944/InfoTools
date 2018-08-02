@@ -707,7 +707,8 @@ namespace Civil3DInfoTools.Spillway
                 Point2d baseLinePt1 = BaseLine.GetPoint2dAt(pt1Index);
                 Point2d baseLinePt2 = BaseLine.GetPoint2dAt(pt2Index);
                 Point3d thisLineStartPt = Poly2d.GetPointAtParameter(StartParameter);
-                ToTheRightOfBaseLine = Utils.IsLeft(baseLinePt1, baseLinePt2, thisLineStartPt) < 0;
+                Point2d thisLineStartPt_2d = new Point2d(thisLineStartPt.X, thisLineStartPt.Y);
+                ToTheRightOfBaseLine = Utils.IsLeft(baseLinePt1, baseLinePt2, thisLineStartPt_2d) < 0;
 
             }
         }

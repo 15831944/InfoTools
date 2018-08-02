@@ -80,7 +80,7 @@ namespace Civil3DInfoTools.SurfaceMeshByBoundary
 
                         ed.WriteMessage("\n\nNativeIntersection:");
 
-                        intersectionPt = Utils.GetLinesIntersectionAcad(p1, p2, p3, p4, out overlaying);
+                        intersectionPt = Utils.GetLinesIntersectionAcad(p1, p2, p3, p4);
                         if (intersectionPt == null)
                         {
                             ed.WriteMessage("\nintersectionPt = null");

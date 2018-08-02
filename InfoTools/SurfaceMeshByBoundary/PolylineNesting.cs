@@ -11,7 +11,7 @@ using System.Threading.Tasks;
 
 namespace Civil3DInfoTools.SurfaceMeshByBoundary
 {
-    //TODO: Обратить внимание на то, что должна быть расчитана координата Z для всех найденных точек
+
 
     /// <summary>
     /// Дерево для хранения данных о вложенности полилиний
@@ -135,46 +135,127 @@ namespace Civil3DInfoTools.SurfaceMeshByBoundary
         {
             //Определить какие узлы представляют внешнюю границу, а какие внутреннюю
             ResolveOuterBoundary(Root, false);
-            //Определить внутренние вершины и внутренние треугольники поверхности
-            //Найти наборы внутренних вершин для внешних контуров
 
-            foreach (Node node in Root.NestedNodes)
+            
+            
+
+            //Определить пересечения всех полилиний с ребрами поверхностей. Добавление точек полилиний в графоы треугольников
+            TraversePolylines(Root);
+
+            //Уточнение графов треугольников
+            foreach (TriangleGraph trGr in TriangleGraphs.Values)
             {
-                Extents3d? ext = node.Polyline.Bounds;
-                if (ext != null)
+                //Заполнение данных о участках полилиний, попавших в треугольники
+                //Удаление ненужных участков полилиний из графа
+                trGr.ResolvePolylineParts();
+            }
+            //Удалить те графы треугольников, которые не содержат участков полилиний
+            List<TinSurfaceTriangle> keysToRemove = new List<TinSurfaceTriangle>();
+            foreach(KeyValuePair<TinSurfaceTriangle, TriangleGraph> kvp in TriangleGraphs)
+            {
+                TinSurfaceTriangle key = kvp.Key;
+                if (kvp.Value.PolylineParts.Count == 0)
                 {
-                    //TinSurfaceVertex[] verts = TinSurf.GetVerticesInsideBorder(node.Point3DCollection);
-                    //К сожалению GetVerticesInsideBorder недостаточно производителен. Необходимо использовать R-tree
-                    IReadOnlyList<TinSurfaceVertexS> verts = SurfaceMeshByBoundaryCommand.TreesCurrDoc[TinSurf.Handle.Value]
-                        .Search(new RBush.Envelope()
-                        {
-                            MinX = node.MinX,
-                            MinY = node.MinY,
-                            MaxX = node.MaxX,
-                            MaxY = node.MaxY,
-                        });
-                    foreach (TinSurfaceVertexS vertexS in verts)
-                    {
-                        TinSurfaceVertex vertex = vertexS.TinSurfaceVertex;
-                        Point3d vertLoc = vertex.Location;
+                    keysToRemove.Add(key);
+                }
+                
+            }
+            foreach (TinSurfaceTriangle key in keysToRemove)
+            {
+                TriangleGraphs.Remove(key);
+            }
 
-                        if (
-                            //Проверить находится ли вершина в пределах BoundingBox полилинии
-                            (vertLoc.X <= node.MaxX) && (vertLoc.X >= node.MinX) && (vertLoc.Y <= node.MaxY) && (vertLoc.Y >= node.MinY)
-                            //Проверить, что точка точно находится внутри контура
-                            && Utils.PointIsInsidePolylineWindingNumber(vertLoc, node.Point3DCollection)
-                            )
-                        {
-                            InnerVerts.Add(vertex);
-                        }
-
-                        //if()
-
-                    }
+            //Определить внутренние вершины и внутренние треугольники поверхности
+            foreach (Node node in Root.NestedNodes)//Для каждой из внешних полилиний
+            {
+                HashSet<TinSurfaceVertex> vertsAllreadyChecked = new HashSet<TinSurfaceVertex>();
+                HashSet<TinSurfaceTriangle> trianglesAllreadyChecked = new HashSet<TinSurfaceTriangle>();
+                LinkedList<TinSurfaceTriangle> trianglesToCheck = new LinkedList<TinSurfaceTriangle>();
+                foreach (TinSurfaceTriangle triangle in node.IntersectingTriangles)
+                {
+                    trianglesToCheck.AddLast(triangle);
                 }
 
+                for (LinkedListNode<TinSurfaceTriangle> lln = trianglesToCheck.First; lln != null; lln = lln.Next)
+                {
 
+                    TinSurfaceTriangle triangle = lln.Value;
+                    //Проверить каждую вершину треугольника на попадание в полилинию
+                    //Если вершина попала в полилинию, то каждый из примыкающих к ней треугольников добавить набор треугольников для проверки
+                    //Если он не один из пересекаемых или уже проверенных треугольников
+                    TinSurfaceVertex[] vertices = new TinSurfaceVertex[] { triangle.Vertex1, triangle.Vertex2, triangle.Vertex3 };
+                    foreach (TinSurfaceVertex vertex in vertices)
+                    {
+                        if (!vertsAllreadyChecked.Contains(vertex))//Если эта вершина еще не проверялась
+                        {
+                            Point2d vertLoc = new Point2d(vertex.Location.X, vertex.Location.Y);
+                            if (Utils.PointIsInsidePolylineWindingNumber(vertLoc, node.Point2DCollection))
+                            {
+                                InnerVerts.Add(vertex);
+                                foreach (TinSurfaceTriangle neighbor in vertex.Triangles)
+                                {
+                                    if (!node.IntersectingTriangles.Contains(neighbor)
+                                        && !trianglesAllreadyChecked.Contains(neighbor))
+                                    {
+                                        trianglesToCheck.AddLast(neighbor);
+                                    }
+                                }
+                            }
+
+                            vertsAllreadyChecked.Add(vertex);
+                        }
+                        
+
+                    }
+
+                    trianglesAllreadyChecked.Add(triangle);
+
+                }
             }
+
+            #region Старое
+            /*
+                //Определить внутренние вершины и внутренние треугольники поверхности
+                //Найти наборы внутренних вершин для внешних контуров
+                foreach (Node node in Root.NestedNodes)
+                {
+                    Extents3d? ext = node.Polyline.Bounds;
+                    if (ext != null)
+                    {
+                        //TinSurfaceVertex[] verts = TinSurf.GetVerticesInsideBorder(node.Point3DCollection);
+                        //К сожалению GetVerticesInsideBorder недостаточно производителен. Необходимо использовать R-tree
+                        IReadOnlyList<TinSurfaceVertexS> verts = SurfaceMeshByBoundaryCommand.TreesCurrDoc[TinSurf.Handle.Value]
+                            .Search(new RBush.Envelope()
+                            {
+                                MinX = node.MinX,
+                                MinY = node.MinY,
+                                MaxX = node.MaxX,
+                                MaxY = node.MaxY,
+                            });
+                        foreach (TinSurfaceVertexS vertexS in verts)
+                        {
+                            TinSurfaceVertex vertex = vertexS.TinSurfaceVertex;
+                            Point3d vertLoc = vertex.Location;
+
+                            if (
+                                //Проверить находится ли вершина в пределах BoundingBox полилинии
+                                (vertLoc.X <= node.MaxX) && (vertLoc.X >= node.MinX) && (vertLoc.Y <= node.MaxY) && (vertLoc.Y >= node.MinY)
+                                //Проверить, что точка точно находится внутри контура
+                                && Utils.PointIsInsidePolylineWindingNumber(vertLoc, node.Point3DCollection)
+                                )
+                            {
+                                InnerVerts.Add(vertex);
+                            }
+
+                            //if()
+
+                        }
+                    }
+
+
+                }
+                */ 
+            #endregion
             //Затем для контуров внутренних границ найти те вершины, которые попадают в вырезы в контуре
             HashSet<TinSurfaceVertex> outerVerts = new HashSet<TinSurfaceVertex>();
             GetOuterVerts(Root, InnerVerts, outerVerts);
@@ -182,16 +263,16 @@ namespace Civil3DInfoTools.SurfaceMeshByBoundary
             {
                 InnerVerts.Remove(ov);
             }
-            //Определить внутренние треугольники. На данном этапе считать, что внутренние треугольники - те, у которых все вершины внутренние
-            //TODO: Но такие треугольники могут пересекаться с полилиниями. Пересекающиеся треугольники должны быть удалены на следующем этапе
-            //HashSet<TinSurfaceTriangle> ch
+            //Определить внутренние треугольники.
+            //Внутренние треугольники - те, у которых все вершины внутренние и они не пересекаются полилиниями
             foreach (TinSurfaceVertex iv in InnerVerts)
             {
                 foreach (TinSurfaceTriangle triangle in iv.Triangles)
                 {
                     if (InnerVerts.Contains(triangle.Vertex1)
                         && InnerVerts.Contains(triangle.Vertex2)
-                        && InnerVerts.Contains(triangle.Vertex3))
+                        && InnerVerts.Contains(triangle.Vertex3)
+                        && !TriangleGraphs.ContainsKey(triangle))
                     {
                         InnerTriangles.Add(triangle);
                     }
@@ -199,16 +280,11 @@ namespace Civil3DInfoTools.SurfaceMeshByBoundary
             }
 
 
-            //Определить пересечения всех полилиний с ребрами поверхностей. Добавление точек полилиний в графоы треугольников
-            TraversePolylines(Root);
-
-            //Графы треугольников
-            foreach (TriangleGraph trGr in TriangleGraphs.Values)
-            {
-                trGr.PolylineParts();
-            }
+            
 
         }
+
+        //private void GetInner
 
         /// <summary>
         /// Присвоение значений свойству IsOuterBoundary
@@ -236,7 +312,9 @@ namespace Civil3DInfoTools.SurfaceMeshByBoundary
 
             foreach (TinSurfaceVertex vert in innerVerts)
             {
-                if (Utils.PointIsInsidePolylineWindingNumber(vert.Location, node.Point3DCollection))
+                Point2d vertLoc2d = new Point2d(vert.Location.X, vert.Location.Y);
+
+                if (Utils.PointIsInsidePolylineWindingNumber(vertLoc2d, node.Point2DCollection))
                 {
                     //Вершина внутри текущего узла
                     innerVertsToRecursCall.Add(vert);
@@ -246,7 +324,7 @@ namespace Civil3DInfoTools.SurfaceMeshByBoundary
                         bool insideInner = false;
                         foreach (Node nn in node.NestedNodes)
                         {
-                            if (Utils.PointIsInsidePolylineWindingNumber(vert.Location, nn.Point3DCollection))
+                            if (Utils.PointIsInsidePolylineWindingNumber(vertLoc2d, nn.Point2DCollection))
                             {
                                 insideInner = true;
                                 break;
@@ -292,30 +370,17 @@ namespace Civil3DInfoTools.SurfaceMeshByBoundary
 
                 List<LinkedList<PolylinePt>> vertSequences = new List<LinkedList<PolylinePt>>();
 
-                for (int i = 0; i < node.Point3DCollection.Count; i++)
+                for (int i = 0; i < node.Point2DCollection.Count; i++)
                 {
-                    Point3d pt = node.Point3DCollection[i];
-                    Point2d pt2d = new Point2d(pt.X, pt.Y);
-                    TinSurfaceTriangle triangle = null;
-                    try
+                    Point2d pt = node.Point2DCollection[i];
+                    //Point2d pt2d = new Point2d(pt.X, pt.Y);
+
+                    PolylinePt polyPt = PtPositionInTriangle(node, pt);
+                    if (polyPt != null)
                     {
-                        triangle = TinSurf.FindTriangleAtXY(pt.X, pt.Y);
-                    }
-                    catch (System.ArgumentException) { }//Если точка за пределами поверхности, то выбрасывается исключение
-                    if (triangle != null)
-                    {
-                        //Расчет барицентрических координат для определения координаты Z
-                        Point2d v1_2d = new Point2d(triangle.Vertex1.Location.X, triangle.Vertex1.Location.Y);
-                        Point2d v2_2d = new Point2d(triangle.Vertex2.Location.X, triangle.Vertex2.Location.Y);
-                        Point2d v3_2d = new Point2d(triangle.Vertex3.Location.X, triangle.Vertex3.Location.Y);
-                        double lambda1 = 0;
-                        double lambda2 = 0;
-                        Utils.BarycentricCoordinates(pt2d, v1_2d, v2_2d, v3_2d, out lambda1, out lambda2);
-                        double lambda3 = 1 - lambda1 - lambda2;
-                        //TODO: Расчет координаты Z
+                        polyPt.VertNumber = i;//На всякий случай
 
                         //Вершина находится на поверхности. Добавить ее в набор
-                        PolylinePt polyPt = new PolylinePt(node, pt2d) { VertNumber = i };
                         if (vertSequences.Count > 0 && vertSequences.Last().Last().VertNumber == i - 1)
                         {
                             //Продолжить заполнение последовательности
@@ -329,13 +394,13 @@ namespace Civil3DInfoTools.SurfaceMeshByBoundary
                             vertSequences.Add(seq);
                         }
 
-                        //Определить расположение вершины - внутри треугольника, на ребре или на вершине
-                        PtPositionInTriangle(pt2d, triangle, polyPt);
+
 
                         //Добавление в граф треугольника
                         AddPolylinePt(polyPt);
-
                     }
+
+
                 }
 
                 if (vertSequences.Count == 0)
@@ -351,7 +416,7 @@ namespace Civil3DInfoTools.SurfaceMeshByBoundary
                     LinkedList<PolylinePt> lastSeq = vertSequences.Last();
                     if (vertSequences.Count > 1 &&
                         firstSeq.First().VertNumber
-                        == (lastSeq.Last().VertNumber + 1) % node.Point3DCollection.Count)
+                        == (lastSeq.Last().VertNumber + 1) % node.Point2DCollection.Count)
                     {
                         //Объединить первую и последнюю последовательности
                         for (LinkedListNode<PolylinePt> lln = lastSeq.Last; lln != null; lln = lln.Previous)
@@ -364,7 +429,7 @@ namespace Civil3DInfoTools.SurfaceMeshByBoundary
 
 
                 //Все вершины попали на поверхность
-                bool allVertsOnSurface = vertSequences.Count == 1 && vertSequences.First().Count == node.Point3DCollection.Count;
+                bool allVertsOnSurface = vertSequences.Count == 1 && vertSequences.First().Count == node.Point2DCollection.Count;
 
 
                 //Обход последовательностей
@@ -399,53 +464,160 @@ namespace Civil3DInfoTools.SurfaceMeshByBoundary
         }
 
         /// <summary>
+        /// Определение треугольника, в который попадает точка
         /// Определение положения точки внутри треугольника, на ребре или на вершине
         /// </summary>
         /// <param name="pt"></param>
         /// <param name="triangle"></param>
         /// <param name="polyPt"></param>
-        private void PtPositionInTriangle(Point2d pt, TinSurfaceTriangle triangle, PolylinePt polyPt)
+        private PolylinePt PtPositionInTriangle(Node node, Point2d pt)
         {
-            TinSurfaceVertex[] vertices = new TinSurfaceVertex[] { triangle.Vertex1, triangle.Vertex2, triangle.Vertex3 };
-            TinSurfaceEdge[] edges = new TinSurfaceEdge[] { triangle.Edge1, triangle.Edge2, triangle.Edge3 };
-            Point2d[] vert2dLocs = new Point2d[3];
-            for (int i = 0; i < 3; i++)
-            {
-                vert2dLocs[i] = new Point2d(vertices[i].Location.X, vertices[i].Location.Y);
-            }
-            //Проверить, совпадает ли точка с одной из вершин или попадет на ребро
-            for (int i = 0; i < 3; i++)
-            {
-                Point2d vert2dLoc = vert2dLocs[i];
+            PolylinePt polyPt = null;
 
-                if (pt.IsEqualTo(vert2dLoc))
+            TinSurfaceTriangle triangle = null;
+            try
+            {
+                //Данный метод может определять треугольник не совсем верно
+                //если точка находится на расстояни менее 0,001 от ребра,
+                //то может быть получен соседний треугольник вместо нужного 
+                triangle = TinSurf.FindTriangleAtXY(pt.X, pt.Y);
+            }
+            catch (System.ArgumentException) { }//Если точка за пределами поверхности, то выбрасывается исключение
+            if (triangle != null)
+            {
+                polyPt = new PolylinePt(node, pt);
+
+                //bool onSurfaceConfirmed = true;
+
+                TinSurfaceVertex[] vertices = new TinSurfaceVertex[] { triangle.Vertex1, triangle.Vertex2, triangle.Vertex3 };
+                TinSurfaceEdge[] edges = new TinSurfaceEdge[] { triangle.Edge1, triangle.Edge2, triangle.Edge3 };
+                Point2d[] vert2dLocs = new Point2d[3];
+                for (int i = 0; i < 3; i++)
                 {
-                    //Точка лежит на вершине
-                    polyPt.TinSurfaceVertex = vertices[i];
-                    return;
+                    vert2dLocs[i] = new Point2d(vertices[i].Location.X, vertices[i].Location.Y);
                 }
-            }
-            for (int i = 0; i < 3; i++)
-            {
-                using (Polyline line = new Polyline())
-                {
-                    line.AddVertexAt(0, vert2dLocs[i], 0, 0, 0);
-                    line.AddVertexAt(0, vert2dLocs[(i + 1) % 3], 0, 0, 0);
-                    Point3d pt3d = new Point3d(pt.X, pt.Y, 0);
-                    Point3d closestPtOnEdge = line.GetClosestPointTo(pt3d, false);
+                //Проверить, совпадает ли точка с одной из вершин или попадет на ребро
 
-                    Tolerance tolerance = /*Tolerance.Global;*/new Tolerance(0.001, 0.001);
-                    if (pt3d.IsEqualTo(closestPtOnEdge, tolerance))//Здесь должен быть допуск
+
+                TinSurfaceVertex allmostEqualLocationVertex = null;
+                TinSurfaceEdge allmostOverlappingEdge = null;
+
+                Tolerance tolerance = new Tolerance(0.001, 0.001);
+                for (int i = 0; i < 3; i++)
+                {
+                    Point2d vert2dLoc = vert2dLocs[i];
+
+                    //проверить при стандартном значении допуска
+                    if (pt.IsEqualTo(vert2dLoc))
                     {
-                        //Точка лежит на ребре
-                        polyPt.TinSurfaceEdge = edges[i];
-                        return;
+                        //Точка лежит на вершине
+                        polyPt.TinSurfaceVertex = vertices[i];
+                        return polyPt;
+                    }
+                    //Затем проверить с допуском для учета неточности FindTriangleAtXY
+                    if (pt.IsEqualTo(vert2dLoc, tolerance))
+                    {
+                        allmostEqualLocationVertex = vertices[i];
+                    }
+
+                }
+                for (int i = 0; i < 3; i++)
+                {
+                    using (Polyline line = new Polyline())
+                    {
+                        Point2d vert1_2dLoc = vert2dLocs[i];
+                        Point2d vert2_2dLoc = vert2dLocs[(i + 1) % 3];
+
+                        line.AddVertexAt(0, vert1_2dLoc, 0, 0, 0);
+                        line.AddVertexAt(0, vert2_2dLoc, 0, 0, 0);
+                        Point3d pt3d = new Point3d(pt.X, pt.Y, 0);
+                        Point3d closestPtOnEdge = line.GetClosestPointTo(pt3d, false);
+
+                        //Сначала проверить при стандартном значении допуска
+                        if (pt3d.IsEqualTo(closestPtOnEdge))
+                        {
+                            //Точка лежит на ребре
+                            polyPt.TinSurfaceEdge = edges[i];
+                            return polyPt;
+                        }
+                        //Затем проверить с допуском для учета неточности FindTriangleAtXY
+                        //если не была обнаружена очень близкая вершина
+                        if (allmostEqualLocationVertex == null)
+                        {
+                            if (pt3d.IsEqualTo(closestPtOnEdge, tolerance))
+                            {
+                                allmostOverlappingEdge = edges[i];
+                            }
+                        }
                     }
                 }
+                //Если не на ребре и не на вершине, то внутри треугольника
+
+                //Необходимо проверить действительно ли точка находится в данном треугольнике, так как 
+                //метод FindTriangleAtXY дает неточное значение треугольника если точка очень близка к ребру треугольника
+                //Более точно работает расчет барицентрических координат
+                TinSurfaceTriangle triangleAccurate = triangle;
+                double lambda1 = 0;
+                double lambda2 = 0;
+                bool isInsideTriangle
+                    = Utils.BarycentricCoordinates(pt, vert2dLocs[0], vert2dLocs[1], vert2dLocs[2],
+                    out lambda1, out lambda2);
+                if (!isInsideTriangle)
+                {
+                    //Расчитать барицентрические координаты для соседних треугольников, близких к заданной точке
+                    if (allmostEqualLocationVertex != null)
+                    {
+                        foreach (TinSurfaceTriangle t in allmostEqualLocationVertex.Triangles)
+                        {
+                            if (!t.Equals(triangle))
+                            {
+                                isInsideTriangle
+                                    = Utils.BarycentricCoordinates(pt, t, out lambda1, out lambda2);
+                                if (isInsideTriangle)
+                                {
+                                    triangleAccurate = t;
+                                    break;
+                                }
+                            }
+                        }
+                    }
+                    else if (allmostOverlappingEdge != null)
+                    {
+                        TinSurfaceTriangle neighborTriangle =
+                            !allmostOverlappingEdge.Triangle1.Equals(triangle) ?
+                            allmostOverlappingEdge.Triangle1 : allmostOverlappingEdge.Triangle2;
+                        if (neighborTriangle != null)
+                        {
+                            isInsideTriangle
+                                = Utils.BarycentricCoordinates(pt, neighborTriangle, out lambda1, out lambda2);
+                            if (isInsideTriangle)
+                            {
+                                triangleAccurate = neighborTriangle;
+                            }
+                        }
+                        else//Выход за границу поверхности!
+                        {
+                            //TODO: Проверить, что точка точно за пределами переданного треугольника
+
+                            polyPt = null;//Вершина за границей поверхности!
+                            return polyPt;
+                        }
+                    }
+                }
+
+                polyPt.TinSurfaceTriangle = triangleAccurate;
+
+
+                //TODO: Расчет координаты Z по барицентрическим координатам и координатам Z вершин треугольника
+                double lambda3 = 1 - lambda1 - lambda2;
+
             }
-            //Если не на ребре и не на вершине, то внутри треугольника
-            polyPt.TinSurfaceTriangle = triangle;
+
+            return polyPt;
+
+
         }
+
 
 
         private const bool testDisplay = false;
@@ -646,17 +818,15 @@ namespace Civil3DInfoTools.SurfaceMeshByBoundary
 
                                         Point2d edgePt1_2d = new Point2d(edgePt1.X, edgePt1.Y);
                                         Point2d edgePt2_2d = new Point2d(edgePt2.X, edgePt2.Y);
-                                        bool overlapping = false;
-                                        Point2d? intersection = Utils//Расчет точки пересечения с помощью AutoCAD
-                                            .GetLinesIntersectionAcad(startPt2d, endPt2d, edgePt1_2d, edgePt2_2d, out overlapping);
-
-
-                                        //if (intersection == null && !overlapping//В некоторых случаях автокад не просчитывает пересечение, хотя оно есть!
-                                        //    && Utils.LineSegmentsAreIntersecting(startPt2d, endPt2d, edgePt1_2d, edgePt2_2d))
-                                        //{
-                                        //    //Тогда расчитать точку пересечения по правилу Крамера
-                                        //    intersection = Utils.GetLinesIntersectionCramer(startPt2d, endPt2d, edgePt1_2d, edgePt2_2d, out overlapping);
-                                        //}
+                                        //bool overlapping = false;
+                                        //Point2d? intersection = Utils//Расчет точки пересечения с помощью AutoCAD
+                                        //    .GetLinesIntersectionAcad(startPt2d, endPt2d, edgePt1_2d, edgePt2_2d, out overlapping);
+                                        Point2d? intersection = null;
+                                        bool overlapping = Utils.LinesAreOverlapping(startPt2d, endPt2d, edgePt1_2d, edgePt2_2d);
+                                        if (!overlapping)
+                                        {
+                                            intersection = Utils.GetLinesIntersectionAcad(startPt2d, endPt2d, edgePt1_2d, edgePt2_2d);
+                                        }
 
 
                                         if (overlapping)
@@ -809,25 +979,23 @@ namespace Civil3DInfoTools.SurfaceMeshByBoundary
                                                             segmentVector = segmentVector.GetNormal();
                                                             int n = 1;
                                                             Point2d testingPt = Point2d.Origin;
-                                                            TinSurfaceTriangle otherTriangle = null;
+                                                            PolylinePt polyPt = null;
                                                             bool overrun = false;
                                                             do
                                                             {
                                                                 testingPt = intersectionPt + segmentVector * n;
                                                                 n++;
                                                                 overrun = (testingPt - startPt2d).Length > overalLength;
-                                                                try { otherTriangle = TinSurf.FindTriangleAtXY(testingPt.X, testingPt.Y); }
-                                                                catch (System.ArgumentException) { }
+                                                                if (!overrun)
+                                                                {
+                                                                    polyPt = PtPositionInTriangle(node, testingPt);
+                                                                }
                                                             }
-                                                            while (otherTriangle == null && !overrun);
+                                                            while (polyPt == null && !overrun);
 
-                                                            if (otherTriangle != null && !overrun)
+                                                            if (polyPt != null && !overrun)
                                                             {
-                                                                PolylinePt polyPt = new PolylinePt(node, testingPt);
-                                                                PtPositionInTriangle(testingPt, otherTriangle, polyPt);
-
                                                                 lln.List.AddAfter(lln, polyPt);
-
 
                                                                 segmentTraversedAsPossible = false;
                                                             }
@@ -942,12 +1110,15 @@ namespace Civil3DInfoTools.SurfaceMeshByBoundary
 
 
         /// <summary>
-        /// Точка полилинии совпавшая с вершиной треугольника
+        /// Добавление точки в соответствующие графы
         /// </summary>
         private void AddPolylinePt(PolylinePt pt)
         {
             if (pt.TinSurfaceVertex != null)
             {
+                //Данная вершина должна обязательно считаться внутренней!
+                InnerVerts.Add(pt.TinSurfaceVertex);
+
                 //Добавить точку во все примыкающие треугольники
                 foreach (TinSurfaceTriangle triangle in pt.TinSurfaceVertex.Triangles)
                 {
@@ -981,7 +1152,7 @@ namespace Civil3DInfoTools.SurfaceMeshByBoundary
 
 
         /// <summary>
-        /// Точка полилинии внутри треугольника
+        /// Добавление точки в конкретный граф треугольника
         /// </summary>
         /// <param name="triangle"></param>
         /// <param name="pt"></param>
@@ -996,6 +1167,9 @@ namespace Civil3DInfoTools.SurfaceMeshByBoundary
                 TriangleGraphs.Add(triangle, triangleGraph);
             }
             triangleGraph.AddPolylinePoint(pt);
+
+            //Добавить треугольник в набор пересекаемых для этой линии
+            pt.Node.IntersectingTriangles.Add(triangle);
         }
 
 
@@ -1017,7 +1191,7 @@ namespace Civil3DInfoTools.SurfaceMeshByBoundary
             /// <summary>
             /// Точки полилинии. Точки пересчитаны в глобальную систему координат
             /// </summary>
-            public Point3dCollection Point3DCollection { get; private set; } = new Point3dCollection();
+            public Point2dCollection Point2DCollection { get; private set; } = new Point2dCollection();
             public double MinX { get; private set; } = double.MaxValue;
             public double MinY { get; private set; } = double.MaxValue;
             public double MaxX { get; private set; } = double.MinValue;
@@ -1033,6 +1207,17 @@ namespace Civil3DInfoTools.SurfaceMeshByBoundary
             /// </summary>
             public List<Node> NestedNodes { get; private set; } = new List<Node>();
 
+            /// <summary>
+            /// Треугольники, которые пересекает эта полилиния
+            /// </summary>
+            public HashSet<TinSurfaceTriangle> IntersectingTriangles = new HashSet<TinSurfaceTriangle>();
+
+
+            /// <summary>
+            /// Предполагается, что полилиния замкнута и не имеет повторяющихся точек
+            /// </summary>
+            /// <param name="polyline"></param>
+            /// <param name="polylineNesting"></param>
             public Node(Polyline polyline, PolylineNesting polylineNesting)
             {
                 Polyline = polyline;
@@ -1043,7 +1228,7 @@ namespace Civil3DInfoTools.SurfaceMeshByBoundary
                 {
                     for (int i = 0; i < polyline.NumberOfVertices; i++)
                     {
-                        Point3d pt = polyline.GetPoint3dAt(i);
+                        Point2d pt = polyline.GetPoint2dAt(i);
                         if (pt.X < MinX)
                         {
                             MinX = pt.X;
@@ -1061,18 +1246,7 @@ namespace Civil3DInfoTools.SurfaceMeshByBoundary
                             MaxY = pt.Y;
                         }
 
-
-                        //Если последняя точка равна первой, то не добавлять ее
-                        //if (i == polyline.NumberOfVertices - 1 && pt.IsEqualTo(Point3DCollection[0]))
-                        //{
-                        //    //Вместо этого отредактировать полилинию, убрав из нее лишнюю точку
-                        //    polyline.RemoveVertexAt(i);
-                        //    polyline.Closed = true;
-                        //}
-                        //else
-                        //{
-                        Point3DCollection.Add(pt);
-                        //}
+                        Point2DCollection.Add(pt);
 
                     }
                 }
@@ -1087,7 +1261,7 @@ namespace Civil3DInfoTools.SurfaceMeshByBoundary
             public bool IsNested(Node node)
             {
                 //Проверка по одной точке, так как предполагается, что полилинии не пересекаются
-                return Utils.PointIsInsidePolylineWindingNumber(node.Point3DCollection[0], this.Point3DCollection);
+                return Utils.PointIsInsidePolylineWindingNumber(node.Point2DCollection[0], this.Point2DCollection);
             }
 
             public override int GetHashCode()

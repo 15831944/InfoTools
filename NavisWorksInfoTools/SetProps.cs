@@ -24,8 +24,11 @@ namespace NavisWorksInfoTools
 
         private const string defTabName = "АТРИБУТЫ";
 
+        private string existantTabName = null;
+
         public override int Execute(params string[] parameters)
         {
+            existantTabName = null;
             try
             {
                 //get state object of COM API
@@ -41,7 +44,7 @@ namespace NavisWorksInfoTools
                     //Получить список свойств из первого выбранного объекта из пользовательской панели если она есть
                     ModelItem sample = selection.First;
 
-                    
+
                     Debug.Print("\n[Item Display Name]: " + sample.DisplayName + "\n");
                     foreach (PropertyCategory oPC in sample.PropertyCategories)
                     {
@@ -52,31 +55,91 @@ namespace NavisWorksInfoTools
                             Debug.Print("\t[Display Name]: " + oDP.DisplayName + "\t[Internal Name]:" + oDP.Name + "\t[Value]: " + oDP.Value.ToString());
                         }
                     }
-                    
+
 
 
 
                     List<DisplayProperty> props = new List<DisplayProperty>();
+                    List<DisplayURL> urls = new List<DisplayURL>();
 
-                    foreach (PropertyCategory oPC in sample.PropertyCategories)
+                    //Поиск среди выбранных объектов и их потомков первого объекта,
+                    //1 - который содержит пользовательские свойства
+                    //2 - который содержит ссылки
+                    bool userDataFound = false;
+                    bool linksFound = false;
+                    foreach (ModelItem item in selection.DescendantsAndSelf)
                     {
-                        if (oPC.Name.Equals("LcOaPropOverrideCat"))
+                        //Поиск категории пользовательских данных
+                        if (!userDataFound)
                         {
-                            foreach (DataProperty dp in oPC.Properties)
+                            PropertyCategory userDataCat
+                            = item.PropertyCategories.FindCategoryByName("LcOaPropOverrideCat");
+                            if (userDataCat != null)
                             {
-                                if (dp.Value.IsDisplayString || dp.Value.IsIdentifierString)
+                                foreach (DataProperty dp in userDataCat.Properties)
                                 {
-                                    props.Add(new DisplayProperty() { DisplayName = dp.DisplayName, Value = dp.Value.ToDisplayString() });
+                                    if (dp.Value.IsDisplayString || dp.Value.IsIdentifierString)
+                                    {
+                                        existantTabName = userDataCat.DisplayName;
+                                        props.Add(new DisplayProperty() { DisplayName = dp.DisplayName, Value = dp.Value.ToDisplayString() });
+                                    }
                                 }
+                                userDataFound = true;
                             }
-                            break;
                         }
+                        //Поиск категории ссылок
+                        if (!linksFound)
+                        {
+                            PropertyCategory linksCat
+                               = item.PropertyCategories.FindCategoryByName("LcOaExURLAttribute");
+                            if (linksCat != null)
+                            {
+                                int linksCount = linksCat.Properties.Count / 3;
+
+                                for (int i = 0; i < linksCount; i++)
+                                {
+                                    string suffix = i == 0 ? "" : i.ToString();
+                                    DataProperty nameProp = item.PropertyCategories
+                                        .FindPropertyByName("LcOaExURLAttribute", "LcOaURLAttributeName" + suffix);
+                                    DataProperty urlProp = item.PropertyCategories
+                                        .FindPropertyByName("LcOaExURLAttribute", "LcOaURLAttributeURL" + suffix);
+                                    if (nameProp != null && urlProp != null)
+                                    {
+                                        DisplayURL displayURL = new DisplayURL()
+                                        {
+                                            DisplayName = nameProp.Value.ToDisplayString(),
+                                            URL = urlProp.Value.ToDisplayString()
+                                        };
+                                        urls.Add(displayURL);
+                                    }
+                                }
+
+                                linksFound = true;
+                            }
+
+                        }
+                        if (userDataFound && linksFound)
+                            break;
                     }
 
-                    SetPropsWindow setPropsWindow = new SetPropsWindow(props);
+                    SetPropsWindow setPropsWindow = new SetPropsWindow(props, urls);
+                    if (existantTabName != null)
+                    {
+                        setPropsWindow.TabName = existantTabName;
+                    }
+
                     bool? result = setPropsWindow.ShowDialog();
                     if (result != null && result.Value)
                     {
+                        //Удалить пустые строки из наборов
+                        setPropsWindow.Props.RemoveAll(dp => String.IsNullOrEmpty(dp.DisplayName));
+                        setPropsWindow.URLs.RemoveAll(dUrl => 
+                        String.IsNullOrEmpty(dUrl.DisplayName) || String.IsNullOrEmpty(dUrl.URL));
+
+                        //Заполнены ли списки свойств и гиперссылок?
+                        //Если список пустой, то соответствующая панель должна быть удалена
+                        bool userPropsDefined = setPropsWindow.Props.Count > 0;
+                        //bool urlsDefined = setPropsWindow.URLs.Count > 0;
 
                         // create new property category
                         // (new tab in the properties dialog)
@@ -104,24 +167,57 @@ namespace NavisWorksInfoTools
 
                         }
 
-
+                        //Создание набора ссылок для привязки к объектам
+                        ComApi.InwOpState10 state = ComApiBridge.ComApiBridge.State;
+                        ComApi.InwURLOverride urlOverride
+                            = (ComApi.InwURLOverride)state
+                            .ObjectFactory(ComApi.nwEObjectType.eObjectType_nwURLOverride, null, null);
+                        ComApi.InwURLColl oURLColl = urlOverride.URLs();
+                        foreach (DisplayURL dUrl in setPropsWindow.URLs)
+                        {
+                            ComApi.InwURL2 oUrl = (ComApi.InwURL2)state
+                                .ObjectFactory(ComApi.nwEObjectType.eObjectType_nwURL, null, null);
+                            oUrl.name = dUrl.DisplayName;
+                            oUrl.URL = dUrl.URL;
+                            oUrl.SetCategory("Hyperlink", "LcOaURLCategoryHyperlink");//Тип - всегда гиперссылка
+                            oURLColl.Add(oUrl);
+                        }
 
                         foreach (ModelItem item in selection.DescendantsAndSelf)
                         {
-                            //Переделать панель атрибутов в соответствии с заполненными строками в окне
-
                             //convert the .NET collection to COM object
                             ComApi.InwOaPath oPath = ComApiBridge.ComApiBridge.ToInwOaPath(item);
-                            // get properties collection of the path
-                            ComApi.InwGUIPropertyNode2 propn = (ComApi.InwGUIPropertyNode2)oState.GetGUIPropertyNode(oPath, true);
-                            try
-                            { propn.RemoveUserDefined(0); }
-                            catch (System.Runtime.InteropServices.COMException) { }
-                            string tabName = defTabName;
-                            if (!String.IsNullOrEmpty(setPropsWindow.TabName))
-                                tabName = setPropsWindow.TabName;
-                            //propn.SetUserDefined(0, "АТРИБУТЫ", tabName, newPvec);
-                            propn.SetUserDefined(0, tabName, "S1NF0", newPvec);
+
+
+                            //Переделать панель атрибутов в соответствии с заполненными строками в окне
+                            if (setPropsWindow.OverwriteUserAttr)//Только если стояла галка в окне!!!
+                            {
+                                // get properties collection of the path
+                                ComApi.InwGUIPropertyNode2 propn = (ComApi.InwGUIPropertyNode2)oState.GetGUIPropertyNode(oPath, true);
+                                try
+                                { propn.RemoveUserDefined(0); }
+                                catch (System.Runtime.InteropServices.COMException) { }
+                                if (userPropsDefined)
+                                {
+                                    string tabName = defTabName;
+                                    if (!String.IsNullOrEmpty(setPropsWindow.TabName))
+                                        tabName = setPropsWindow.TabName;
+                                    //propn.SetUserDefined(0, "АТРИБУТЫ", tabName, newPvec);
+                                    propn.SetUserDefined(0, tabName, "S1NF0", newPvec);
+                                }
+                            }
+
+
+
+
+                            //Переделать все ссылки в соответствии с заполненными строками в окне
+                            if (setPropsWindow.OverwriteLinks)//Только если стояла галка в окне!!!
+                            {
+                                ComApi.InwOpSelection comSelectionOut =
+                                        ComApiBridge.ComApiBridge.ToInwOpSelection(new ModelItemCollection() { item });
+                                state.SetOverrideURL(comSelectionOut, urlOverride);
+                            }
+                            
                         }
                     }
                 }
@@ -143,5 +239,12 @@ namespace NavisWorksInfoTools
     {
         public string DisplayName { get; set; }
         public string Value { get; set; }
+    }
+
+    public class DisplayURL
+    {
+        public string DisplayName { get; set; }
+
+        public string URL { get; set; }
     }
 }

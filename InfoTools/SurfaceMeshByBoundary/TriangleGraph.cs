@@ -88,14 +88,15 @@ namespace Civil3DInfoTools.SurfaceMeshByBoundary
 
 
 
-        public List<LinkedList<PolylinePt>> Sequences { get; set; } = new List<LinkedList<PolylinePt>>();//TEST
+        public List<LinkedList<PolylinePt>> PolylineParts { get; set; } = new List<LinkedList<PolylinePt>>();
         /// <summary>
         /// Добавить узлы участков поллиний в граф
         /// </summary>
-        public void PolylineParts()
+        public void ResolvePolylineParts()
         {
             foreach (KeyValuePair<PolylineNesting.Node, SortedSet<PolylinePt>> kvp in pts)
             {
+
                 //TEST
                 #region MyRegion
                 //using (Transaction tr = PolylineNesting.db.TransactionManager.StartTransaction())
@@ -103,14 +104,14 @@ namespace Civil3DInfoTools.SurfaceMeshByBoundary
                 //{
                 //    PolylineNesting.ms = tr.GetObject(PolylineNesting.ms.Id, OpenMode.ForWrite) as BlockTableRecord;
 
-                //    Point3d vert1 = TinSurfaceTriangle.Vertex1.Location;
-                //    Point3d vert2 = TinSurfaceTriangle.Vertex2.Location;
-                //    Point3d vert3 = TinSurfaceTriangle.Vertex3.Location;
+                //    Point3d vert13d = TinSurfaceTriangle.Vertex1.Location;
+                //    Point3d vert23d = TinSurfaceTriangle.Vertex2.Location;
+                //    Point3d vert33d = TinSurfaceTriangle.Vertex3.Location;
 
                 //    pline.Color = Color.FromColorIndex(ColorMethod.ByAci, 5);
-                //    pline.AddVertexAt(0, new Point2d(vert1.X, vert1.Y), 0, 0, 0);
-                //    pline.AddVertexAt(1, new Point2d(vert2.X, vert2.Y), 0, 0, 0);
-                //    pline.AddVertexAt(2, new Point2d(vert3.X, vert3.Y), 0, 0, 0);
+                //    pline.AddVertexAt(0, new Point2d(vert13d.X, vert13d.Y), 0, 0, 0);
+                //    pline.AddVertexAt(1, new Point2d(vert23d.X, vert23d.Y), 0, 0, 0);
+                //    pline.AddVertexAt(2, new Point2d(vert33d.X, vert33d.Y), 0, 0, 0);
                 //    pline.Closed = true;
 
                 //    PolylineNesting.ms.AppendEntity(pline);
@@ -123,16 +124,14 @@ namespace Civil3DInfoTools.SurfaceMeshByBoundary
                 //}
                 #endregion
                 //TEST
-
                 //Участок полилинии состоит из точек, параметры которых не перескакивают через целые значения
-                //При этом если участок содержит параметр 0 (и точка с нулевым параметром не лежит на ребре или вершине!),
+                //При этом если участок содержит параметр 0,
                 //то необходимо состыковать его с замыкающими точками (1 или более)
                 //Замыкающие точки - участок без перехода через целые значения с наибольшими параметрами
                 //После стыковки участка с параметром 0, удалить все участки, содержащие менее 2 точек
                 //Участок полилинии должен начинаться и заканчиваться точкой лежащей на ребре или совпавшей с вершиной,
                 //кроме тех случаев, когда вся полилиния находится внутри одного треугольника
-
-                //TODO: Не нужны участки, у которых все точки лежат на 1 ребре (или вершинах, к которым примыкает это ребро)
+                //Не нужны участки, у которых все сегменты лежат на ребрах треугольника
 
                 PolylineNesting.Node node = kvp.Key;
                 PolylinePt ptWithStartParam = null;
@@ -165,13 +164,13 @@ namespace Civil3DInfoTools.SurfaceMeshByBoundary
                 //Если обнаружен стартовый параметр, то объединить первую и последнюю последовательности
                 if (ptWithStartParam != null && sequences.Count > 1)
                 {
-                    
+
 
                     LinkedList<PolylinePt> seq1 = sequences.First();
                     LinkedList<PolylinePt> seq2 = sequences.Last();
 
-                    //Нужно проверить что параметр последней точки последей последовательности
-                    if (seq2.Last().Parameter>=node.Polyline.EndParam-1)
+                    //Нужно проверить параметр последней точки последей последовательности (что он находится в пределах 1.00 от конечного параметра полилинии)
+                    if (seq2.Last().Parameter >= node.Polyline.EndParam - 1)
                     {
                         for (LinkedListNode<PolylinePt> lln = seq2.Last; lln != null; lln = lln.Previous)
                         {
@@ -180,10 +179,19 @@ namespace Civil3DInfoTools.SurfaceMeshByBoundary
                         sequences.RemoveAt(sequences.Count - 1);
                     }
 
-                    
+
                 }
 
                 //Проверить все участки полилинии и удалить неправильные
+                //Tolerance tolerance = Tolerance.Global;
+                Point2d vert1 = new Point2d(TinSurfaceTriangle.Vertex1.Location.X, TinSurfaceTriangle.Vertex1.Location.Y);
+                Point2d vert2 = new Point2d(TinSurfaceTriangle.Vertex2.Location.X, TinSurfaceTriangle.Vertex2.Location.Y);
+                Point2d vert3 = new Point2d(TinSurfaceTriangle.Vertex3.Location.X, TinSurfaceTriangle.Vertex3.Location.Y);
+                Vector2d edge1Vector = vert2- vert1;
+                Vector2d edge2Vector = vert3 - vert2;
+                Vector2d edge3Vector = vert1 - vert3;
+                
+
                 sequences.RemoveAll(seq =>
                 {
                     bool removeThis = seq.Count < 2;//Количество точек не менее двух
@@ -194,21 +202,25 @@ namespace Civil3DInfoTools.SurfaceMeshByBoundary
                         bool firstPtOnEdge = seq.First().TinSurfaceEdge != null || seq.First().TinSurfaceVertex != null;
                         bool lastPtOnEdge = seq.Last().TinSurfaceEdge != null || seq.Last().TinSurfaceVertex != null;
                         removeThis = firstPtOnEdge != lastPtOnEdge;//Несоответствие привязки участка к ребрам
-
-                        //if (!removeThis
-                        //    && seq.All(pt => pt.TinSurfaceEdge != null || pt.TinSurfaceTriangle != null)//Все точки лежат на ребре или на вершине
-                        //    )
-                        //{
-                        //    HashSet<TinSurfaceVertex> verts = new HashSet<TinSurfaceVertex>();
-                        //    TinSurfaceEdge edge = null;
-                        //    foreach (PolylinePt pt in seq)
-                        //    {
-                        //        if (pt.TinSurfaceVertex!=null)
-                        //        {
-                        //            verts.Add()
-                        //        }
-                        //    }
-                        //}
+                        if (!removeThis)
+                        {
+                            removeThis = true;
+                            //Проверить все ребра на совпадение с ребрами треугольника
+                            for (LinkedListNode<PolylinePt> lln = seq.First; lln.Next != null; lln = lln.Next)
+                            {
+                                Point2d segPt1 = lln.Value.Point2D;
+                                Point2d segPt2 = lln.Next.Value.Point2D;
+                                if (!(Utils.LinesAreOverlapping(segPt1, segPt2, vert1, vert2)
+                                || Utils.LinesAreOverlapping(segPt1, segPt2, vert2, vert3)
+                                || Utils.LinesAreOverlapping(segPt1, segPt2, vert3, vert1)))
+                                {
+                                    //Если сегмент не накладывается ни на одно ребро треугольника, то закончить проверку
+                                    removeThis = false;
+                                    break;
+                                }
+                                
+                            }
+                        }
 
 
                     }
@@ -217,7 +229,7 @@ namespace Civil3DInfoTools.SurfaceMeshByBoundary
                     return removeThis;
                 });
 
-                Sequences.AddRange(sequences);//TEST
+                PolylineParts.AddRange(sequences);
 
                 //Создать ребра и узлы графа
 

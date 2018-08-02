@@ -452,7 +452,9 @@ namespace Civil3DInfoTools.RoadMarking
             return createdBtrId;
         }
 
+
         
+
 
         private void PrepareCurve(Curve c1, ObjectId layerId)
         {

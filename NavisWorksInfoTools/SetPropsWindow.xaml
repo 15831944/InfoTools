@@ -3,21 +3,39 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:sys="clr-namespace:System;assembly=mscorlib" 
         xmlns:local="clr-namespace:NavisWorksInfoTools"
         mc:Ignorable="d"
-        Title="Добавить атрибуты" Height="385" Width="443" Loaded="Window_Loaded"
+        Title="Добавить атрибуты" Height="629" Width="625.5" Loaded="Window_Loaded"
         WindowStartupLocation="CenterScreen">
     <Grid>
-        <DataGrid Name="propsDataGrid" AutoGenerateColumns="False" Margin="10,40,10,57">
+        <DataGrid Name="propsDataGrid" AutoGenerateColumns="False" Margin="10,156,10,319">
             <DataGrid.Columns>
                 <DataGridTextColumn Binding="{Binding DisplayName}" Header="Свойство"/>
                 <DataGridTextColumn Binding="{Binding Value}" Header="Значение"/>
             </DataGrid.Columns>
         </DataGrid>
-        <Button Content="ОК" Margin="0,0,10,32" HorizontalAlignment="Right" Width="75" Height="20" VerticalAlignment="Bottom" Click="Button_Click"/>
-        <TextBlock Margin="10,0,90,10" TextWrapping="Wrap" Text="При нажатии кнопки OK атрибуты перепишутся для всех выбранных объектов и всех вложенных" Height="42" VerticalAlignment="Bottom"/>
-        <Label Content="Название панели:" HorizontalAlignment="Left" Margin="10,9,0,0" VerticalAlignment="Top"/>
-        <TextBox Name="tabNameTextBox" HorizontalAlignment="Left" Height="23" Margin="123,13,0,0" TextWrapping="Wrap" Text="АТРИБУТЫ" VerticalAlignment="Top" Width="302"/>
+        <Button Content="ОК" Margin="0,0,10,10" HorizontalAlignment="Right" Width="75" Height="85" VerticalAlignment="Bottom" Click="Button_Click"/>
+        <TextBlock Margin="10,0,90,10" TextWrapping="Wrap" Height="85" VerticalAlignment="Bottom"><Run Text="При нажатии кнопки OK атрибуты "/><Run Text="и ссылки"/><Run Text=" перепишутся для всех выбранных объектов и всех вложенных"/><Run Text=". Если к каким"/><Run Text="-"/><Run Text="либо вложенным объектам было привязано несколько"/><Run Text=" вкладок данных"/><Run Text=" пользовател"/><Run Text="я"/><Run Text=", то они все будут "/><Run Text="заменены на одну вкладку со свойствами, которые зад"/><Run Text="аны"/><Run Text=" в этом окне"/><Run Text="."/></TextBlock>
+        <Label Content="Название пользовательской панели:" HorizontalAlignment="Left" Margin="10,99,0,0" VerticalAlignment="Top"/>
+        <TextBox Name="tabNameTextBox" HorizontalAlignment="Left" Height="23" Margin="227,102,0,0" TextWrapping="Wrap" Text="АТРИБУТЫ" VerticalAlignment="Top" Width="249"/>
+        <Label Content="Пользовательские атрибуты:" HorizontalAlignment="Left" Margin="10,125,0,0" VerticalAlignment="Top"/>
+        <DataGrid Name="linksDataGrid" AutoGenerateColumns="False"
+                  Margin="10,0,10,100" Height="163" VerticalAlignment="Bottom">
+            <DataGrid.RowStyle>
+                <Style TargetType="{x:Type DataGridRow}">
+                    <Setter Property="Height" Value="{x:Static sys:Double.NaN}"/>
+                </Style>
+            </DataGrid.RowStyle>
+            <DataGrid.Columns>
+                <DataGridTextColumn Binding="{Binding DisplayName}" Header="Имя"/>
+                <DataGridTextColumn Binding="{Binding URL}" Header="URL" Width="450" MaxWidth="450"/>
+            </DataGrid.Columns>
+        </DataGrid>
+        <Label Content="Ссылки:" Margin="10,0,389,268" VerticalAlignment="Bottom"/>
+        <TextBlock Margin="11,10,10,0" TextWrapping="Wrap" VerticalAlignment="Top" Height="69"><Run Text="Если хотябы в одном из выбранных элементов или вложенных в них есть такие, к которым уже привязаны пользовательские данные или ссылки, то они будут отображены в этом окне. Но при этом отображаются"/><Run Text=" только  строковые"/><Run Text=" атрибуты только одной вкладки данных пользователя"/><Run Text=". Отображаются те данные, которые находятся выше в дереве выбранных элементов."/></TextBlock>
+        <CheckBox Name="overwriteUserAttrCheckBox" Content="Перезаписывать пользовательские атрибуты" HorizontalAlignment="Left" Margin="11,84,0,0" VerticalAlignment="Top" Unchecked="overwriteUserAttrCheckBox_CheckedChanged" Checked="overwriteUserAttrCheckBox_CheckedChanged"/>
+        <CheckBox Name ="overwriteLinksCheckBox"  Content="Перезаписывать ссылки" HorizontalAlignment="Left" Margin="11,289,0,0" VerticalAlignment="Top" Checked="overwriteLinksCheckBox_CheckedChanged" Unchecked="overwriteLinksCheckBox_CheckedChanged"/>
 
     </Grid>
 </Window>

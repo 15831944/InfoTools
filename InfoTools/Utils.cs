@@ -12,7 +12,12 @@ namespace Civil3DInfoTools
 {
     public static class Utils
     {
-
+        /// <summary>
+        /// Ошибка в комнадную строку
+        /// </summary>
+        /// <param name="ed"></param>
+        /// <param name="comment"></param>
+        /// <param name="ex"></param>
         public static void ErrorToCommandLine(Editor ed, string comment, Exception ex = null)
         {
             ed.WriteMessage("\n~~~~~~~|Ошибка InfoTools|~~~~~~~");
@@ -27,6 +32,11 @@ namespace Civil3DInfoTools
             ed.WriteMessage("\n~~~~~~~|Ошибка InfoTools|~~~~~~~");
         }
 
+        /// <summary>
+        /// Первый объект из DBObjectCollection
+        /// </summary>
+        /// <param name="coll"></param>
+        /// <returns></returns>
         public static DBObject GetFirstDBObject(DBObjectCollection coll)
         {
             foreach (DBObject dbo in coll)
@@ -37,6 +47,11 @@ namespace Civil3DInfoTools
         }
 
 
+        /// <summary>
+        /// Найти тип линии - непрерывный (независимо от его названия)
+        /// </summary>
+        /// <param name="db"></param>
+        /// <returns></returns>
         public static ObjectId GetContinuousLinetype(Database db)
         {
 
@@ -61,7 +76,12 @@ namespace Civil3DInfoTools
 
         }
 
-
+        /// <summary>
+        /// Последовательность штрихов и пробелов типа линии
+        /// </summary>
+        /// <param name="ltype"></param>
+        /// <param name="ltScale"></param>
+        /// <returns></returns>
         public static List<double> GetLinePattern(LinetypeTableRecord ltype, double ltScale = 1)
         {
             List<double> pattern = new List<double>();
@@ -86,6 +106,9 @@ namespace Civil3DInfoTools
             return pattern;
         }
 
+
+
+
         /// <summary>
         /// Убрать все недопустимые символы из имени слоя
         /// </summary>
@@ -96,6 +119,16 @@ namespace Civil3DInfoTools
             return string.Join("_", layername.Split(new char[] { '<', '>', '/', '\\', '"', '"', ':', ';', '?', '*', '|', ',', '=', '`' }));
         }
 
+        /// <summary>
+        /// Создать слой если еще нет
+        /// </summary>
+        /// <param name="layerName"></param>
+        /// <param name="db"></param>
+        /// <param name="tr"></param>
+        /// <param name="layerSample"></param>
+        /// <param name="color"></param>
+        /// <param name="lineWeight"></param>
+        /// <returns></returns>
         public static ObjectId CreateLayerIfNotExists(string layerName, Database db, Transaction tr,
             LayerTableRecord layerSample = null, Color color = null,/*short colorIndex = -1,*/ LineWeight lineWeight = LineWeight.ByLayer)
         {
@@ -151,14 +184,6 @@ namespace Civil3DInfoTools
         /// <param name="pt2"></param>
         /// <returns></returns>
         public static double IsLeft(Point2d pt0, Point2d pt1, Point2d pt2)
-        {
-            return ((pt1.X - pt0.X) * (pt2.Y - pt0.Y) - (pt2.X - pt0.X) * (pt1.Y - pt0.Y));
-        }
-        public static double IsLeft(Point2d pt0, Point2d pt1, Point3d pt2)
-        {
-            return ((pt1.X - pt0.X) * (pt2.Y - pt0.Y) - (pt2.X - pt0.X) * (pt1.Y - pt0.Y));
-        }
-        public static double IsLeft(Point3d pt0, Point3d pt1, Point3d pt2)
         {
             return ((pt1.X - pt0.X) * (pt2.Y - pt0.Y) - (pt2.X - pt0.X) * (pt1.Y - pt0.Y));
         }
@@ -259,7 +284,7 @@ namespace Civil3DInfoTools
         /// <param name="pt"></param>
         /// <param name="poly"></param>
         /// <returns></returns>
-        public static bool PointIsInsidePolylineWindingNumber(Point3d pt, Point3dCollection pointsOfPolyline)
+        public static bool PointIsInsidePolylineWindingNumber(Point2d pt, Point2dCollection pointsOfPolyline)
         {
 
             int numVert = pointsOfPolyline.Count;
@@ -267,8 +292,8 @@ namespace Civil3DInfoTools
             int wn = 0;
             for (int i = 0; i < numVert; i++)
             {
-                Point3d vert1 = pointsOfPolyline[i];
-                Point3d vert2 = pointsOfPolyline[(i + 1) % numVert];
+                Point2d vert1 = pointsOfPolyline[i];
+                Point2d vert2 = pointsOfPolyline[(i + 1) % numVert];
 
                 double isLeftVal = double.MinValue;
                 //Проверка точек сегмента на переход через координату Y проверяемой точки
@@ -308,12 +333,28 @@ namespace Civil3DInfoTools
         }
 
 
+
+        public static bool BarycentricCoordinates(Point2d p,
+            Autodesk.Civil.DatabaseServices.TinSurfaceTriangle t,
+            out double lambda1, out double lambda2)
+        {
+            Point2d vert1_2d = new Point2d(t.Vertex1.Location.X, t.Vertex1.Location.Y);
+            Point2d vert2_2d = new Point2d(t.Vertex2.Location.X, t.Vertex2.Location.Y);
+            Point2d vert3_2d = new Point2d(t.Vertex3.Location.X, t.Vertex3.Location.Y);
+            return
+                BarycentricCoordinates(p, vert1_2d, vert2_2d,
+                vert3_2d, out lambda1, out lambda2);
+        }
+
+
         /// <summary>
         /// Проверка, что точка внутри треугольника
         /// Расчет барицентрических координат
         /// https://www.youtube.com/watch?v=wSZp8ydgWGw
         /// Если одна координата равна нулю, то точка лежит на ребре
         /// Если две координаты равны нулю, то точка лежит на вершине треугольника
+        /// Может возвращать не совсем точное значение если точка лежит на ребре или вершине треугольника,
+        /// но более точное чем FindTriangleAtXY
         /// </summary>
         /// <param name="p"></param>
         /// <param name="p0"></param>
@@ -337,21 +378,6 @@ namespace Civil3DInfoTools
             double y3_y1 = p3.Y - p1.Y;
             lambda2 = (y3_y1 * x_x3 + x1_x3 * y_y3) / denominator;
 
-
-            //if (lambda1 != 0 && Math.Abs(lambda1) < 0.000000001)
-            //{
-            //    lambda1 = 0;
-            //}
-            //if (lambda2 != 0 && Math.Abs(lambda2) < 0.000000001)
-            //{
-            //    lambda2 = 0;
-            //}
-            //if (lambda1 + lambda2 != 1 && Math.Abs(lambda1 + lambda2 - 1) < 0.000000001)
-            //{
-            //    lambda2 = 1 - lambda1;
-            //}
-
-
             return
                 lambda1 >= 0
                 && lambda2 >= 0
@@ -369,8 +395,13 @@ namespace Civil3DInfoTools
         /// <param name="minPt2"></param>
         /// <returns></returns>
         public static bool BoxesAreSuperimposed
-            (Point3d maxPt1, Point3d minPt1, Point3d maxPt2, Point3d minPt2)
+            (Extents2d ext1_2d, Extents2d ext2_2d)
         {
+            Point2d maxPt1 = ext1_2d.MaxPoint;
+            Point2d minPt1 = ext1_2d.MinPoint;
+            Point2d maxPt2 = ext2_2d.MaxPoint;
+            Point2d minPt2 = ext2_2d.MinPoint;
+
             //Характеристики двух прямоугольников
             double dX1 = maxPt1.X - minPt1.X;
             double dY1 = maxPt1.Y - minPt1.Y;
@@ -408,21 +439,13 @@ namespace Civil3DInfoTools
         /// <param name="p3"></param>
         /// <param name="p4"></param>
         /// <returns></returns>
-        public static bool LineSegmentsAreIntersecting(Point2d p1, Point2d p2, Point2d p3, Point2d p4/*, out bool overlaying*/)
+        public static bool LineSegmentsAreIntersecting(Point2d p1, Point2d p2, Point2d p3, Point2d p4)
         {
-            //overlaying = false;
 
             double p3IsLeft = IsLeft(p1, p2, p3);
             double p4IsLeft = IsLeft(p1, p2, p4);
             double p1IsLeft = IsLeft(p3, p4, p1);
             double p2IsLeft = IsLeft(p3, p4, p2);
-
-            //Невозможно определить допуск
-            //p3IsLeft = Math.Abs(p3IsLeft) > 1.0E-9 ? p3IsLeft : 0;
-            //p4IsLeft = Math.Abs(p4IsLeft) > 1.0E-9 ? p4IsLeft : 0;
-            //p1IsLeft = Math.Abs(p1IsLeft) > 1.0E-9 ? p1IsLeft : 0;
-            //p2IsLeft = Math.Abs(p2IsLeft) > 1.0E-9 ? p2IsLeft : 0;
-
 
             int p3IsLeftSign = Math.Sign(p3IsLeft);
             int p4IsLeftSign = Math.Sign(p4IsLeft);
@@ -431,7 +454,6 @@ namespace Civil3DInfoTools
 
             if ((p3IsLeftSign == 0 && p4IsLeftSign == 0) || (p1IsLeftSign == 0 && p2IsLeftSign == 0))
             {
-                //overlaying = true;
                 return false;
             }
 
@@ -444,6 +466,7 @@ namespace Civil3DInfoTools
 
         /// <summary>
         /// Пересечение двух бесконечных прямых линий
+        /// Данный расчет не учитывает допусков автокада
         /// </summary>
         /// <param name="p1"></param>
         /// <param name="p2"></param>
@@ -477,7 +500,16 @@ namespace Civil3DInfoTools
 
 
 
-
+        /// <summary>
+        /// Пересечение двух бесконечных прямых линий. Расчет по правилу Крамера
+        /// Данный расчет не учитывает допусков автокада
+        /// </summary>
+        /// <param name="p1"></param>
+        /// <param name="p2"></param>
+        /// <param name="p3"></param>
+        /// <param name="p4"></param>
+        /// <param name="overlapping"></param>
+        /// <returns></returns>
         public static Point2d? GetLinesIntersectionCramer(Point2d p1, Point2d p2, Point2d p3, Point2d p4, out bool overlapping)
         {
 
@@ -509,65 +541,6 @@ namespace Civil3DInfoTools
 
 
         /// <summary>
-        /// Проверка двух линий на пересечение с использованием методов API автокада
-        /// </summary>
-        /// <param name="p1"></param>
-        /// <param name="p2"></param>
-        /// <param name="p3"></param>
-        /// <param name="p4"></param>
-        /// <param name="overlapping"></param>
-        /// <returns></returns>
-        public static Point2d? GetLinesIntersectionAcad(Point2d p1, Point2d p2, Point2d p3, Point2d p4, out bool overlapping)
-        {
-            Point2d? pt = null;
-            overlapping = false;
-
-            using (Line line1 = new Line(new Point3d(p1.X, p1.Y, 0), new Point3d(p2.X, p2.Y, 0)))
-            using (Line line2 = new Line(new Point3d(p3.X, p3.Y, 0), new Point3d(p4.X, p4.Y, 0)))
-            {
-                Point3dCollection intersectPts = new Point3dCollection();
-                line1.IntersectWith(line2, Intersect.ExtendBoth, intersectPts, IntPtr.Zero, IntPtr.Zero);
-                if (intersectPts.Count == 0)
-                {
-                    //Линии параллельны
-                    //Проверить расстояние между линиями
-                    double dist = line2.GetClosestPointTo(line1.StartPoint, true).DistanceTo(line1.StartPoint);
-                    if (dist == 0)
-                    {
-                        overlapping = true;
-                    }
-                }
-                else
-                {
-
-                    //Бесконечные линии пересекаются, но нужно проверить, что они пересекаются без продления
-                    //Для этого точка пересечения должна попадать в BoudingBox обоих линий
-                    Point2d testingPt = new Point2d(intersectPts[0].X, intersectPts[0].Y);
-                    Extents3d? ext1 = line1.Bounds;
-                    Extents3d? ext2 = line2.Bounds;
-                    if (ext1!=null && ext2!=null
-                        && PointInsideBoundingBox(ext1.Value.MaxPoint, ext1.Value.MinPoint, testingPt)
-                        && PointInsideBoundingBox(ext2.Value.MaxPoint, ext2.Value.MinPoint, testingPt))
-                    {
-                        pt = testingPt;
-                    }
-
-
-
-                    //intersectPts = new Point3dCollection();
-                    //line1.IntersectWith(line2, Intersect.OnBothOperands, intersectPts, IntPtr.Zero, IntPtr.Zero);
-                    //if (intersectPts.Count > 0)
-                    //{
-                    //    pt = new Point2d(intersectPts[0].X, intersectPts[0].Y);
-                    //}
-                }
-            }
-
-            return pt;
-        }
-
-
-        /// <summary>
         /// Точка внутри BoundingBox в плане
         ///
         /// </summary>
@@ -575,7 +548,7 @@ namespace Civil3DInfoTools
         /// <param name="minPt"></param>
         /// <param name="testingPt"></param>
         /// <returns></returns>
-        public static bool PointInsideBoundingBox(Point3d maxPt, Point3d minPt, Point2d testingPt)
+        public static bool PointInsideBoundingBox(Point2d maxPt, Point2d minPt, Point2d testingPt)
         {
             return
                 (testingPt.X <= maxPt.X)
@@ -585,5 +558,60 @@ namespace Civil3DInfoTools
                 && (testingPt.Y >= minPt.Y);
         }
 
+
+
+        /// <summary>
+        /// Проверка только на наложение двух линий
+        /// С учетом допусков автокада
+        /// </summary>
+        /// <returns></returns>
+        public static bool LinesAreOverlapping(Point2d p1, Point2d p2, Point2d p3, Point2d p4)
+        {
+            Vector2d vector1 = p2 - p1;
+            Vector2d vector2 = p4 - p3;
+            if (vector1.IsParallelTo(vector2))
+            {
+                LineSegment2d line1 = new LineSegment2d(p1, p2);
+                LineSegment2d line2 = new LineSegment2d(p3, p4);
+
+                //Finds the two closest points between this curve and the input curve
+                PointOnCurve2d[] closestPts = line2.GetClosestPointTo(line1);
+                if (closestPts[0].Point.IsEqualTo(closestPts[1].Point))
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        /// <summary>
+        /// Расчет пересечений двух линий 
+        /// С учетом допусков автокада
+        /// </summary>
+        /// <param name="p1"></param>
+        /// <param name="p2"></param>
+        /// <param name="p3"></param>
+        /// <param name="p4"></param>
+        /// <returns></returns>
+        public static Point2d? GetLinesIntersectionAcad(Point2d p1, Point2d p2, Point2d p3, Point2d p4)
+        {
+            Point2d? pt = null;
+            LineSegment2d line1 = new LineSegment2d(p1, p2);
+            LineSegment2d line2 = new LineSegment2d(p3, p4);
+            CurveCurveIntersector2d intersector = new CurveCurveIntersector2d(line1, line2);
+            if (intersector.NumberOfIntersectionPoints>0)
+            {
+                pt = intersector.GetIntersectionPoint(0);
+            }
+            return pt;
+        }
+
+
+        public static Extents2d Extents2DBy3D(Extents3d ext3d)
+        {
+            Extents2d ext2d = new Extents2d(new Point2d(ext3d.MinPoint.X, ext3d.MinPoint.Y), new Point2d(ext3d.MaxPoint.X, ext3d.MaxPoint.Y));
+            return ext2d;
+        }
     }
 }
