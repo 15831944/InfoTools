@@ -600,7 +600,7 @@ namespace Civil3DInfoTools
             LineSegment2d line1 = new LineSegment2d(p1, p2);
             LineSegment2d line2 = new LineSegment2d(p3, p4);
             CurveCurveIntersector2d intersector = new CurveCurveIntersector2d(line1, line2);
-            if (intersector.NumberOfIntersectionPoints>0)
+            if (intersector.NumberOfIntersectionPoints > 0)
             {
                 pt = intersector.GetIntersectionPoint(0);
             }
@@ -612,6 +612,12 @@ namespace Civil3DInfoTools
         {
             Extents2d ext2d = new Extents2d(new Point2d(ext3d.MinPoint.X, ext3d.MinPoint.Y), new Point2d(ext3d.MaxPoint.X, ext3d.MaxPoint.Y));
             return ext2d;
+        }
+
+
+        public static Point2d Point2DBy3D(Point3d p3d)
+        {
+            return new Point2d(p3d.X, p3d.Y);
         }
     }
 }

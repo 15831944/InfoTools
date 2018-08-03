@@ -32,6 +32,9 @@ namespace Civil3DInfoTools.SurfaceMeshByBoundary
     //TODO: Учесть  eCannotScaleNonUniformly из-за растянутых блоков. Такие блоки не должны учитываться, так как иначе придется как-то пересчитывать дуги полилинии
     //Возможно следует предусмотреть, чтобы все блоки имели масштаб 1?
 
+    //TODO: Учесть динамические блоки с несколькими состояниями видимости
+
+    //TODO: Добавить ввод возвышения над поверхностью (запоминать ввод)
 
     public class SurfaceMeshByBoundaryCommand
     {
@@ -296,8 +299,9 @@ namespace Civil3DInfoTools.SurfaceMeshByBoundary
                                             int colorIndex = 1;
                                             foreach (TriangleGraph tg in polylineNesting.TriangleGraphs.Values)
                                             {
-                                                foreach (LinkedList<PolylinePt> seq in tg.PolylineParts)
+                                                foreach (TriangleGraph.PolylinePart pp in tg.PolylineParts)
                                                 {
+                                                    LinkedList<PolylinePt> seq = pp.PolylinePts;
                                                     using (Polyline poly = new Polyline())
                                                     {
                                                         int n = 0;

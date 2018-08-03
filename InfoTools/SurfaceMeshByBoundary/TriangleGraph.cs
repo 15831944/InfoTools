@@ -19,78 +19,93 @@ namespace Civil3DInfoTools.SurfaceMeshByBoundary
         /// <summary>
         /// Ссылка на дерево полилиний
         /// </summary>
-        public PolylineNesting PolylineNesting { get; private set; }
+        private PolylineNesting polylineNesting;
 
         /// <summary>
         /// Ссылка на треугольник поверхности
         /// </summary>
-        public TinSurfaceTriangle TinSurfaceTriangle { get; private set; }
+        private TinSurfaceTriangle tinSurfaceTriangle;
 
         /// <summary>
-        /// Точки полилиний, попавшие в этоттреугольник
+        /// Последовательно расположенные узлы графа. Точки, расположенные по периметру треугольника от вершины 1 до вершины 3
+        /// </summary>
+        private LinkedList<GraphNode> graphNodes = new LinkedList<GraphNode>();
+
+        /// <summary>
+        /// Узлы графа, расположенные в вершинах треугольника
+        /// </summary>
+        LinkedListNode<GraphNode>[] vertexNodes = new LinkedListNode<GraphNode>[3];
+
+        /// <summary>
+        /// Длины ребер
+        /// </summary>
+        double[] edgesLength = new double[3];
+
+        /// <summary>
+        /// Положения вершин треугольника
+        /// </summary>
+        Point2d[] vert2dLocs = new Point2d[3];
+
+        /// <summary>
+        /// Ссылки на вершины поверхности
+        /// </summary>
+        TinSurfaceVertex[] verts = new TinSurfaceVertex[3];
+
+        /// <summary>
+        /// Точки полилиний, попавшие в этот треугольник
         /// </summary>
         private Dictionary<PolylineNesting.Node, SortedSet<PolylinePt>> pts
             = new Dictionary<PolylineNesting.Node, SortedSet<PolylinePt>>();
 
+        /// <summary>
+        /// Участки полилиний, проходящие через этот треугольник
+        /// </summary>
+        public List<PolylinePart> PolylineParts { get; set; }
+            = new List<PolylinePart>();//TODO: Должно быть закрытым полем
 
         /// <summary>
-        /// Узлы графа
+        /// Список полигонов, которые образует треугольник с пересекаемыми линиями
         /// </summary>
-        private List<Node> Nodes { get; set; }
-
-        /// <summary>
-        /// Ребра графа
-        /// </summary>
-        private List<Edge> Edges { get; set; }
+        public List<List<Point3d>> Polygons { get; set; } = new List<List<Point3d>>();
 
         public TriangleGraph(PolylineNesting polylineNesting, TinSurfaceTriangle triangle)
         {
-            PolylineNesting = polylineNesting;
-            TinSurfaceTriangle = triangle;
+            this.polylineNesting = polylineNesting;
+            tinSurfaceTriangle = triangle;
+            verts[0] = tinSurfaceTriangle.Vertex1;
+            verts[1] = tinSurfaceTriangle.Vertex2;
+            verts[2] = tinSurfaceTriangle.Vertex3;
+            vert2dLocs[0] = Utils.Point2DBy3D(tinSurfaceTriangle.Vertex1.Location);
+            vert2dLocs[1] = Utils.Point2DBy3D(tinSurfaceTriangle.Vertex2.Location);
+            vert2dLocs[2] = Utils.Point2DBy3D(tinSurfaceTriangle.Vertex3.Location);
+            edgesLength[0] = (vert2dLocs[1] - vert2dLocs[0]).Length;
+            edgesLength[1] = (vert2dLocs[1] - vert2dLocs[2]).Length;
+            edgesLength[2] = (vert2dLocs[2] - vert2dLocs[0]).Length;
+            //Добавить узлы вершин треугольника
+            new VertexGraphNode(this, 1);
+            new VertexGraphNode(this, 2);
+            new VertexGraphNode(this, 3);
+
         }
 
-
         /// <summary>
-        /// Добавить узлы внутрненних вершин в граф
+        /// Добавить точку полилинии, которая попала в этот треугольник
         /// </summary>
-        public void InnerVerts()
+        /// <param name="pt"></param>
+        public void AddPolylinePoint(PolylinePt pt)
         {
-            //Внутренние вершины треугольника добавить в граф (узлы вершин треугольника)
-            //Если вершина треугольника внутренняя, то в граф добавляются смежные с ней ребра (узлы сторон треугольника) и ребра от вершины к смежным ребрам
-            TinSurfaceVertex[] verts = new TinSurfaceVertex[] { TinSurfaceTriangle.Vertex1, TinSurfaceTriangle.Vertex2, TinSurfaceTriangle.Vertex3 };
-            TinSurfaceEdge[] edges = new TinSurfaceEdge[] { TinSurfaceTriangle.Edge1, TinSurfaceTriangle.Edge2, TinSurfaceTriangle.Edge3 };
-            bool[] triangSideNodesAdded = new bool[] { false, false, false };
-            for (int i = 0; i < 3; i++)
+            SortedSet<PolylinePt> polylinePts = null;
+            pts.TryGetValue(pt.Node, out polylinePts);
+            if (polylinePts == null)
             {
-                TinSurfaceVertex v = verts[i];
-                if (PolylineNesting.InnerVerts.Contains(verts[i]))
-                {
-                    int e1Index = (i + 1) % 3;
-                    int e2Index = i == 0 ? 2 : i - 1;
-
-                    TinSurfaceEdge e1 = edges[e1Index];
-                    TinSurfaceEdge e2 = edges[e2Index];
-
-                    if (!triangSideNodesAdded[e1Index])
-                    {
-                        //TODO добавить узел ребра 1
-                    }
-                    if (!triangSideNodesAdded[e2Index])
-                    {
-                        //TODO добавить узел ребра 2
-                    }
-
-                    //TODO: Добавить ребра графа
-                }
+                polylinePts = new SortedSet<PolylinePt>();
+                pts.Add(pt.Node, polylinePts);
             }
+            polylinePts.Add(pt);
         }
 
-
-
-
-        public List<LinkedList<PolylinePt>> PolylineParts { get; set; } = new List<LinkedList<PolylinePt>>();
         /// <summary>
-        /// Добавить узлы участков поллиний в граф
+        /// Определить участки полилиний, попавшие в треугольник
         /// </summary>
         public void ResolvePolylineParts()
         {
@@ -184,13 +199,13 @@ namespace Civil3DInfoTools.SurfaceMeshByBoundary
 
                 //Проверить все участки полилинии и удалить неправильные
                 //Tolerance tolerance = Tolerance.Global;
-                Point2d vert1 = new Point2d(TinSurfaceTriangle.Vertex1.Location.X, TinSurfaceTriangle.Vertex1.Location.Y);
-                Point2d vert2 = new Point2d(TinSurfaceTriangle.Vertex2.Location.X, TinSurfaceTriangle.Vertex2.Location.Y);
-                Point2d vert3 = new Point2d(TinSurfaceTriangle.Vertex3.Location.X, TinSurfaceTriangle.Vertex3.Location.Y);
-                Vector2d edge1Vector = vert2- vert1;
+                Point2d vert1 = new Point2d(tinSurfaceTriangle.Vertex1.Location.X, tinSurfaceTriangle.Vertex1.Location.Y);
+                Point2d vert2 = new Point2d(tinSurfaceTriangle.Vertex2.Location.X, tinSurfaceTriangle.Vertex2.Location.Y);
+                Point2d vert3 = new Point2d(tinSurfaceTriangle.Vertex3.Location.X, tinSurfaceTriangle.Vertex3.Location.Y);
+                Vector2d edge1Vector = vert2 - vert1;
                 Vector2d edge2Vector = vert3 - vert2;
                 Vector2d edge3Vector = vert1 - vert3;
-                
+
 
                 sequences.RemoveAll(seq =>
                 {
@@ -218,7 +233,7 @@ namespace Civil3DInfoTools.SurfaceMeshByBoundary
                                     removeThis = false;
                                     break;
                                 }
-                                
+
                             }
                         }
 
@@ -229,9 +244,11 @@ namespace Civil3DInfoTools.SurfaceMeshByBoundary
                     return removeThis;
                 });
 
-                PolylineParts.AddRange(sequences);
+                foreach (LinkedList<PolylinePt> seq in sequences)
+                {
+                    PolylineParts.Add(new PolylinePart(seq));
+                }
 
-                //Создать ребра и узлы графа
 
             }
 
@@ -239,82 +256,323 @@ namespace Civil3DInfoTools.SurfaceMeshByBoundary
         }
 
 
-        public void AddPolylinePoint(PolylinePt pt)
+        /// <summary>
+        /// Расчитать полигоны для построения сети
+        /// </summary>
+        public void CalculatePoligons()
         {
-            SortedSet<PolylinePt> polylinePts = null;
-            pts.TryGetValue(pt.Node, out polylinePts);
-            if (polylinePts == null)
+            //Определить внутренние вершины в этом треугольнике
+            foreach (LinkedListNode<GraphNode> lln in vertexNodes)
             {
-                polylinePts = new SortedSet<PolylinePt>();
-                pts.Add(pt.Node, polylinePts);
+                VertexGraphNode vgn = (VertexGraphNode)lln.Value;
+                vgn.IsInnerVertex = polylineNesting.InnerVerts.Contains(verts[vgn.VertNum]);
             }
-            polylinePts.Add(pt);
+
+            //Добавление оставшихся узлов и ребер в граф
+            foreach (PolylinePart pp in PolylineParts)
+            {
+                PolylinePt[] nodePts = new PolylinePt[]//Точки присоединения полилинии к границам треугольника
+                {
+                    pp.PolylinePts.First(),
+                    pp.PolylinePts.Last()
+                };
+                for (short i = 0; i < 2; i++)
+                {
+                    PolylinePt pt = nodePts[i];
+                    GraphNode graphNode = null;
+                    if (pt.TinSurfaceVertex != null)
+                    {
+                        //Определить номер этой вершины в этом треугольнике и получить ссылку на узел графа 
+                        short vertNum = GetVertNum(pt.TinSurfaceVertex);
+                        if (vertNum == -1)
+                        {
+                            throw new Exception();
+                        }
+                        graphNode = vertexNodes[vertNum].Value;
+                    }
+                    else
+                    {
+                        //Определить номер этого ребра, добавить узел этого ребра
+                        short edgeNum = GetEdgeNum(pt.TinSurfaceEdge);
+                        if (edgeNum == -1)
+                        {
+                            throw new Exception();
+                        }
+                        graphNode = new EdgeGraphNode(this, edgeNum, pt.Point2D);
+                    }
+
+                    //дополнить свойства graphNode указателями на участок полилинии
+                    graphNode.PolylinePart = pp;
+                    graphNode.PolylinePartConnectedByStart = i == 0;
+                    if (i == 0)
+                    {
+                        pp.StartNode = graphNode;
+                    }
+                    else
+                    {
+                        pp.EndNode = graphNode;
+                    }
+                }
+                //Соединения для созданных узлов
+                pp.StartNode.ConnectedLinkedListNode = pp.EndNode.LinkedListNode;
+                pp.EndNode.ConnectedLinkedListNode = pp.StartNode.LinkedListNode;
+            }
+
+            //Составление маршрутов обхода графа
+            //Правила
+            //- Начинать обход с любого еще не обойденнго узла, из которого исходит участок полилинии. Запомнить ссылку на PolylineNesting.Node
+            //- Узлы вершин, которые не являются внутренними игнорируются
+            //- Если из текущего узла исходит участок полилинии, который еще не обойден, то обойти его
+            //- Из текущего узла не исходит такого участка полилинии =>
+            //  - Взять точку на границе треугольника не доходя до следующего узла (справа или слева)
+            //  - Определить, попадает ли она внутрь PolylineNesting.Node.
+            //  - Если PolylineNesting.Node.IsOuterBoundary = true, то идти в ту сторону с которой точка попадает внутрь этой полилинии, иначе в противоположную сторону
+            //- Обходить до тех пор пока не будет дотигнут стартовый узел
+            //- Нельзя заходить в те узлы которые уже посещены (только замыкание со стартовым узлом)
+
+            for (LinkedListNode<GraphNode> lln = graphNodes.First; lln != null; lln = lln.Next)
+            {
+                GraphNode startNode = lln.Value;
+                if (!startNode.Visited && startNode.PolylinePart != null)
+                {
+                    GraphNode currNode = startNode;
+                    //Начать обход замкнутого пути
+                    List<Point3d> poligon = new List<Point3d>();
+                    while (!currNode.Visited)
+                    {
+                        currNode.Visited = true;
+                        if (currNode.PolylinePart!=null && !currNode.PolylinePart.Traversed)
+                        {
+
+                        }
+
+                        
+                    }
+
+                    if (!currNode.Equals(startNode))
+                    {
+                        //Обход не правильный
+                    }
+                }
+            }
         }
 
         /// <summary>
-        /// Узел графа - это либо ребро треугольника, либо его вершина
+        /// Получить номер вершины в треугольнике
         /// </summary>
-        abstract class Node
+        /// <param name="vertex"></param>
+        /// <returns></returns>
+        private short GetVertNum(TinSurfaceVertex vertex)
         {
-            abstract public Point3d Location { get; set; }
-
-            abstract public bool Visited { get; set; }
+            if (vertex.Equals(tinSurfaceTriangle.Vertex1))
+            {
+                return 0;
+            }
+            else if (vertex.Equals(tinSurfaceTriangle.Vertex2))
+            {
+                return 1;
+            }
+            else if (vertex.Equals(tinSurfaceTriangle.Vertex3))
+            {
+                return 2;
+            }
+            return -1;
         }
 
         /// <summary>
-        /// Вершина треугольника
+        /// Получить номер ребра в треугольнике
         /// </summary>
-        class VertexNode : Node
+        /// <param name="edge"></param>
+        /// <returns></returns>
+        private short GetEdgeNum(TinSurfaceEdge edge)
         {
-            public TinSurfaceVertex TinSurfaceVertex { get; private set; }
-            public override Point3d Location { get => throw new NotImplementedException(); set => throw new NotImplementedException(); }
-            public override bool Visited { get => throw new NotImplementedException(); set => throw new NotImplementedException(); }
+            if (edge.Equals(tinSurfaceTriangle.Edge1))
+            {
+                return 0;
+            }
+            else if (edge.Equals(tinSurfaceTriangle.Edge2))
+            {
+                return 1;
+            }
+            else if (edge.Equals(tinSurfaceTriangle.Edge3))
+            {
+                return 2;
+            }
+            return -1;
+        }
+
+
+        /// <summary>
+        /// Узел графа - точка на границе треугольника
+        /// </summary>
+        public abstract class GraphNode
+        {
+            /// <summary>
+            /// Ссылка на граф
+            /// </summary>
+            public TriangleGraph TriangleGraph { get; set; }
+            /// <summary>
+            /// LinkedListNode в котором находится этот узел графа
+            /// </summary>
+            public LinkedListNode<GraphNode> LinkedListNode { get; set; }
+            /// <summary>
+            /// LinkedListNode, в котором находится узел графа, который соединен с этим через участок полилинии
+            /// </summary>
+            public LinkedListNode<GraphNode> ConnectedLinkedListNode { get; set; }
+            /// <summary>
+            /// Участок полилинии, который соединяет этот узел с другим
+            /// </summary>
+            public PolylinePart PolylinePart { get; set; }
+            /// <summary>
+            /// Участок полилинии подсоединен к этому началом
+            /// </summary>
+            public bool PolylinePartConnectedByStart { get; set; }
+
+            /// <summary>
+            /// Этот узел уже обойден
+            /// </summary>
+            public bool Visited { get; set; } = false;
+        }
+        /// <summary>
+        /// Узел графа, расположенный на вершине треугольника
+        /// </summary>
+        public class VertexGraphNode : GraphNode
+        {
+            /// <summary>
+            /// Вершина является внутренней
+            /// </summary>
+            public bool IsInnerVertex { get; set; }
+            /// <summary>
+            /// Номер вершины треугольника
+            /// </summary>
+            public short VertNum { get; set; }
+            /// <summary>
+            /// Узлы вершин должны быть созданы последовательно. Сначала 0, потом 1 и 2
+            /// При этом других узлов в графе не должно быть
+            /// </summary>
+            /// <param name="tg"></param>
+            /// <param name="vertNum"></param>
+            public VertexGraphNode(TriangleGraph tg, short vertNum)
+            {
+                if (vertNum > 2 || vertNum < 0)
+                {
+                    throw new ArgumentException(nameof(vertNum));
+                }
+
+                TriangleGraph = tg;
+                VertNum = vertNum;
+
+                //Добавить узел в нужное место в графе, заполнить свойство LinkedListNode и поле vertex
+                if (tg.vertexNodes.Count(n => n != null) == vertNum
+                    && tg.graphNodes.Count == vertNum)
+                {
+                    LinkedListNode = tg.graphNodes.AddLast(this);
+                    tg.vertexNodes[vertNum] = LinkedListNode;
+                }
+                else
+                {
+                    throw new ArgumentException(nameof(tg));
+                }
+            }
+        }
+        /// <summary>
+        /// Узел графа, расположенный на ребре треугольника
+        /// </summary>
+        private class EdgeGraphNode : GraphNode
+        {
+            /// <summary>
+            /// Номер ребра треугольника
+            /// </summary>
+            public short EdgeNum { get; set; }
+            /// <summary>
+            /// Параметр, характеризующий положение узла на ребре
+            /// </summary>
+            public double Parameter { get; set; }
+            /// <summary>
+            /// Создание нового объекта возможно только после того как созданы узлы вершин
+            /// </summary>
+            /// <param name="tg"></param>
+            /// <param name="edgeNum"></param>
+            public EdgeGraphNode(TriangleGraph tg, short edgeNum, Point2d pt)
+            {
+                if (edgeNum > 2 || edgeNum < 0)
+                {
+                    throw new ArgumentException(nameof(edgeNum));
+                }
+
+                if (!tg.vertexNodes.All(n => n != null))
+                {
+                    throw new ArgumentException(nameof(tg));
+                }
+
+                TriangleGraph = tg;
+                EdgeNum = edgeNum;
+
+                //Расчитать параметр для этого узла
+                Parameter = (pt - tg.vert2dLocs[edgeNum]).Length / tg.edgesLength[edgeNum];
+
+                //Добавить узел в нужное место в графе, заполнить свойство LinkedListNode
+                LinkedListNode<GraphNode> lln = tg.vertexNodes[edgeNum];
+                do
+                {
+                    EdgeGraphNode edgeNode = lln.Value as EdgeGraphNode;
+                    if (edgeNode != null && edgeNode.Parameter > Parameter)
+                    {
+                        //Если обнаружен узел с большим параметром, то выход из цикла
+                        break;
+                    }
+
+                    lln = lln.Next;
+                } while (!(lln.Value is VertexGraphNode));
+
+                LinkedListNode = tg.graphNodes.AddBefore(lln, this);
+
+
+            }
         }
 
         /// <summary>
-        /// Сторона треугольника
+        /// Участок полилинии проходящий через треугольник
         /// </summary>
-        class TriangSideNode : Node
+        public class PolylinePart
         {
-            public TinSurfaceEdge TinSurfaceEdge { get; private set; }
-            public override Point3d Location { get => throw new NotImplementedException(); set => throw new NotImplementedException(); }
-            public override bool Visited { get => throw new NotImplementedException(); set => throw new NotImplementedException(); }
+            /// <summary>
+            /// Ссылка на информацию о полилинии
+            /// </summary>
+            public PolylineNesting.Node PolylineNestingNode { get; private set; }
+
+            /// <summary>
+            /// Точки полилинии
+            /// </summary>
+            public LinkedList<PolylinePt> PolylinePts { get; private set; }
+
+            /// <summary>
+            /// Узел в начале участка полилинии
+            /// </summary>
+            public GraphNode StartNode { get; set; }
+
+            /// <summary>
+            /// Узел в конце участка полилинии
+            /// </summary>
+            public GraphNode EndNode { get; set; }
+
+            /// <summary>
+            /// Этот участок уже обойден
+            /// </summary>
+            public bool Traversed { get; set; } = false;
+
+            public PolylinePart(LinkedList<PolylinePt> polylinePts)
+            {
+                if (polylinePts == null || polylinePts.Count == 0)
+                {
+                    throw new ArgumentException(nameof(polylinePts));
+                }
+                PolylinePts = polylinePts;
+                PolylineNestingNode = polylinePts.First().Node;
+            }
+
         }
 
-
-        /// <summary>
-        /// Ребро графа - это либо участок полилинии, проходящей через треугольник, либо участок ребра треугольника смежный его вершине
-        /// </summary>
-        abstract class Edge
-        {
-            public abstract Node Node1 { get; set; }
-
-            public abstract Node Node2 { get; set; }
-        }
-
-        /// <summary>
-        /// Участок полилинии
-        /// </summary>
-        class PolyEdge : Edge
-        {
-            public override Node Node1 { get => throw new NotImplementedException(); set => throw new NotImplementedException(); }
-            public override Node Node2 { get => throw new NotImplementedException(); set => throw new NotImplementedException(); }
-        }
-
-        /// <summary>
-        /// Участок стороны треугольника от вершины
-        /// </summary>
-        class SideEdge : Edge
-        {
-            public override Node Node1 { get => throw new NotImplementedException(); set => throw new NotImplementedException(); }
-            public override Node Node2 { get => throw new NotImplementedException(); set => throw new NotImplementedException(); }
-        }
-
-
-        public override int GetHashCode()
-        {
-            return TinSurfaceTriangle.GetHashCode();
-        }
 
     }
 }
