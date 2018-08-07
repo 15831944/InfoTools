@@ -13,6 +13,7 @@ namespace Civil3DInfoTools.SurfaceMeshByBoundary
     /// <summary>
     /// Граф треугольника
     /// Объект, который собирает данные о частях полилиний, которые пересекают один конкретный треугольник поверхности
+    /// Главная задача этого объекта - получить полигоны, которые войдут в состав сети, которая будет построена в итоге
     /// </summary>
     public class TriangleGraph
     {
@@ -82,9 +83,9 @@ namespace Civil3DInfoTools.SurfaceMeshByBoundary
             edgesLength[1] = (vert2dLocs[1] - vert2dLocs[2]).Length;
             edgesLength[2] = (vert2dLocs[2] - vert2dLocs[0]).Length;
             //Добавить узлы вершин треугольника
+            new VertexGraphNode(this, 0);
             new VertexGraphNode(this, 1);
             new VertexGraphNode(this, 2);
-            new VertexGraphNode(this, 3);
 
         }
 
@@ -271,91 +272,305 @@ namespace Civil3DInfoTools.SurfaceMeshByBoundary
             //Добавление оставшихся узлов и ребер в граф
             foreach (PolylinePart pp in PolylineParts)
             {
-                PolylinePt[] nodePts = new PolylinePt[]//Точки присоединения полилинии к границам треугольника
+                PolylinePt test = pp.PolylinePts.First();
+                if (test.TinSurfaceEdge != null || test.TinSurfaceVertex != null)//Эта полилиния пересекает треугольник?
                 {
-                    pp.PolylinePts.First(),
-                    pp.PolylinePts.Last()
-                };
-                for (short i = 0; i < 2; i++)
-                {
-                    PolylinePt pt = nodePts[i];
-                    GraphNode graphNode = null;
-                    if (pt.TinSurfaceVertex != null)
+                    PolylinePt[] nodePts = new PolylinePt[]//Точки присоединения полилинии к границам треугольника
                     {
-                        //Определить номер этой вершины в этом треугольнике и получить ссылку на узел графа 
-                        short vertNum = GetVertNum(pt.TinSurfaceVertex);
-                        if (vertNum == -1)
+                        pp.PolylinePts.First(),
+                        pp.PolylinePts.Last()
+                    };
+                    for (short i = 0; i < 2; i++)
+                    {
+                        PolylinePt pt = nodePts[i];
+                        GraphNode graphNode = null;
+                        if (pt.TinSurfaceVertex != null)
                         {
-                            throw new Exception();
+                            //Определить номер этой вершины в этом треугольнике и получить ссылку на узел графа 
+                            short vertNum = GetVertNum(pt.TinSurfaceVertex);
+                            if (vertNum == -1)
+                            {
+                                throw new Exception();
+                            }
+                            graphNode = vertexNodes[vertNum].Value;
                         }
-                        graphNode = vertexNodes[vertNum].Value;
+                        else
+                        {
+                            //Определить номер этого ребра, добавить узел этого ребра
+                            short edgeNum = GetEdgeNum(pt.TinSurfaceEdge);
+                            if (edgeNum == -1)
+                            {
+                                throw new Exception();
+                            }
+                            graphNode = new EdgeGraphNode(this, edgeNum, pt.Point2D);
+                        }
+
+                        //дополнить свойства graphNode указателями на участок полилинии
+                        graphNode.PolylinePart = pp;
+                        graphNode.PolylinePartConnectedByStart = i == 0;
+                        if (i == 0)
+                        {
+                            pp.StartNode = graphNode;
+                        }
+                        else
+                        {
+                            pp.EndNode = graphNode;
+                        }
+                    }
+                    //Соединения для созданных узлов
+                    pp.StartNode.ConnectedLinkedListNode = pp.EndNode.LinkedListNode;
+                    pp.EndNode.ConnectedLinkedListNode = pp.StartNode.LinkedListNode;
+                }
+                else
+                {
+                    //Эта полилиния полностью находится внутри треугоьника
+                    //Эсли эта полилиния - внешняя граница, то добавить полигон по всем точкам полилинии
+                    if (pp.PolylineNestingNode.IsOuterBoundary)
+                    {
+                        List<Point3d> poligon = new List<Point3d>();
+                        Polygons.Add(poligon);
+                        foreach (PolylinePt pt in pp.PolylinePts)
+                        {
+                            poligon.Add(new Point3d(pt.Point2D.X, pt.Point2D.Y, pt.Z));
+                        }
                     }
                     else
                     {
-                        //Определить номер этого ребра, добавить узел этого ребра
-                        short edgeNum = GetEdgeNum(pt.TinSurfaceEdge);
-                        if (edgeNum == -1)
-                        {
-                            throw new Exception();
-                        }
-                        graphNode = new EdgeGraphNode(this, edgeNum, pt.Point2D);
+                        //Если эта полилиния ограничивает островок, то пока что проигнорировать ее.
+                        //TODO: В будущем нужно будет найти решение для такой ситуации
                     }
 
-                    //дополнить свойства graphNode указателями на участок полилинии
-                    graphNode.PolylinePart = pp;
-                    graphNode.PolylinePartConnectedByStart = i == 0;
-                    if (i == 0)
-                    {
-                        pp.StartNode = graphNode;
-                    }
-                    else
-                    {
-                        pp.EndNode = graphNode;
-                    }
                 }
-                //Соединения для созданных узлов
-                pp.StartNode.ConnectedLinkedListNode = pp.EndNode.LinkedListNode;
-                pp.EndNode.ConnectedLinkedListNode = pp.StartNode.LinkedListNode;
             }
 
             //Составление маршрутов обхода графа
             //Правила
             //- Начинать обход с любого еще не обойденнго узла, из которого исходит участок полилинии. Запомнить ссылку на PolylineNesting.Node
-            //- Узлы вершин, которые не являются внутренними игнорируются
             //- Если из текущего узла исходит участок полилинии, который еще не обойден, то обойти его
-            //- Из текущего узла не исходит такого участка полилинии =>
-            //  - Взять точку на границе треугольника не доходя до следующего узла (справа или слева)
-            //  - Определить, попадает ли она внутрь PolylineNesting.Node.
-            //  - Если PolylineNesting.Node.IsOuterBoundary = true, то идти в ту сторону с которой точка попадает внутрь этой полилинии, иначе в противоположную сторону
-            //- Обходить до тех пор пока не будет дотигнут стартовый узел
-            //- Нельзя заходить в те узлы которые уже посещены (только замыкание со стартовым узлом)
+            //- Из текущего узла не исходит такого участка полилинии (например, мы только что обошли участок полилинии и пришли в узел на ребре) =>
+            //  - Есть 2 варианта куда идти дальше: либо вперед до следующего узла, либо назад 
+            //  Проверяются оба варианта. При этом:
+            //      - Обходить до тех пор пока не будет дотигнут стартовый узел
+            //      - Нельзя заходить в те узлы которые уже посещены (только замыкание со стартовым узлом)
+            //      - Нельзя заходить в узлы вершин, которые не являются внутренними
+            //  Если в итоге получаются 2 варината обхода, взять точку изнутри каждого из обойденных полигонов и с помощью алгоритма WindingNumber проверить,
+            //  попадают ли они внутрь PolylineNesting.Node. Если PolylineNesting.Node.IsOuterBoundary = true,
+            //  то принять обход, точка которого попала внутрь PolylineNesting.Node, иначе принять обход, точка которого не попала внутрь PolylineNesting.Node
 
+
+            //DisplayUtils.Polyline(vert2dLocs, true, 1, SurfaceMeshByBoundaryCommand.DB, null, SurfaceMeshByBoundaryCommand.ED);
             for (LinkedListNode<GraphNode> lln = graphNodes.First; lln != null; lln = lln.Next)
             {
                 GraphNode startNode = lln.Value;
                 if (!startNode.Visited && startNode.PolylinePart != null)
                 {
-                    GraphNode currNode = startNode;
-                    //Начать обход замкнутого пути
-                    List<Point3d> poligon = new List<Point3d>();
-                    while (!currNode.Visited)
+                    startNode.Visited = true;
+                    PolylinePart startPolyPart = startNode.PolylinePart;
+                    GraphNode nextNode = startNode.ConnectedLinkedListNode.Value;
+                    if (nextNode.Visited || startPolyPart.Visited)
                     {
-                        currNode.Visited = true;
-                        if (currNode.PolylinePart!=null && !currNode.PolylinePart.Traversed)
+                        //Такой ситуации не должно быть. Отметить проблемный треугольник
+                        DisplayUtils.Polyline(vert2dLocs, true, 1, SurfaceMeshByBoundaryCommand.DB);
+                        continue;
+                    }
+
+                    PolylineNesting.Node pNNode = startPolyPart.PolylineNestingNode;
+
+                    //Начать составление маршрутов 2 вариантов замкнутого пути. Начинается всегда с прохода по участку полилинии
+                    List<PathElement> path1 = new List<PathElement>() { startNode, startPolyPart, nextNode };
+                    List<PathElement> path2 = new List<PathElement>() { startNode, startPolyPart, nextNode };
+
+                    startPolyPart.Visited = true;//необходимо для правильной работы PathPreparing
+                    bool path1Prepared = PathPreparing(nextNode, startNode, true, path1);
+                    bool path2Prepared = PathPreparing(nextNode, startNode, false, path2);
+
+
+                    List<Point3d> poligon1 = null;
+                    List<Point3d> poligon2 = null;
+                    if (path1Prepared)
+                    {
+                        //Заполнить полигон 1
+                        poligon1 = GetPoligonFromPath(path1);
+                        //DisplayUtils.Polyline(Utils.Poligon3DTo2D(poligon1), true, 1, SurfaceMeshByBoundaryCommand.DB);
+                    }
+                    if (path2Prepared)
+                    {
+                        //Заполнить полигон 2
+                        poligon2 = GetPoligonFromPath(path2);
+                        //DisplayUtils.Polyline(Utils.Poligon3DTo2D(poligon2), true, 1, SurfaceMeshByBoundaryCommand.DB);
+                    }
+
+                    List<PathElement> actualPath = null;
+                    List<Point3d> actualPoligon = null;
+                    if (path1Prepared && path2Prepared)//Если составлено 2 возможных путя
+                    {
+                        //Для 1-го варианта обхода найти внутреннюю точку (не на границе)
+                        IList<Point2d> poligon1_2d = Utils.Poligon3DTo2D(poligon1);
+                        //IList<Point2d> poligon2_2d = Utils.Poligon3DTo2D(poligon2);
+                        Point2d? p1 = null;
+                        try
                         {
-
+                            p1 = Utils.GetAnyPointInsidePoligon(poligon1_2d, Utils.DirectionIsClockwise(poligon1_2d));
                         }
+                        catch (Exception)
+                        {
+                            //Такой ситуации не должно быть. Отметить проблемный треугольник
+                            DisplayUtils.Polyline(vert2dLocs, true, 1, SurfaceMeshByBoundaryCommand.DB);
+                            continue;
+                        }
+                        //Point2d p2 = Utils.GetAnyPointInsidePoligon(poligon2_2d, Utils.DirectionIsClockwise(poligon2_2d));
 
+                        if(p1 != null)
+                        {
+                            //Определить находится ли эта точка внутри полилинии
+                            bool p1InsidePolyline = Utils.PointIsInsidePolylineWindingNumber(p1.Value, pNNode.Point2DCollection);
+
+                            //Проверить, подходит ли 1-й вариант с учетом свойства IsOuterBoundary
+                            if ((pNNode.IsOuterBoundary && p1InsidePolyline) || (!pNNode.IsOuterBoundary && !p1InsidePolyline))
+                            {
+                                //Первый вариант правильный
+                                actualPoligon = poligon1;
+                                actualPath = path1;
+                            }
+                            else
+                            {
+                                //Второй вариант правильный
+                                actualPoligon = poligon2;
+                                actualPath = path2;
+                            }
+                        }
                         
+
+                    }
+                    else if (path1Prepared)
+                    {
+                        actualPoligon = poligon1;
+                        actualPath = path1;
+                    }
+                    else if (path2Prepared)
+                    {
+                        actualPoligon = poligon2;
+                        actualPath = path2;
                     }
 
-                    if (!currNode.Equals(startNode))
+                    if (actualPoligon!=null)
                     {
-                        //Обход не правильный
+                        //Для принятого пути обхода:
+                        // - Добавить полигон в набор
+                        // - Присвоить свойству Visited значение true
+                        Polygons.Add(actualPoligon);
+                        foreach (PathElement pe in actualPath)
+                        {
+                            pe.Visited = true;
+                        }
                     }
+
+                    
                 }
             }
         }
+
+        /// <summary>
+        /// Составление варианта маршрута
+        /// </summary>
+        /// <param name="startNode"></param>
+        /// <param name="endNode"></param>
+        /// <param name="forward"></param>
+        /// <returns></returns>
+        private bool PathPreparing(GraphNode startNode, GraphNode endNode, bool forward, List<PathElement> path)
+        {
+            List<PolylinePart> polyPartsTraversed = new List<PolylinePart>();
+            GraphNode currNode = startNode;
+            while (!currNode.Equals(endNode) && !currNode.Visited)
+            {
+                //- Обходить до тех пор пока не будет дотигнут стартовый узел
+                //- Нельзя заходить в те узлы которые уже посещены во время других проходов (только замыкание со стартовым узлом)
+                //- Нельзя заходить в узлы вершин, которые не являются внутренними (если вершина находится на границе, то она считается внутренней)
+                VertexGraphNode vertexGraphNode = currNode as VertexGraphNode;
+                if (vertexGraphNode != null && !vertexGraphNode.IsInnerVertex)
+                {
+                    break;
+                }
+
+
+                if (currNode.PolylinePart != null && !currNode.PolylinePart.Visited)
+                {
+                    //Если из текущего узла исходит участок полилинии, который еще не обойден, то обойти его
+                    PolylinePart polylinePart = currNode.PolylinePart;
+                    currNode = currNode.ConnectedLinkedListNode.Value;
+                    path.Add(polylinePart);
+                    path.Add(currNode);
+                    //Переписать свойство Visited, чтобы не было обратного прохода
+                    polylinePart.Visited = true;
+                    polyPartsTraversed.Add(polylinePart);
+                }
+                else//Обход до следующего узла вдоль границы треугольника
+                {
+                    LinkedListNode<GraphNode> lln = currNode.LinkedListNode;
+                    LinkedListNode<GraphNode> nextlln = forward ? lln.Next : lln.Previous;
+                    if (nextlln == null)//Если дошли до конца двусвязного списка, то продолжить с противоположной стороны
+                    {
+                        nextlln = forward ? lln.List.First : lln.List.Last;
+                    }
+
+                    currNode = nextlln.Value;
+                    path.Add(currNode);
+                }
+            }
+
+            bool pathFound = false;
+            //Если достигнут конечный узел то вернуть true
+            if (currNode.Equals(endNode))
+                pathFound = true;
+
+            //После завершения составления маршрута сбросить свойство Visited у всех добавленных участков полилинии
+            foreach (PolylinePart pp in polyPartsTraversed)
+            {
+                pp.Visited = false;
+            }
+            //Если начальный и конечный узлы равны, то удалить последний
+            if (path.First().Equals(path.Last()))
+            {
+                path.RemoveAt(path.Count - 1);
+            }
+
+            return pathFound;
+        }
+
+        /// <summary>
+        /// Получить полигон точек по последовательности узлов графа
+        /// </summary>
+        /// <param name="path"></param>
+        /// <returns></returns>
+        private List<Point3d> GetPoligonFromPath(List<PathElement> path)
+        {
+            List<Point3d> poligon = new List<Point3d>();
+            bool polyPartFromStart = false;
+            foreach (PathElement pe in path)
+            {
+                GraphNode graphNode = pe as GraphNode;
+                PolylinePart polylinePart = pe as PolylinePart;
+                VertexGraphNode vertexGraphNode = pe as VertexGraphNode;
+
+                if (graphNode != null && graphNode.PolylinePart != null)
+                {
+                    polyPartFromStart = graphNode.PolylinePartConnectedByStart;
+                }
+                else if (polylinePart != null)
+                {
+                    //Для участка полилинии получить все 3d точки в нужном порядке
+                    poligon.AddRange(polylinePart.GetPoints3dOrdered(polyPartFromStart));
+                }
+                if (vertexGraphNode != null && vertexGraphNode.PolylinePart == null)
+                {
+                    //Если из узла вершины не выходит участок полилинии, то добавить вершину треугольника в полигон
+                    poligon.Add(verts[vertexGraphNode.VertNum].Location);
+                }
+            }
+
+            return poligon;
+        }
+
 
         /// <summary>
         /// Получить номер вершины в треугольнике
@@ -403,9 +618,22 @@ namespace Civil3DInfoTools.SurfaceMeshByBoundary
 
 
         /// <summary>
+        /// Элемент замкнутого пути обхода графа - либо GraphNode, либо PolylinePart
+        /// Данный класс служит для того чтобы можно было записывать и узлы и участки полилинии в одну коллекцию и отмечать посещенные
+        /// </summary>
+        public abstract class PathElement
+        {
+            /// <summary>
+            /// Этот элемент графа уже обойден
+            /// </summary>
+            public bool Visited { get; set; } = false;
+        }
+
+
+        /// <summary>
         /// Узел графа - точка на границе треугольника
         /// </summary>
-        public abstract class GraphNode
+        public abstract class GraphNode : PathElement
         {
             /// <summary>
             /// Ссылка на граф
@@ -428,10 +656,7 @@ namespace Civil3DInfoTools.SurfaceMeshByBoundary
             /// </summary>
             public bool PolylinePartConnectedByStart { get; set; }
 
-            /// <summary>
-            /// Этот узел уже обойден
-            /// </summary>
-            public bool Visited { get; set; } = false;
+
         }
         /// <summary>
         /// Узел графа, расположенный на вершине треугольника
@@ -515,18 +740,25 @@ namespace Civil3DInfoTools.SurfaceMeshByBoundary
                 LinkedListNode<GraphNode> lln = tg.vertexNodes[edgeNum];
                 do
                 {
+                    lln = lln.Next != null ? lln.Next : lln.List.First;
+
                     EdgeGraphNode edgeNode = lln.Value as EdgeGraphNode;
                     if (edgeNode != null && edgeNode.Parameter > Parameter)
                     {
                         //Если обнаружен узел с большим параметром, то выход из цикла
                         break;
                     }
-
-                    lln = lln.Next;
                 } while (!(lln.Value is VertexGraphNode));
 
-                LinkedListNode = tg.graphNodes.AddBefore(lln, this);
-
+                if (!lln.Equals(tg.vertexNodes[0]))
+                {
+                    LinkedListNode = tg.graphNodes.AddBefore(lln, this);
+                }
+                else//????На первом месте в списке всегда должна быть первая вершина. Перед ней ничего не вставляется. Вместо этого в конец списка
+                {
+                    LinkedListNode = tg.graphNodes.AddLast(this);
+                }
+                
 
             }
         }
@@ -534,7 +766,7 @@ namespace Civil3DInfoTools.SurfaceMeshByBoundary
         /// <summary>
         /// Участок полилинии проходящий через треугольник
         /// </summary>
-        public class PolylinePart
+        public class PolylinePart : PathElement
         {
             /// <summary>
             /// Ссылка на информацию о полилинии
@@ -556,11 +788,6 @@ namespace Civil3DInfoTools.SurfaceMeshByBoundary
             /// </summary>
             public GraphNode EndNode { get; set; }
 
-            /// <summary>
-            /// Этот участок уже обойден
-            /// </summary>
-            public bool Traversed { get; set; } = false;
-
             public PolylinePart(LinkedList<PolylinePt> polylinePts)
             {
                 if (polylinePts == null || polylinePts.Count == 0)
@@ -569,6 +796,24 @@ namespace Civil3DInfoTools.SurfaceMeshByBoundary
                 }
                 PolylinePts = polylinePts;
                 PolylineNestingNode = polylinePts.First().Node;
+            }
+
+            /// <summary>
+            /// Получить все точки участка полилинии от начала или от конца
+            /// </summary>
+            /// <param name="fromStart"></param>
+            /// <returns></returns>
+            public List<Point3d> GetPoints3dOrdered(bool fromStart)
+            {
+                List<Point3d> points = new List<Point3d>();
+                LinkedListNode<PolylinePt> lln = fromStart ? PolylinePts.First : PolylinePts.Last;
+                while (lln!=null)
+                {
+                    points.Add(new Point3d(lln.Value.Point2D.X, lln.Value.Point2D.Y, lln.Value.Z));
+                    lln = fromStart ? lln.Next : lln.Previous;
+                }
+
+                return points;
             }
 
         }

@@ -72,6 +72,10 @@
       <HintPath>C:\Program Files\Autodesk\AutoCAD 2018\C3D\AeccDbMgd.dll</HintPath>
       <Private>False</Private>
     </Reference>
+    <Reference Include="ManagedMapApi">
+      <HintPath>C:\Program Files\Autodesk\AutoCAD 2018\Map\ManagedMapApi.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
     <Reference Include="RBush">
       <HintPath>..\..\Создание поверхностей для обозначения участков\RBush-master\RBush\bin\Debug\netstandard1.2\RBush.dll</HintPath>
     </Reference>
@@ -88,7 +92,9 @@
   <ItemGroup>
     <Compile Include="App.cs" />
     <Compile Include="Constants.cs" />
-    <Compile Include="LayersByColors\LayersByColorsCommand.cs" />
+    <Compile Include="DisplayUtils.cs" />
+    <Compile Include="AuxiliaryCommands\CreateLandSiteBlockCommand.cs" />
+    <Compile Include="AuxiliaryCommands\LayersByColorsCommand.cs" />
     <Compile Include="ObjectInsertion\InsertByCoordinatesCommand.cs" />
     <Compile Include="PolylineCaptionOverrule.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />

@@ -19,7 +19,15 @@ namespace Civil3DInfoTools.SurfaceMeshByBoundary
         /// </summary>
         public int VertNumber { get; set; }
 
+        /// <summary>
+        /// Положение точки на плане
+        /// </summary>
         public Point2d Point2D { get; set; }
+
+        /// <summary>
+        /// Отметка поверхности
+        /// </summary>
+        public double Z { get; set; }
 
         public PolylineNesting.Node Node { get; set; }
 

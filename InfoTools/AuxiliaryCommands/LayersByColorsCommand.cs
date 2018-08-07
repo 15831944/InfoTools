@@ -9,9 +9,9 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-[assembly: CommandClass(typeof(Civil3DInfoTools.LayersByColors.LayersByColorsCommand))]
+[assembly: CommandClass(typeof(Civil3DInfoTools.AuxiliaryCommands.LayersByColorsCommand))]
 
-namespace Civil3DInfoTools.LayersByColors
+namespace Civil3DInfoTools.AuxiliaryCommands
 {
     public class LayersByColorsCommand
     {
@@ -73,7 +73,7 @@ namespace Civil3DInfoTools.LayersByColors
                         Color color = ent.Color;
                         if (!color.IsByLayer)
                         {
-                            string colorName = Utils.GetSafeLayername( color.ColorNameForDisplay);
+                            string colorName = Utils.GetSafeSymbolName( color.ColorNameForDisplay);
                             using (Transaction tr = btr.Database.TransactionManager.StartTransaction())
                             {
                                 ObjectId layerId = Utils.CreateLayerIfNotExists(colorName, db, tr, null, color);

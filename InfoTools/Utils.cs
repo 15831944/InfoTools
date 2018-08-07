@@ -1,12 +1,10 @@
-﻿using Autodesk.AutoCAD.DatabaseServices;
+﻿using Autodesk.AutoCAD.Colors;
+using Autodesk.AutoCAD.DatabaseServices;
 using Autodesk.AutoCAD.EditorInput;
+using Autodesk.AutoCAD.Geometry;
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using Autodesk.AutoCAD.Colors;
-using Autodesk.AutoCAD.Geometry;
 
 namespace Civil3DInfoTools
 {
@@ -111,12 +109,13 @@ namespace Civil3DInfoTools
 
         /// <summary>
         /// Убрать все недопустимые символы из имени слоя
+        /// Подходит так же и для имени блока
         /// </summary>
-        /// <param name="layername"></param>
+        /// <param name="name"></param>
         /// <returns></returns>
-        public static string GetSafeLayername(string layername)
+        public static string GetSafeSymbolName(string name)
         {
-            return string.Join("_", layername.Split(new char[] { '<', '>', '/', '\\', '"', '"', ':', ';', '?', '*', '|', ',', '=', '`' }));
+            return string.Join("_", name.Split(new char[] { '<', '>', '/', '\\', '"', '"', ':', ';', '?', '*', '|', ',', '=', '`' }));
         }
 
         /// <summary>
@@ -619,5 +618,119 @@ namespace Civil3DInfoTools
         {
             return new Point2d(p3d.X, p3d.Y);
         }
+
+
+        public static IList<Point2d> Poligon3DTo2D(IList<Point3d> poligon)
+        {
+            List<Point2d> poligon2d = new List<Point2d>();
+            foreach (Point3d p in poligon)
+            {
+                poligon2d.Add(new Point2d(p.X, p.Y));
+            }
+            return poligon2d;
+        }
+
+
+        /// <summary>
+        /// Порядок точек в наборе соответствует обходу по часовой стрелки
+        /// Точки рассматриваются в горизонтальной плоскости
+        /// https://stackoverflow.com/a/1165943
+        /// </summary>
+        /// <param name="poligon"></param>
+        /// <returns></returns>
+        public static bool DirectionIsClockwise(IList<Point2d> poligon)
+        {
+            int N = poligon.Count();
+            double p = 0;
+            for (int i = 0; i < N; i++)
+            {
+                Point2d p1 = poligon[i];
+                Point2d p2 = poligon[(i + 1) % N];
+                p += (p2.X - p1.X) * (p2.Y + p1.Y);
+            }
+            return p > 0;
+        }
+
+        /// <summary>
+        /// Получить произвольную точку, которая гарантировано лежит внутри полигона (не на границе)
+        /// http://apodeline.free.fr/FAQ/CGAFAQ/CGAFAQ-3.html - 3.6 : How do I find a single point inside a simple polygon?
+        /// </summary>
+        /// <param name="poligon"></param>
+        /// <param name="counterClockwise"></param>
+        /// <returns></returns>
+        public static Point2d GetAnyPointInsidePoligon(IList<Point2d> poligon, bool clockwise)
+        {
+            int N = poligon.Count();
+            //Найти выпуклую вершину
+            int v_index = -1;//выпуклая вершина
+            int a_index = -1;//смежная с выпуклой
+            int b_index = -1;//смежная с выпуклой
+            for (int i = 0; i < N; i++)
+            {
+                int index1 = i;
+                int index2 = (i + 1) % N;
+                int index3 = (i + 2) % N;
+
+                Point2d p1 = poligon[index1];
+                Point2d p2 = poligon[index2];
+                Point2d p3 = poligon[index3];
+
+                double isLeft = IsLeft(p1, p2, p3);
+
+                if ((clockwise && isLeft < 0) || (!clockwise && isLeft > 0))
+                {
+                    v_index = index2;
+                    a_index = index1;
+                    b_index = index3;
+                    break;
+                }
+            }
+
+            if (v_index==-1)
+            {
+                throw new Exception("Не найдено ни одной выпуклой вершины у полигона");
+            }
+
+            Point2d v = poligon[v_index];
+            Point2d a = poligon[a_index];
+            Point2d b = poligon[b_index];
+            //расстояние до точки v расчитывается ортогонально линии ab
+            Line2d lineToCalcDistance = new Line2d(v, b - a);
+
+            //Для каждой из остальных вершин
+            Point2d? closestPtInsideAVB = null;
+            double minDist = double.MaxValue;
+            for (int i = (b_index + 1) % N; i != a_index; i = (i + 1) % N)
+            {
+                Point2d q = poligon[i];
+                double l1, l2;
+                //Если вершина находится внутри треугольника avb
+                if (BarycentricCoordinates(q, a, v, b, out l1, out l2)//Внутри треугольника
+                    && l1 != 0 && l2 != 0 && l1 != 1 && l2 != 1)//Не на границе треугольника
+                {
+                    double distToV = lineToCalcDistance.GetDistanceTo(q);
+                    if (distToV < minDist)
+                    {
+                        minDist = distToV;
+                        closestPtInsideAVB = q;
+                    }
+                }
+            }
+
+            if (closestPtInsideAVB != null)
+            {
+                Point2d p = closestPtInsideAVB.Value;
+                return new Point2d((p.X + v.X) / 2, (p.Y + v.Y) / 2);
+            }
+            else
+            {
+                return new Point2d((a.X + v.X + b.X) / 3, (a.Y + v.Y + b.Y) / 3);
+            }
+
+
+
+        }
+
+
     }
 }

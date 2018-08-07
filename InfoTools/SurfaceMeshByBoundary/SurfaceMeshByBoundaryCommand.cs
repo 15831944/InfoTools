@@ -22,7 +22,7 @@ namespace Civil3DInfoTools.SurfaceMeshByBoundary
 {
     //TODO: Команду можно вызывать только из пространства модели документа
     //TODO: Выдавать предупреждение если обнаружены пересекающиеся прямые
-    //TODO: Сеть создавать не внутри блока, а в пространстве модели. Если у блока были привязаны данные Map3d, то привязать их к сети
+    //TODO: Сеть создавать не внутри блока, а в пространстве модели. ?Если у блока были привязаны данные Map3d, то привязать их к сети?
 
     //TODO: Подробно изучить CurveCurveIntersector2d Class для расчета пересечений между кривыми!  IsTangential если линии только касаются в точке пересечения?
     //Подумать об изменении процедуры проверки на пересечение с учетом того, что я узнал о Tolerance  Curve2d
@@ -53,6 +53,9 @@ namespace Civil3DInfoTools.SurfaceMeshByBoundary
         //public static Dictionary<long, RBush<TinSurfaceVertexS>> TreesCurrDoc = null;
 
 
+        public static Database DB { get; private set; }
+        public static Editor ED { get; private set; }
+
         [CommandMethod("S1NF0_SurfaceMeshByBoundary", CommandFlags.Modal | CommandFlags.UsePickSet)]
         public void SurfaceMeshByBoundary()
         {
@@ -70,8 +73,10 @@ namespace Civil3DInfoTools.SurfaceMeshByBoundary
             //}
 
             Database db = adoc.Database;
+            DB = db;
 
             Editor ed = adoc.Editor;
+            ED = ed;
 
             CivilDocument cdok = CivilDocument.GetCivilDocument(adoc.Database);
 
@@ -105,8 +110,9 @@ namespace Civil3DInfoTools.SurfaceMeshByBoundary
                     {
                         //Множественный выбор блоков
                         PromptSelectionOptions pso = new PromptSelectionOptions();
+                        pso.MessageForAdding = "\nВыберите блоки участков";
 
-                        acSSPrompt = adoc.Editor.GetSelection();
+                        acSSPrompt = adoc.Editor.GetSelection(pso);
                         if (acSSPrompt.Status == PromptStatus.OK)
                         {
                             acSSet = acSSPrompt.Value;
@@ -279,9 +285,7 @@ namespace Civil3DInfoTools.SurfaceMeshByBoundary
 
 
                                         //Построение дерева вложенности полилиний
-                                        PolylineNesting polylineNesting = new PolylineNesting(/*transform,*/ tinSurf
-                                            , db, ed//TEST
-                                            );
+                                        PolylineNesting polylineNesting = new PolylineNesting(tinSurf);
                                         foreach (Polyline poly in polylinesWithNoBulges)
                                         {
                                             poly.TransformBy(transform);
@@ -291,6 +295,7 @@ namespace Civil3DInfoTools.SurfaceMeshByBoundary
                                         //Расчет полигонов
                                         polylineNesting.CalculatePoligons();
 
+
                                         //TEST
                                         using (Transaction tr = db.TransactionManager.StartTransaction())
                                         {
@@ -299,20 +304,36 @@ namespace Civil3DInfoTools.SurfaceMeshByBoundary
                                             int colorIndex = 1;
                                             foreach (TriangleGraph tg in polylineNesting.TriangleGraphs.Values)
                                             {
-                                                foreach (TriangleGraph.PolylinePart pp in tg.PolylineParts)
+                                                //foreach (TriangleGraph.PolylinePart pp in tg.PolylineParts)
+                                                //{
+                                                //    LinkedList<PolylinePt> seq = pp.PolylinePts;
+                                                //    using (Polyline poly = new Polyline())
+                                                //    {
+                                                //        int n = 0;
+                                                //        foreach (PolylinePt pt in seq)
+                                                //        {
+                                                //            poly.AddVertexAt(n, pt.Point2D, 0, 0, 0);
+                                                //            n++;
+                                                //        }
+                                                //        poly.ColorIndex = colorIndex;
+                                                //        colorIndex = (colorIndex + 1) % 6 + 1;
+                                                //        poly.LineWeight = LineWeight.LineWeight030;
+                                                //        ms.AppendEntity(poly);
+                                                //        tr.AddNewlyCreatedDBObject(poly, true);
+                                                //    }
+                                                //}
+
+                                                foreach (List<Point3d> poligon in tg.Polygons)
                                                 {
-                                                    LinkedList<PolylinePt> seq = pp.PolylinePts;
                                                     using (Polyline poly = new Polyline())
                                                     {
-                                                        int n = 0;
-                                                        foreach (PolylinePt pt in seq)
+                                                        for (int i = 0; i < poligon.Count; i++)
                                                         {
-                                                            poly.AddVertexAt(n, pt.Point2D, 0, 0, 0);
-                                                            n++;
+                                                            poly.AddVertexAt(i, Utils.Point2DBy3D(poligon[i]), 0, 0, 0);
                                                         }
-                                                        poly.ColorIndex = colorIndex;
-                                                        colorIndex = (colorIndex + 1) % 6 + 1;
-                                                        poly.LineWeight = LineWeight.LineWeight030;
+                                                        poly.Closed = true;
+                                                        poly.ColorIndex = 6;
+
                                                         ms.AppendEntity(poly);
                                                         tr.AddNewlyCreatedDBObject(poly, true);
                                                     }
