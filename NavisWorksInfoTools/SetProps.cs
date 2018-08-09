@@ -22,7 +22,7 @@ namespace NavisWorksInfoTools
     public class SetProps : AddInPlugin
     {
 
-        private const string defTabName = "АТРИБУТЫ";
+        public static string DefTabName {get;} = "АТРИБУТЫ";
 
         private string existantTabName = null;
 
@@ -199,7 +199,7 @@ namespace NavisWorksInfoTools
                                 catch (System.Runtime.InteropServices.COMException) { }
                                 if (userPropsDefined)
                                 {
-                                    string tabName = defTabName;
+                                    string tabName = DefTabName;
                                     if (!String.IsNullOrEmpty(setPropsWindow.TabName))
                                         tabName = setPropsWindow.TabName;
                                     //propn.SetUserDefined(0, "АТРИБУТЫ", tabName, newPvec);

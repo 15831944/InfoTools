@@ -40,6 +40,7 @@
             this.commentTextBox.Location = new System.Drawing.Point(12, 12);
             this.commentTextBox.Multiline = true;
             this.commentTextBox.Name = "commentTextBox";
+            this.commentTextBox.ScrollBars = System.Windows.Forms.ScrollBars.Vertical;
             this.commentTextBox.Size = new System.Drawing.Size(493, 356);
             this.commentTextBox.TabIndex = 0;
             // 

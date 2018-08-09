@@ -26,11 +26,6 @@ namespace Civil3DInfoTools.SurfaceMeshByBoundary
         public Node Root { get; private set; }
 
         /// <summary>
-        /// Трансформация для точек полилиний
-        /// </summary>
-        //public Matrix3d Transform { get; private set; }
-
-        /// <summary>
         /// Поверхность по которой строится сеть
         /// </summary>
         public TinSurface TinSurf { get; private set; }
@@ -129,14 +124,14 @@ namespace Civil3DInfoTools.SurfaceMeshByBoundary
             }
             //Удалить те графы треугольников, которые не содержат участков полилиний
             List<TinSurfaceTriangle> keysToRemove = new List<TinSurfaceTriangle>();
-            foreach(KeyValuePair<TinSurfaceTriangle, TriangleGraph> kvp in TriangleGraphs)
+            foreach (KeyValuePair<TinSurfaceTriangle, TriangleGraph> kvp in TriangleGraphs)
             {
                 TinSurfaceTriangle key = kvp.Key;
                 if (kvp.Value.PolylineParts.Count == 0)
                 {
                     keysToRemove.Add(key);
                 }
-                
+
             }
             foreach (TinSurfaceTriangle key in keysToRemove)
             {
@@ -182,7 +177,7 @@ namespace Civil3DInfoTools.SurfaceMeshByBoundary
 
                             vertsAllreadyChecked.Add(vertex);
                         }
-                        
+
 
                     }
 
@@ -194,6 +189,7 @@ namespace Civil3DInfoTools.SurfaceMeshByBoundary
             //Затем для контуров внутренних границ найти те вершины, которые попадают в вырезы в контуре
             HashSet<TinSurfaceVertex> outerVerts = new HashSet<TinSurfaceVertex>();
             GetOuterVerts(Root, InnerVerts, outerVerts);
+
             foreach (TinSurfaceVertex ov in outerVerts)
             {
                 InnerVerts.Remove(ov);
@@ -218,10 +214,87 @@ namespace Civil3DInfoTools.SurfaceMeshByBoundary
             {
                 trGr.CalculatePoligons();
             }
-            
+
         }
 
-        //private void GetInner
+        /// <summary>
+        /// Создание сети
+        /// </summary>
+        public SubDMesh CreateSubDMesh()
+        {
+            SubDMesh sdm = null;
+
+            //Составаление общего списка полигонов
+            Vector3d elevationVector = new Vector3d(0, 0, SurfaceMeshByBoundaryCommand.MeshElevation);
+            List<List<Point3d>> poligons = new List<List<Point3d>>();
+            //Внутренние треугольники
+            foreach (TinSurfaceTriangle t in InnerTriangles)
+            {
+                Point3d pt1 = t.Vertex1.Location + elevationVector;
+                Point3d pt2 = t.Vertex2.Location + elevationVector;
+                Point3d pt3 = t.Vertex3.Location + elevationVector;
+
+                poligons.Add(new List<Point3d>() { pt1, pt2, pt3 });
+            }
+
+            //Граничные полигоны
+            foreach (TriangleGraph tg in TriangleGraphs.Values)
+            {
+                foreach (List<Point3d> pts in tg.Polygons)
+                {
+                    List<Point3d> poligon = new List<Point3d>();
+                    foreach (Point3d pt in pts)
+                    {
+                        poligon.Add(pt + elevationVector);
+                    }
+
+                    poligons.Add(poligon);
+                }
+
+            }
+
+            if (poligons.Count>0)
+            {
+                //Заполнение коллекций для построения сети
+                Point3dCollection vertarray = new Point3dCollection();
+                Int32Collection facearray = new Int32Collection();
+
+                Dictionary<Point3d, int> vertIndexes = new Dictionary<Point3d, int>();
+                int currIndex = 0;
+                foreach (List<Point3d> poligon in poligons)
+                {
+                    //Добавление точек
+                    foreach (Point3d pt in poligon)
+                    {
+                        if (!vertIndexes.ContainsKey(pt))//добавлять точку если ее еще нет
+                        {
+                            vertarray.Add(pt);
+                            vertIndexes.Add(pt, currIndex);
+                            currIndex++;
+                        }
+                    }
+
+                    //Добавление полигона
+                    facearray.Add(poligon.Count);
+                    foreach (Point3d pt in poligon)
+                    {
+                        facearray.Add(vertIndexes[pt]);
+                    }
+                }
+
+                sdm = new SubDMesh();
+                sdm.SetDatabaseDefaults();
+                sdm.SetSubDMesh(vertarray, facearray, 0);
+
+                //Настроить слой как у первой внешней полилинии
+                sdm.LayerId = Root.NestedNodes.First().Polyline.LayerId;
+            }
+
+
+            return sdm;
+
+
+        }
 
         /// <summary>
         /// Присвоение значений свойству IsOuterBoundary
@@ -247,35 +320,45 @@ namespace Civil3DInfoTools.SurfaceMeshByBoundary
             //Набор тех вершин, которые находятся внутри node
             List<TinSurfaceVertex> innerVertsToRecursCall = new List<TinSurfaceVertex>();
 
-            foreach (TinSurfaceVertex vert in innerVerts)
+            if (node.Polyline==null)
             {
-                Point2d vertLoc2d = new Point2d(vert.Location.X, vert.Location.Y);
-
-                if (Utils.PointIsInsidePolylineWindingNumber(vertLoc2d, node.Point2DCollection))
+                //Если это корневой узел, то сразу переходить к вложенным узлам
+                innerVertsToRecursCall = innerVerts.ToList();
+            }
+            else
+            {
+                foreach (TinSurfaceVertex vert in innerVerts)
                 {
-                    //Вершина внутри текущего узла
-                    innerVertsToRecursCall.Add(vert);
+                    Point2d vertLoc2d = new Point2d(vert.Location.X, vert.Location.Y);
 
-                    if (!node.IsOuterBoundary)//Этот узел - внутренняя граница
+                    if (Utils.PointIsInsidePolylineWindingNumber(vertLoc2d, node.Point2DCollection))
                     {
-                        bool insideInner = false;
-                        foreach (Node nn in node.NestedNodes)
+                        //Вершина внутри текущего узла
+                        innerVertsToRecursCall.Add(vert);
+
+                        if (!node.IsOuterBoundary)//Этот узел - внутренняя граница
                         {
-                            if (Utils.PointIsInsidePolylineWindingNumber(vertLoc2d, nn.Point2DCollection))
+                            bool insideInner = false;
+                            foreach (Node nn in node.NestedNodes)
                             {
-                                insideInner = true;
-                                break;
+                                if (Utils.PointIsInsidePolylineWindingNumber(vertLoc2d, nn.Point2DCollection))
+                                {
+                                    insideInner = true;
+                                    break;
+                                }
+                            }
+                            //Если точка находится внутри node, но не находится внутри одного из node.NestedNodes, то она находится в вырезе
+                            if (!insideInner)
+                            {
+                                outerVerts.Add(vert);
                             }
                         }
-                        //Если точка находится внутри node, но не находится внутри одного из node.NestedNodes, то она находится в вырезе
-                        if (!insideInner)
-                        {
-                            outerVerts.Add(vert);
-                        }
-                    }
 
+                    }
                 }
             }
+
+            
 
             foreach (Node nn in node.NestedNodes)
             {
@@ -534,7 +617,7 @@ namespace Civil3DInfoTools.SurfaceMeshByBoundary
                         }
                         else//Выход за границу поверхности!
                         {
-                            //TODO: Проверить, что точка точно за пределами переданного треугольника
+                            //TODO?: Проверить, что точка точно за пределами переданного треугольника
 
                             polyPt = null;//Вершина за границей поверхности!
                             return polyPt;
@@ -544,9 +627,6 @@ namespace Civil3DInfoTools.SurfaceMeshByBoundary
 
                 polyPt.TinSurfaceTriangle = triangleAccurate;
 
-
-                //TODO: Расчет координаты Z по барицентрическим координатам и координатам Z вершин треугольника
-                double lambda3 = 1 - lambda1 - lambda2;
 
             }
 

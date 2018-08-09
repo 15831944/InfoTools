@@ -20,6 +20,8 @@ namespace Civil3DInfoTools.AuxiliaryCommands
 {
     public class CreateLandSiteBlockCommand
     {
+        private static short colorIndex = 82;
+
         /// <summary>
         /// Выбор полилиний, указание текстового примитива, создание блока с этими полилиниями и названием из указанного текста
         /// </summary>
@@ -32,6 +34,8 @@ namespace Civil3DInfoTools.AuxiliaryCommands
             Database db = adoc.Database;
 
             Editor ed = adoc.Editor;
+
+            List<Polyline> selectedPolylines = null;
 
             try
             {
@@ -48,7 +52,21 @@ namespace Civil3DInfoTools.AuxiliaryCommands
                 if (acSSPrompt.Status == PromptStatus.OK)
                 {
                     SelectionSet acSSet = acSSPrompt.Value;
-                    //acSSet.GetObjectIds;
+
+                    //Подсветить выбранные полилинии
+                    selectedPolylines = new List<Polyline>();
+                    using (Transaction tr = db.TransactionManager.StartTransaction())
+                    {
+                        foreach (ObjectId id in acSSet.GetObjectIds())
+                        {
+                            Polyline polyline = (Polyline)tr.GetObject(id, OpenMode.ForRead);
+                            selectedPolylines.Add(polyline);
+                        }
+                        tr.Commit();
+                    }
+                    Highlight(selectedPolylines, true);
+
+
                     //Указание текстового примитива
                     PromptEntityOptions peo1 = new PromptEntityOptions("\nУкажите текстовый примитив с названием участка");
                     peo1.SetRejectMessage("\nМожно выбрать только поверхность TIN");
@@ -56,6 +74,9 @@ namespace Civil3DInfoTools.AuxiliaryCommands
                     PromptEntityResult per1 = ed.GetEntity(peo1);
                     if (per1.Status == PromptStatus.OK)
                     {
+                        //Снять подсветку
+                        Highlight(selectedPolylines, false);
+
                         string blockName = null;
 
                         using (Transaction tr = db.TransactionManager.StartTransaction())
@@ -106,6 +127,7 @@ namespace Civil3DInfoTools.AuxiliaryCommands
                             tr.AddNewlyCreatedDBObject(btr, true);
 
                             ObjectId layerId = ObjectId.Null;
+                            ObjectIdCollection objectIdCollection = new ObjectIdCollection();
                             //Копирование всех полилиний в созданный блок
                             foreach (ObjectId id in acSSet.GetObjectIds())
                             {
@@ -114,16 +136,16 @@ namespace Civil3DInfoTools.AuxiliaryCommands
                                     layerId = polyline.LayerId;//Запомнить слой.
 
                                 Polyline polylineCopy = (Polyline)polyline.Clone();
-
+                                polylineCopy.Elevation = 0.0;
                                 //Поменять цвет на красный
-                                polylineCopy.ColorIndex = 1;
+                                polylineCopy.ColorIndex = colorIndex;
 
-                                btr.AppendEntity(polylineCopy);
+                                objectIdCollection.Add(btr.AppendEntity(polylineCopy));
                                 tr.AddNewlyCreatedDBObject(polylineCopy, true);
                             }
 
                             //Создать атрибут внутри блока
-                            using (Transaction trAttr = db.TransactionManager.StartTransaction())
+                            //using (Transaction trAttr = db.TransactionManager.StartTransaction())
                             using (AttributeDefinition acAttDef = new AttributeDefinition())
                             {
                                 acAttDef.Position = dBText.Position;
@@ -134,14 +156,45 @@ namespace Civil3DInfoTools.AuxiliaryCommands
                                 acAttDef.Height = dBText.Height;
                                 acAttDef.Justify = dBText.Justify;
                                 acAttDef.TextStyleId = dBText.TextStyleId;
-                                acAttDef.ColorIndex = 1;
+                                acAttDef.ColorIndex = colorIndex;
                                 acAttDef.WidthFactor = dBText.WidthFactor;
                                 acAttDef.LayerId = dBText.LayerId;
 
                                 btr.AppendEntity(acAttDef);
-                                trAttr.AddNewlyCreatedDBObject(acAttDef, true);
-                                trAttr.Commit();
+                                tr/*Attr*/.AddNewlyCreatedDBObject(acAttDef, true);
+                                //trAttr.Commit();
                             }
+
+                            //Создать штриховку http://adndevblog.typepad.com/autocad/2012/07/hatch-using-the-autocad-net-api.html
+                            using (Hatch oHatch = new Hatch())
+                            {
+
+                                try
+                                {
+                                    Vector3d normal = new Vector3d(0.0, 0.0, 1.0);
+                                    oHatch.Normal = normal;
+                                    oHatch.Elevation = 0.0;
+                                    oHatch.PatternScale = objectIdCollection.Count == 1 ? 2.0 : 10.0;
+                                    oHatch.SetHatchPattern(HatchPatternType.PreDefined, "ANSI37");
+                                    oHatch.ColorIndex = colorIndex;
+
+                                    btr.AppendEntity(oHatch);
+                                    tr.AddNewlyCreatedDBObject(oHatch, true);
+
+                                    oHatch.Associative = true;
+                                    foreach (ObjectId id in objectIdCollection)
+                                    {
+                                        oHatch.AppendLoop((int)HatchLoopTypes.Default, new ObjectIdCollection() { id });
+                                    }
+
+                                    oHatch.EvaluateHatch(true);
+                                }
+                                catch (System.Exception)
+                                {
+                                    try { oHatch.Erase(true); } catch { }
+                                }
+                            }
+
 
                             //Создание вхождения этого блока
                             BlockTableRecord ms = (BlockTableRecord)tr.GetObject(bt[BlockTableRecord.ModelSpace], OpenMode.ForWrite);
@@ -188,6 +241,28 @@ namespace Civil3DInfoTools.AuxiliaryCommands
                 //Utils.ErrorToCommandLine(ed, "Ошибка при создании контуров разметки", ex);
                 CommonException(ex, "Ошибка при создании контуров разметки");
             }
+            finally
+            {
+                //Снять подсветку
+                Highlight(selectedPolylines, false);
+            }
+        }
+
+
+        private void Highlight(List<Polyline> selectedPolylines, bool yes)
+        {
+            if (selectedPolylines != null)
+                foreach (Polyline p in selectedPolylines)
+                {
+                    if (yes)
+                    {
+                        p.Highlight();
+                    }
+                    else
+                    {
+                        p.Unhighlight();
+                    }
+                }
         }
     }
 }

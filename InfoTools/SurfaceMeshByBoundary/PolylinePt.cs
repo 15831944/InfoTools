@@ -51,6 +51,35 @@ namespace Civil3DInfoTools.SurfaceMeshByBoundary
             VertNumber = Convert.ToInt32(Math.Floor(Parameter));
         }
 
+        /// <summary>
+        /// Расчет координаты Z по барицентрическим координатам
+        /// </summary>
+        public void CalculateZ()
+        {
+            if (TinSurfaceVertex != null)
+            {
+                Z = TinSurfaceVertex.Location.Z;
+                return;
+            }
+
+            TinSurfaceTriangle triangle = null;
+            if (TinSurfaceEdge != null)
+            {
+                triangle = TinSurfaceEdge.Triangle1 != null ? TinSurfaceEdge.Triangle1 : TinSurfaceEdge.Triangle2;
+            }
+            else
+            {
+                triangle = TinSurfaceTriangle;
+            }
+            double lambda1;
+            double lambda2;
+            Utils.BarycentricCoordinates(Point2D, triangle, out lambda1, out lambda2);
+
+            double lambda3 = 1 - lambda1 - lambda2;
+
+            Z = lambda1 * triangle.Vertex1.Location.Z + lambda2 * triangle.Vertex2.Location.Z + lambda3 * triangle.Vertex3.Location.Z;
+        }
+
         public int CompareTo(PolylinePt other)
         {
             return Parameter.CompareTo(other.Parameter);

@@ -79,5 +79,20 @@ namespace Common
 
             return targetFullPath;
         }
+
+        /// <summary>
+        /// https://stackoverflow.com/questions/146134/how-to-remove-illegal-characters-from-path-and-filenames
+        /// </summary>
+        /// <param name="filename"></param>
+        /// <returns></returns>
+        public static string GetSafeFilename(string filename)
+        {
+            return string.Join("_", filename.Split(Path.GetInvalidFileNameChars()));
+        }
+
+        public static string GetSavePathName(string pathname)
+        {
+            return string.Join("_", pathname.Split(Path.GetInvalidPathChars()));
+        }
     }
 }

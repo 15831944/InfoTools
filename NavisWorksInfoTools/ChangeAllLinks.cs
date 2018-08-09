@@ -56,24 +56,39 @@ namespace NavisWorksInfoTools
                                 {
                                     //Проверять исходный URL
                                     string initialUrl = url.URL;
+
                                     if (!String.IsNullOrEmpty(initialUrl))
                                     {
                                         //Получение директории по-разному для локальных путей и для интернета
                                         string initialDir = null;
+                                        char slash = '\\';
                                         if (initialUrl.Contains("/"))
                                         {
+                                            slash = '/';
                                             Uri uri = new Uri(initialUrl);
                                             Uri initialDirUri = new Uri(uri, ".");
                                             initialDir = initialDirUri.ToString().TrimEnd('/');
                                         }
                                         else
                                         {
-                                            initialDir = Path.GetDirectoryName(initialUrl);
+                                            //Записанный путь может содержать недопустимые символы из-за которых вываливается ошибка в методе GetDirectoryName
+                                            //initialDir = Path.GetDirectoryName(initialUrl);//выдает ошибку
+                                            List<string> temp = initialUrl.Split('\\').ToList();
+                                            temp.RemoveAt(temp.Count - 1);
+                                            initialDir = String.Join("\\", temp.ToArray());
                                         }
 
-                                        string fileName = Path.GetFileName(initialUrl);
+                                        string oldUrlToCompare = changeLinksPropsWindow.OldUrl;
+
+
+                                        //string fileName = Path.GetFileName(initialUrl);//выдает ошибку
+                                        string fileName = initialUrl.Split(slash).Last();
+
                                         if (changeLinksPropsWindow.ChangeAllUrls
-                                            || changeLinksPropsWindow.OldUrl.Equals(initialDir))
+                                            || oldUrlToCompare
+                                            //.StartsWith(initialDir)
+                                            .Equals(initialDir)
+                                            )
                                         {
                                             //Разделитель может быть либо прямым либо обратным слешем
                                             string divider = "/";

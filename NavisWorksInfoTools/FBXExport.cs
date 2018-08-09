@@ -105,7 +105,7 @@ namespace NavisWorksInfoTools
                     }
 
                     name = name + ".fbx";
-                    name = GetSafeFilename(name);
+                    name = Common.Utils.GetSafeFilename(name);
 
                     string fileName = Path.Combine(fbxPath, name);
                     if (!File.Exists(fileName))
@@ -119,7 +119,7 @@ namespace NavisWorksInfoTools
                 {
                     //Дополнить путь выгрузки новой папкой
                     string name = item.DisplayName;
-                    name = GetSafeFilename(name);
+                    name = Common.Utils.GetSafeFilename(name);
                     name = Path.GetFileNameWithoutExtension(name);
                     string fbxPathToChildren = Path.Combine(fbxPath, name);
                     //Рекурсивный вызов
@@ -132,15 +132,7 @@ namespace NavisWorksInfoTools
         }
 
 
-        /// <summary>
-        /// https://stackoverflow.com/questions/146134/how-to-remove-illegal-characters-from-path-and-filenames
-        /// </summary>
-        /// <param name="filename"></param>
-        /// <returns></returns>
-        public string GetSafeFilename(string filename)
-        {
-            return string.Join("", filename.Split(Path.GetInvalidFileNameChars()));
-        }
+        
 
     }
 }

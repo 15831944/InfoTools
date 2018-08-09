@@ -272,6 +272,12 @@ namespace Civil3DInfoTools.SurfaceMeshByBoundary
             //Добавление оставшихся узлов и ребер в граф
             foreach (PolylinePart pp in PolylineParts)
             {
+                //Расчитать координаты Z всех точек
+                foreach (PolylinePt pt in pp.PolylinePts)
+                {
+                    pt.CalculateZ();
+                }
+
                 PolylinePt test = pp.PolylinePts.First();
                 if (test.TinSurfaceEdge != null || test.TinSurfaceVertex != null)//Эта полилиния пересекает треугольник?
                 {
@@ -420,7 +426,7 @@ namespace Civil3DInfoTools.SurfaceMeshByBoundary
                         }
                         //Point2d p2 = Utils.GetAnyPointInsidePoligon(poligon2_2d, Utils.DirectionIsClockwise(poligon2_2d));
 
-                        if(p1 != null)
+                        if (p1 != null)
                         {
                             //Определить находится ли эта точка внутри полилинии
                             bool p1InsidePolyline = Utils.PointIsInsidePolylineWindingNumber(p1.Value, pNNode.Point2DCollection);
@@ -439,7 +445,7 @@ namespace Civil3DInfoTools.SurfaceMeshByBoundary
                                 actualPath = path2;
                             }
                         }
-                        
+
 
                     }
                     else if (path1Prepared)
@@ -453,7 +459,7 @@ namespace Civil3DInfoTools.SurfaceMeshByBoundary
                         actualPath = path2;
                     }
 
-                    if (actualPoligon!=null)
+                    if (actualPoligon != null)
                     {
                         //Для принятого пути обхода:
                         // - Добавить полигон в набор
@@ -465,7 +471,7 @@ namespace Civil3DInfoTools.SurfaceMeshByBoundary
                         }
                     }
 
-                    
+
                 }
             }
         }
@@ -758,7 +764,7 @@ namespace Civil3DInfoTools.SurfaceMeshByBoundary
                 {
                     LinkedListNode = tg.graphNodes.AddLast(this);
                 }
-                
+
 
             }
         }
@@ -807,7 +813,7 @@ namespace Civil3DInfoTools.SurfaceMeshByBoundary
             {
                 List<Point3d> points = new List<Point3d>();
                 LinkedListNode<PolylinePt> lln = fromStart ? PolylinePts.First : PolylinePts.Last;
-                while (lln!=null)
+                while (lln != null)
                 {
                     points.Add(new Point3d(lln.Value.Point2D.X, lln.Value.Point2D.Y, lln.Value.Z));
                     lln = fromStart ? lln.Next : lln.Previous;
