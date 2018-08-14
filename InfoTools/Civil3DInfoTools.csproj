@@ -76,9 +76,6 @@
       <HintPath>C:\Program Files\Autodesk\AutoCAD 2018\Map\ManagedMapApi.dll</HintPath>
       <Private>False</Private>
     </Reference>
-    <Reference Include="RBush">
-      <HintPath>..\..\Создание поверхностей для обозначения участков\RBush-master\RBush\bin\Debug\netstandard1.2\RBush.dll</HintPath>
-    </Reference>
     <Reference Include="System" />
     <Reference Include="System.Core" />
     <Reference Include="System.Windows.Forms" />
@@ -101,17 +98,17 @@
     <Compile Include="RoadMarking\CreateBoundariesCommand.cs" />
     <Compile Include="Spillway\ExtractSpillwayPositionsCommand.cs" />
     <Compile Include="Spillway\Poly3DFromCorridorFeatureLinesCommand.cs" />
-    <Compile Include="SurfaceMeshByBoundary\LineIntersectionTestCommand.cs" />
     <Compile Include="SurfaceMeshByBoundary\PolylineNesting.cs" />
     <Compile Include="SurfaceMeshByBoundary\PolylinePt.cs" />
     <Compile Include="SurfaceMeshByBoundary\SurfaceMeshByBoundaryCommand.cs" />
-    <Compile Include="SurfaceMeshByBoundary\TinSurfaceVertexS.cs" />
     <Compile Include="SurfaceMeshByBoundary\TriangleGraph.cs" />
     <Compile Include="Utils.cs" />
   </ItemGroup>
   <ItemGroup>
     <Content Include="GeometrySubtracting\Info.txt" />
-    <Content Include="PackageContents.xml" />
+    <Content Include="PackageContents.xml">
+      <SubType>Designer</SubType>
+    </Content>
   </ItemGroup>
   <ItemGroup>
     <None Include="InfoTools.cuix" />

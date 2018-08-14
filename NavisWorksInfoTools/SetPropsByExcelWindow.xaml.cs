@@ -124,17 +124,47 @@ namespace NavisWorksInfoTools
 
         private void Window_Loaded(object sender, RoutedEventArgs e)
         {
-            if (!String.IsNullOrEmpty(defaultPath))
-            {
-                ExcelPath = defaultPath;
-            }
-            else if (!String.IsNullOrEmpty(initialPath))
-            {
-                ExcelPath = initialPath;
-            }
             //Заполнить варианты выбора navisDataTabComboBox
             propertyCategories = sampleItem.PropertyCategories.ToList();
             navisDataTabComboBox.ItemsSource = propertyCategories;
+
+            //Заполнить значения по умолчанию
+            try
+            {
+                //Для пути к Excel
+                if (!String.IsNullOrEmpty(defaultPath))
+                {
+                    ExcelPath = defaultPath;
+                }
+                else if (!String.IsNullOrEmpty(initialPath))
+                {
+                    ExcelPath = initialPath;
+                }
+                //Для номера строки
+                if (defaultRowNum > 0)
+                {
+                    excelRowNumericUpDown.NumValue = defaultRowNum;
+                }
+                //Для категории Navis
+                if (!String.IsNullOrEmpty(defaultCategoryName) && propertyCategories != null && propertyCategories.Count > 0)
+                {
+                    PropertyCategory propertyCategory = propertyCategories.Find(c => c.DisplayName.Equals(defaultCategoryName));
+                    navisDataTabComboBox.SelectedItem = propertyCategory;
+                }
+                //Для свойства Navis
+                if (!String.IsNullOrEmpty(defaultPropertyName) && dataProperties != null && dataProperties.Count > 0)
+                {
+                    DataProperty dataProperty = dataProperties.Find(p => p.DisplayName.Equals(defaultPropertyName));
+                    navisPropertyComboBox.SelectedItem = dataProperty;
+                }
+                //Для названия вкладки
+                if (!String.IsNullOrEmpty(defaultTabName))
+                {
+                    TabName = defaultTabName;
+                }
+            }
+            catch { }
+
         }
 
         /// <summary>
@@ -181,6 +211,19 @@ namespace NavisWorksInfoTools
                 excelRowNumericUpDown.IsEnabled = false;
                 excelColComboBox.IsEnabled = false;
             }
+
+
+            //Заполнить значения по умолчанию
+            try
+            {
+                //Для выбранного листа
+                if (!String.IsNullOrEmpty(defaultSheetName) && excelWorkSheets != null && excelWorkSheets.Count > 0)
+                {
+                    Excel._Worksheet sheet = excelWorkSheets.Find(s => s.Name.Equals(defaultSheetName));
+                    excelSheetComboBox.SelectedItem = sheet;
+                }
+            }
+            catch { }
 
         }
 
@@ -229,6 +272,18 @@ namespace NavisWorksInfoTools
 
             }
             excelColComboBox.ItemsSource = TabelHeader.Values;
+
+            //Заполнить значения по умолчанию
+            try
+            {
+                //Для столбца книги
+                if (!String.IsNullOrEmpty(defaultColumnName) && TabelHeader != null && TabelHeader.Count > 0)
+                {
+                    Common.ExcelInterop.CellValue cellValue = TabelHeader.Values.First(c => c.DisplayString.Equals(defaultColumnName));
+                    excelColComboBox.SelectedItem = cellValue;
+                }
+            }
+            catch { }
         }
 
 
@@ -275,7 +330,7 @@ namespace NavisWorksInfoTools
                 && excelColComboBox.SelectedItem != null
                 && navisDataTabComboBox.SelectedItem != null
                 && navisPropertyComboBox.SelectedItem != null
-                && TabelHeader!= null && TabelHeader.Count>0)
+                && TabelHeader != null && TabelHeader.Count > 0)
             {
                 okButton.IsEnabled = true;
             }
@@ -288,7 +343,16 @@ namespace NavisWorksInfoTools
 
         private void Button_Click(object sender, RoutedEventArgs e)
         {
+            //Задание значений по умолчанию
             defaultPath = ExcelPath;
+            defaultRowNum = excelRowNumericUpDown.NumValue;
+            defaultCategoryName = SelectedPropertyCategory.DisplayName;
+            defaultPropertyName = SelectedDataProperty.DisplayName;
+            defaultTabName = TabName;
+
+            defaultSheetName = SelectedWorkSheet.Name;
+            defaultColumnName = SelectedColumn.DisplayString;
+
             this.DialogResult = true;
         }
 

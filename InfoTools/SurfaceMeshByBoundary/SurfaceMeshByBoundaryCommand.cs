@@ -13,13 +13,20 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using static Common.ExceptionHandling.ExeptionHandlingProcedures;
-using RBush;
 using Autodesk.AutoCAD.Colors;
 
 [assembly: CommandClass(typeof(Civil3DInfoTools.SurfaceMeshByBoundary.SurfaceMeshByBoundaryCommand))]
 
+
+//!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!НЕДОДЕЛАЛ ГРАНИЦЫ УЧАСТКОВ!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
 namespace Civil3DInfoTools.SurfaceMeshByBoundary
 {
+    //TODO: Получить последовательности 3d точек по границам
+    //Сделать отдельный объект для обозначения границ (выдваливание по траектории) 
+    // - http://www.keanw.com/2010/01/sweeping-an-autocad-solid-using-net.html
+    // с другим более темным цветом - https://stackoverflow.com/questions/6615002/given-an-rgb-value-how-do-i-create-a-tint-or-shade
+
     //TODO: Попробовать разобраться с созданием островков внутри треугольников --- https://www.geometrictools.com/Documentation/TriangulationByEarClipping.pdf
     //ГОТОВО//TODO: Если блок имеет более одного вхождения, то сеть создавать не внутри блока, а в пространстве модели. Но при этом слой использовать такой же как у полилинии
     //ГОТОВО//TODO: Сеть создавать в слое как у первой полилинии, находящейся на самом высоком уровне дерева вложенности полилиний
@@ -41,6 +48,7 @@ namespace Civil3DInfoTools.SurfaceMeshByBoundary
 
 
 
+
     public class SurfaceMeshByBoundaryCommand
     {
         public static Database DB { get; private set; }
@@ -48,9 +56,12 @@ namespace Civil3DInfoTools.SurfaceMeshByBoundary
 
         public static double MeshElevation { get; private set; } = 0.05;
 
+        public static Color ColorForBorder { get; private set; } = Color.FromColorIndex(ColorMethod.ByAci, 256);
+
         [CommandMethod("S1NF0_SurfaceMeshByBoundary", CommandFlags.Modal | CommandFlags.UsePickSet)]
         public void SurfaceMeshByBoundary()
         {
+
 
             Document adoc = Application.DocumentManager.MdiActiveDocument;
             if (adoc == null) return;
@@ -66,6 +77,21 @@ namespace Civil3DInfoTools.SurfaceMeshByBoundary
 
             try
             {
+                Color currColor = db.Cecolor;
+                if (!currColor.IsByLayer)//Если текущий слой не по слою, то расчитать более темный цвет для границ участков
+                {
+                    byte red = Convert.ToByte(currColor.Red * 0.5);
+                    byte green = Convert.ToByte(currColor.Green * 0.5);
+                    byte blue = Convert.ToByte(currColor.Blue * 0.5);
+
+                    ColorForBorder = Color.FromRgb(red, green, blue);
+                }
+                else
+                {
+                    ColorForBorder = Color.FromColorIndex(ColorMethod.ByAci, 256);
+                }
+
+
                 TinSurface tinSurf = null;
                 //BlockReference blockReference = null;
 
@@ -167,12 +193,14 @@ namespace Civil3DInfoTools.SurfaceMeshByBoundary
                                                     if (ent is Polyline)
                                                     {
                                                         Polyline poly = ent as Polyline;
-                                                        if (poly.Closed || poly.GetPoint2dAt(0).Equals(poly.GetPoint2dAt(poly.NumberOfVertices - 1))//Полилиния замкнута
+                                                        if ((poly.Closed || poly.GetPoint2dAt(0).Equals(poly.GetPoint2dAt(poly.NumberOfVertices - 1)))//Полилиния замкнута
                                                             && !Utils.PolylineIsSelfIntersecting(poly)//Не имеет самопересечений
                                                                                                       //&& !poly.HasBulges//Не имеет криволинейных сегментов
+                                                            && poly.Visible ==true//Учет многовидовых блоков
                                                             )
                                                         {
-                                                            polylines.Add(ent as Polyline);
+
+                                                            polylines.Add(poly);
                                                         }
 
                                                     }
@@ -236,7 +264,7 @@ namespace Civil3DInfoTools.SurfaceMeshByBoundary
                                                         int nextIndex = (i + 1) % poly.NumberOfVertices;
                                                         Point2d next = poly.GetPoint2dAt(nextIndex);
 
-                                                        if (next.IsEqualTo(curr))
+                                                        if (next.IsEqualTo(curr, new Tolerance(0.001, 0.001)))//Прореживать точки, расположенные слишком близко//TODO: Учесть масштабирование блока
                                                         {
                                                             poly.RemoveVertexAt(nextIndex);
                                                         }
@@ -246,6 +274,7 @@ namespace Civil3DInfoTools.SurfaceMeshByBoundary
                                                         }
                                                     }
                                                 }
+
 
 
                                                 //Построение дерева вложенности полилиний
@@ -260,7 +289,10 @@ namespace Civil3DInfoTools.SurfaceMeshByBoundary
                                                 polylineNesting.CalculatePoligons();
 
                                                 //Построение сети
-                                                SubDMesh sdm = polylineNesting.CreateSubDMesh();//Сеть постоена в координатах пространства модели
+                                                SubDMesh sdm = polylineNesting.CreateSubDMesh();
+                                                //Создание 3d полилиний по границе
+                                                //List<ObjectId> polylineIds3d = polylineNesting.CreateBorderPolylines(db);//Полилинии уже созданы в пространстве модели
+                                                //Объекты постоены в координатах пространства модели
                                                 if (sdm != null)
                                                 {
                                                     using (Transaction tr = db.TransactionManager.StartTransaction())
@@ -268,7 +300,7 @@ namespace Civil3DInfoTools.SurfaceMeshByBoundary
                                                         BlockTableRecord btr = (BlockTableRecord)tr.GetObject(btrId, OpenMode.ForWrite);
                                                         if (btr.GetBlockReferenceIds(true, false).Count > 1)
                                                         {
-                                                            //Если у блока несколько вхождений, то создавать сеть в пространстве модели
+                                                            //Если у блока несколько вхождений, то создавать объекты в пространстве модели
                                                             BlockTable bt = tr.GetObject(db.BlockTableId, OpenMode.ForWrite) as BlockTable;
                                                             BlockTableRecord ms = (BlockTableRecord)tr.GetObject(bt[BlockTableRecord.ModelSpace], OpenMode.ForWrite);
                                                             ms.AppendEntity(sdm);
@@ -280,6 +312,16 @@ namespace Civil3DInfoTools.SurfaceMeshByBoundary
                                                             sdm.TransformBy(transform.Inverse());
                                                             btr.AppendEntity(sdm);
                                                             tr.AddNewlyCreatedDBObject(sdm, true);
+
+                                                            //foreach (ObjectId pId in polylineIds3d)//Перенести полилинии из модели в блок
+                                                            //{
+                                                            //    Polyline3d p = (Polyline3d)tr.GetObject(pId, OpenMode.ForWrite);
+                                                            //    Polyline3d pTransf = (Polyline3d)p.Clone();
+                                                            //    pTransf.TransformBy(transform.Inverse());
+                                                            //    btr.AppendEntity(pTransf);
+                                                            //    tr.AddNewlyCreatedDBObject(pTransf, true);
+                                                            //    p.Erase();
+                                                            //}
                                                         }
                                                         tr.Commit();
                                                     }
@@ -386,7 +428,7 @@ namespace Civil3DInfoTools.SurfaceMeshByBoundary
 
                     }
 
-                    
+
 
 
                 }
@@ -403,6 +445,7 @@ namespace Civil3DInfoTools.SurfaceMeshByBoundary
         /// <summary>
         /// Аппроксимация дуг полилинии прямыми вставками
         /// Только для замкнутой полилинии
+        /// Все переданные полилинии заменяются на вновь созданные (всегда замкнутые), но не добавленные к базе данных чертежа 
         /// </summary>
         /// <param name="poly"></param>
         /// <param name="delta"></param>

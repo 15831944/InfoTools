@@ -185,8 +185,11 @@ namespace Civil3DInfoTools.SurfaceMeshByBoundary
                     LinkedList<PolylinePt> seq1 = sequences.First();
                     LinkedList<PolylinePt> seq2 = sequences.Last();
 
-                    //Нужно проверить параметр последней точки последей последовательности (что он находится в пределах 1.00 от конечного параметра полилинии)
-                    if (seq2.Last().Parameter >= node.Polyline.EndParam - 1)
+                    
+                    if (
+                        //seq1.First().TinSurfaceEdge==null
+                        seq2.Last().Parameter >= node.Polyline.EndParam - 1//Нужно проверить параметр последней точки последей последовательности (что он находится в пределах 1.00 от конечного параметра полилинии)
+                        )
                     {
                         for (LinkedListNode<PolylinePt> lln = seq2.Last; lln != null; lln = lln.Previous)
                         {
@@ -272,11 +275,7 @@ namespace Civil3DInfoTools.SurfaceMeshByBoundary
             //Добавление оставшихся узлов и ребер в граф
             foreach (PolylinePart pp in PolylineParts)
             {
-                //Расчитать координаты Z всех точек
-                foreach (PolylinePt pt in pp.PolylinePts)
-                {
-                    pt.CalculateZ();
-                }
+                
 
                 PolylinePt test = pp.PolylinePts.First();
                 if (test.TinSurfaceEdge != null || test.TinSurfaceVertex != null)//Эта полилиния пересекает треугольник?

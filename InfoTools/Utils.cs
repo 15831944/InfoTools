@@ -241,6 +241,12 @@ namespace Civil3DInfoTools
         /// <returns></returns>
         public static bool PolylineIsSelfIntersecting(Polyline poly)
         {
+            Curve3d curve3D = poly.GetGeCurve();
+            CurveCurveIntersector3d intersector = new CurveCurveIntersector3d(curve3D, curve3D, Vector3d.ZAxis);
+
+            return intersector.NumberOfIntersectionPoints > 0;
+
+            /*
             Dictionary<Point3d, int?> polyPts = new Dictionary<Point3d, int?>();
             int vertCount = poly.NumberOfVertices;
             for (int i = 0; i < vertCount; i++)
@@ -271,6 +277,7 @@ namespace Civil3DInfoTools
             }
 
             return false;
+            */
         }
 
 

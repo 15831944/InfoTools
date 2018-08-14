@@ -46,7 +46,10 @@ namespace Civil3DInfoTools.SurfaceMeshByBoundary
         public Dictionary<TinSurfaceTriangle, TriangleGraph> TriangleGraphs
             = new Dictionary<TinSurfaceTriangle, TriangleGraph>();
 
-
+        /// <summary>
+        /// Все точки полилиний
+        /// </summary>
+        public List<PolylinePt> PolylinePts { get; private set; } = new List<PolylinePt>();
 
         public PolylineNesting(TinSurface tinSurf)
         {
@@ -114,6 +117,13 @@ namespace Civil3DInfoTools.SurfaceMeshByBoundary
 
             //Определить пересечения всех полилиний с ребрами поверхностей. Добавление точек полилиний в графоы треугольников
             TraversePolylines(Root);
+
+            //Расчитать координаты Z всех точек
+            foreach (PolylinePt pt in PolylinePts)
+            {
+                pt.CalculateZ();
+                pt.AddToPolylinePart();
+            }
 
             //Уточнение графов треугольников
             foreach (TriangleGraph trGr in TriangleGraphs.Values)
@@ -218,7 +228,7 @@ namespace Civil3DInfoTools.SurfaceMeshByBoundary
         }
 
         /// <summary>
-        /// Создание сети
+        /// Создание сети по площади участка
         /// </summary>
         public SubDMesh CreateSubDMesh()
         {
@@ -253,7 +263,7 @@ namespace Civil3DInfoTools.SurfaceMeshByBoundary
 
             }
 
-            if (poligons.Count>0)
+            if (poligons.Count > 0)
             {
                 //Заполнение коллекций для построения сети
                 Point3dCollection vertarray = new Point3dCollection();
@@ -296,6 +306,25 @@ namespace Civil3DInfoTools.SurfaceMeshByBoundary
 
         }
 
+        public List<ObjectId> CreateBorderPolylines(Database db)
+        {
+            List<ObjectId> polylines = new List<ObjectId>();
+
+            using (Transaction tr = db.TransactionManager.StartTransaction())
+            {
+                BlockTable bt = tr.GetObject(db.BlockTableId, OpenMode.ForWrite) as BlockTable;
+                BlockTableRecord ms = (BlockTableRecord)tr.GetObject(bt[BlockTableRecord.ModelSpace], OpenMode.ForWrite);
+
+                Root.CreateBorderPolylineRecurse(polylines, ms, tr);
+                tr.Commit();
+            }
+
+
+            return polylines;
+        }
+
+
+
         /// <summary>
         /// Присвоение значений свойству IsOuterBoundary
         /// </summary>
@@ -320,7 +349,7 @@ namespace Civil3DInfoTools.SurfaceMeshByBoundary
             //Набор тех вершин, которые находятся внутри node
             List<TinSurfaceVertex> innerVertsToRecursCall = new List<TinSurfaceVertex>();
 
-            if (node.Polyline==null)
+            if (node.Polyline == null)
             {
                 //Если это корневой узел, то сразу переходить к вложенным узлам
                 innerVertsToRecursCall = innerVerts.ToList();
@@ -358,7 +387,7 @@ namespace Civil3DInfoTools.SurfaceMeshByBoundary
                 }
             }
 
-            
+
 
             foreach (Node nn in node.NestedNodes)
             {
@@ -448,14 +477,31 @@ namespace Civil3DInfoTools.SurfaceMeshByBoundary
                 }
 
 
+
                 //Все вершины попали на поверхность
-                bool allVertsOnSurface = vertSequences.Count == 1 && vertSequences.First().Count == node.Point2DCollection.Count;
+                node.AllPointsOnSurface = vertSequences.Count == 1 && vertSequences.First().Count == node.Point2DCollection.Count;
+
+                //Записать данные об участках в Node
+                if (!node.AllPointsOnSurface)
+                {
+                    foreach (LinkedList<PolylinePt> seq in vertSequences)
+                    {
+                        int startParam = seq.First().VertNumber;
+                        int prevParam = startParam != 0 ? startParam - 1 : node.Polyline.NumberOfVertices - 1;
+                        node.BorderParts.Add(new BorderPart(prevParam, (seq.Last().VertNumber + 1) % node.Polyline.NumberOfVertices));
+                    }
+                }
+                else
+                {
+                    node.BorderParts.Add(new BorderPart(node.Polyline.StartParam, node.Polyline.EndParam));
+                }
+
 
 
                 //Обход последовательностей
                 foreach (LinkedList<PolylinePt> seq in vertSequences)
                 {
-                    if (!allVertsOnSurface)
+                    if (!node.AllPointsOnSurface)
                     {
                         TraversePolylineSegment(node, seq.First, false);
                     }
@@ -1209,10 +1255,10 @@ namespace Civil3DInfoTools.SurfaceMeshByBoundary
             /// Точки полилинии. Точки пересчитаны в глобальную систему координат
             /// </summary>
             public Point2dCollection Point2DCollection { get; private set; } = new Point2dCollection();
-            public double MinX { get; private set; } = double.MaxValue;
-            public double MinY { get; private set; } = double.MaxValue;
-            public double MaxX { get; private set; } = double.MinValue;
-            public double MaxY { get; private set; } = double.MinValue;
+            //public double MinX { get; private set; } = double.MaxValue;
+            //public double MinY { get; private set; } = double.MaxValue;
+            //public double MaxX { get; private set; } = double.MinValue;
+            //public double MaxY { get; private set; } = double.MinValue;
 
             /// <summary>
             /// Внешняя граница области
@@ -1229,6 +1275,27 @@ namespace Civil3DInfoTools.SurfaceMeshByBoundary
             /// </summary>
             public HashSet<TinSurfaceTriangle> IntersectingTriangles = new HashSet<TinSurfaceTriangle>();
 
+            /// <summary>
+            /// Коллекции 3d точек вдоль полилинии, лежащих на поверхности, отсортированных по параметру,
+            /// которая включает в себя вершины полилинии и точки перелома поверхности
+            /// Параметр при этом равен параметру 2d полилинии
+            /// Каждая коллекция привязана к номеру участка полилинии
+            /// </summary>
+            //public Dictionary<int, SortedDictionary<double, Point3d>> BordersPoints3D { get; private set; }
+            //    = new Dictionary<int, SortedDictionary<double, Point3d>>();
+
+            /// <summary>
+            /// Параметр начала, конца и номер участка
+            /// </summary>
+            //public List<Tuple<double, double, int>> BorderParts { get; private set; }
+            //    = new List<Tuple<double, double, int>>();
+
+
+            public List<BorderPart> BorderParts { get; private set; } = new List<BorderPart>();
+
+
+
+            public bool AllPointsOnSurface { get; set; } = false;
 
             /// <summary>
             /// Предполагается, что полилиния замкнута и не имеет повторяющихся точек
@@ -1246,22 +1313,22 @@ namespace Civil3DInfoTools.SurfaceMeshByBoundary
                     for (int i = 0; i < polyline.NumberOfVertices; i++)
                     {
                         Point2d pt = polyline.GetPoint2dAt(i);
-                        if (pt.X < MinX)
-                        {
-                            MinX = pt.X;
-                        }
-                        if (pt.Y < MinY)
-                        {
-                            MinY = pt.Y;
-                        }
-                        if (pt.X > MaxX)
-                        {
-                            MaxX = pt.X;
-                        }
-                        if (pt.Y > MaxY)
-                        {
-                            MaxY = pt.Y;
-                        }
+                        //if (pt.X < MinX)
+                        //{
+                        //    MinX = pt.X;
+                        //}
+                        //if (pt.Y < MinY)
+                        //{
+                        //    MinY = pt.Y;
+                        //}
+                        //if (pt.X > MaxX)
+                        //{
+                        //    MaxX = pt.X;
+                        //}
+                        //if (pt.Y > MaxY)
+                        //{
+                        //    MaxY = pt.Y;
+                        //}
 
                         Point2DCollection.Add(pt);
 
@@ -1281,9 +1348,103 @@ namespace Civil3DInfoTools.SurfaceMeshByBoundary
                 return Utils.PointIsInsidePolylineWindingNumber(node.Point2DCollection[0], this.Point2DCollection);
             }
 
+
+            public void CreateBorderPolylineRecurse(List<ObjectId> polylines, BlockTableRecord ms, Transaction tr)
+            {
+                CreateBorderPolyline(polylines, ms, tr);
+                foreach (Node nn in this.NestedNodes)
+                {
+                    nn.CreateBorderPolylineRecurse(polylines, ms, tr);
+                }
+            }
+
+
+            /// <summary>
+            /// Построить 3d полилинию
+            /// http://through-the-interface.typepad.com/through_the_interface/2008/05/sweeping-an-aut.html
+            /// </summary>
+            /// <returns></returns>
+            private void CreateBorderPolyline(List<ObjectId> polylines, BlockTableRecord ms, Transaction tr)
+            {
+                if (BorderParts.Count > 0)
+                {
+                    foreach (BorderPart p in BorderParts)
+                    {
+                        SortedDictionary<double, PolylinePt> part = p.PointsOrderedByParameter;
+                        //Если на этом участке есть переход через 0, то нужно переставить участок с конца последовательности в начало
+                        LinkedList<PolylinePt> partSeq = new LinkedList<PolylinePt>();
+                        LinkedList<PolylinePt> partToReplace = new LinkedList<PolylinePt>();//часть, которую нужно переставить с конца в начало
+                        foreach (PolylinePt pt in part.Values)
+                        {
+                            if (partToReplace.Count > 0//Если запись последовательности для перестановки уже начата, то все остальные точки попадут в нее
+                                || (partSeq.Count > 0 && pt.Parameter - partSeq.Last().Parameter > 1))//Эта точка по разности параметров с предыдущей больше 1
+                            {
+                                partToReplace.AddLast(pt);
+                            }
+                            else
+                            {
+                                partSeq.AddLast(pt);
+                            }
+                        }
+
+                        for (LinkedListNode<PolylinePt> lln = partToReplace.Last; lln != null; lln = lln.Previous)
+                        {
+                            partSeq.AddFirst(lln.Value);
+                        }
+
+                        if (partSeq.Count>0)
+                        {
+                            Polyline3d border = new Polyline3d();
+                            border.LayerId = PolylineNesting.Root.NestedNodes.First().Polyline.LayerId;
+                            border.Color = SurfaceMeshByBoundaryCommand.ColorForBorder;
+                            ObjectId pId = ms.AppendEntity(border);
+                            if (!pId.IsNull)
+                            {
+                                tr.AddNewlyCreatedDBObject(border, true);
+                                foreach (PolylinePt pt in partSeq)
+                                {
+                                    PolylineVertex3d vertex
+                                        = new PolylineVertex3d(new Point3d(pt.Point2D.X, pt.Point2D.Y, pt.Z + SurfaceMeshByBoundaryCommand.MeshElevation));
+                                    vertex.LayerId = border.LayerId;
+                                    vertex.Color = border.Color;
+                                    border.AppendVertex(vertex);
+                                    tr.AddNewlyCreatedDBObject(vertex, true);
+                                }
+                                if (AllPointsOnSurface)
+                                {
+                                    border.Closed = true;
+                                }
+                                polylines.Add(pId);
+                            }
+                        }
+                    }
+                }
+            }
+
+
+
             public override int GetHashCode()
             {
                 return Polyline.Id.GetHashCode();
+            }
+
+
+
+        }
+
+
+        public class BorderPart
+        {
+            public double StartParam { get; private set; }
+            public double EndParam { get; private set; }
+
+            public SortedDictionary<double, PolylinePt> PointsOrderedByParameter { get; private set; }
+                = new SortedDictionary<double, PolylinePt>();
+
+            public BorderPart(double startParam, double endParam)
+            {
+                StartParam = startParam;
+                EndParam = endParam;
             }
         }
 

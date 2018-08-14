@@ -11,6 +11,8 @@ using Autodesk.AutoCAD.Runtime;
 
 namespace Civil3DInfoTools
 {
+
+
     public class PolylineCaptionOverrule : DrawableOverrule
     {
         public Dictionary<ObjectId, Point3d> position = null;

@@ -19,30 +19,31 @@ namespace NavisWorksInfoTools
     /// </summary>
     public partial class ChangeLinksProps : Window
     {
+        private static string defaultOldUrlFragment = null;
+        private static string defaultNewUrlFragment = null;
+        private static bool? defaultChangeAllUrls = null;
+
+
         public bool ChangeAllUrls
         {
             get
             {
-                bool? checkBoxState = changeAllUrlsCheckBox.IsChecked;
-                return checkBoxState!=null ? checkBoxState.Value : false;
+                bool? checkedState = changeAllUrlsRadioBtn.IsChecked;
+                return checkedState != null ? checkedState.Value : false;
             }
             set
             {
-                changeAllUrlsCheckBox.IsChecked = value;
+                changeAllUrlsRadioBtn.IsChecked = value;
+                //changeOnlySpecifiedFragmRadioBtn.IsChecked = !value;
             }
         }
 
-        public string OldUrl
+        public string OldUrlFragment
         {
             get
             {
                 //Убирать с конца слеш
-                string retVal = oldUrlTextBox.Text;
-                if (retVal.EndsWith("/") || retVal.EndsWith("\\"))
-                {
-                    retVal = retVal.TrimEnd('/');
-                    retVal = retVal.TrimEnd('\\');
-                }
+                string retVal = TrimSlashEnd(oldUrlTextBox.Text);
                 return retVal;
             }
             set
@@ -51,17 +52,12 @@ namespace NavisWorksInfoTools
             }
         }
 
-        public string NewUrl
+        public string NewUrlFragment
         {
             get
             {
                 //Убирать с конца слеш
-                string retVal = newUrlTextBox.Text;
-                if (retVal.EndsWith("/") || retVal.EndsWith("\\"))
-                {
-                    retVal = retVal.TrimEnd('/');
-                    retVal = retVal.TrimEnd('\\');
-                }
+                string retVal = TrimSlashEnd(newUrlTextBox.Text);
                 return retVal;
             }
             set
@@ -70,27 +66,58 @@ namespace NavisWorksInfoTools
             }
         }
 
+        private string TrimSlashEnd(string txt)
+        {
+            string retVal = txt;
+            if (retVal.EndsWith("/") || retVal.EndsWith("\\"))
+            {
+                retVal = retVal.TrimEnd('/');
+                retVal = retVal.TrimEnd('\\');
+            }
+
+            return retVal;
+        }
+
         public ChangeLinksProps()
         {
             InitializeComponent();
         }
 
-        private void CheckBox_Checked(object sender, RoutedEventArgs e)
+        private void Window_Loaded(object sender, RoutedEventArgs e)
         {
-            //выключить текстбокс со старым именем
-            oldUrlTextBox.IsEnabled = false;
+            if (!String.IsNullOrEmpty(defaultOldUrlFragment))
+            {
+                OldUrlFragment = defaultOldUrlFragment;
+            }
+            if (!String.IsNullOrEmpty(defaultNewUrlFragment))
+            {
+                NewUrlFragment = defaultNewUrlFragment;
+            }
+            if (defaultChangeAllUrls != null)
+            {
+                ChangeAllUrls = defaultChangeAllUrls.Value;
+            }
         }
 
-        private void CheckBox_Unchecked(object sender, RoutedEventArgs e)
-        {
-            //включить текстбокс со старым именем
-            oldUrlTextBox.IsEnabled = true;
-        }
 
         private void Button_Click(object sender, RoutedEventArgs e)
         {
             this.DialogResult = true;
+            defaultOldUrlFragment = OldUrlFragment;
+            defaultNewUrlFragment = NewUrlFragment;
+            defaultChangeAllUrls = ChangeAllUrls;
             this.Close();
         }
+
+        private void changeOnlySpecifiedFragmRadioBtn_CheckedChanged(object sender, RoutedEventArgs e)
+        {
+            bool? state = changeOnlySpecifiedFragmRadioBtn.IsChecked;
+            if (oldUrlTextBox != null && state != null)
+            {
+                oldUrlTextBox.IsEnabled = state.Value;
+            }
+        }
+
+        
     }
 }

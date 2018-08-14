@@ -124,25 +124,25 @@ namespace Civil3DInfoTools.RoadMarking
                         }
                         break;
                     }
+                    
 
-                    ObjectIdCollection idToExtract = new ObjectIdCollection();//выбранные объекты
-                    foreach (SelectedObject acSSObj in ssToProcess)
+                    if (ssToProcess!=null && ssToProcess.Count>0)
                     {
-                        idToExtract.Add(acSSObj.ObjectId);
+                        ObjectIdCollection idToExtract = new ObjectIdCollection();//выбранные объекты
+                        foreach (SelectedObject acSSObj in ssToProcess)
+                        {
+                            idToExtract.Add(acSSObj.ObjectId);
+                        }
+
+
+
+                        //Создание новой базы данных для записи обработанных объектов и создания нового чертежа
+                        dbTarget = new Database(true, false);
+                        //Единицы измерения ВСЕГДА метры
+                        dbTarget.Insunits = UnitsValue.Meters;
+                        //Копирование объектов
+                        db.Wblock(dbTarget, idToExtract, Point3d.Origin, DuplicateRecordCloning.Ignore);
                     }
-
-
-
-                    //Создание новой базы данных для записи обработанных объектов и создания нового чертежа
-                    dbTarget = new Database(true, false);
-                    //Единицы измерения ВСЕГДА метры
-                    dbTarget.Insunits = UnitsValue.Meters;
-                    //Копирование объектов
-                    db.Wblock(dbTarget, idToExtract, Point3d.Origin, DuplicateRecordCloning.Ignore);
-
-
-
-
                     tr.Commit();
                 }
 
@@ -150,95 +150,98 @@ namespace Civil3DInfoTools.RoadMarking
 
 
 
-
-
-                ObjectIdCollection createdBtrs = new ObjectIdCollection();
-                using (Transaction trTarget = dbTarget.TransactionManager.StartTransaction())
+                if (dbTarget!=null)
                 {
-                    continuousLtype = Utils.GetContinuousLinetype(dbTarget);
-                    //Обработка объектов в новой базе данных
-                    BlockTable btTarget
-                        = trTarget.GetObject(dbTarget.BlockTableId, OpenMode.ForWrite) as BlockTable;
-                    BlockTableRecord msTarget
-                            = (BlockTableRecord)trTarget
-                            .GetObject(btTarget[BlockTableRecord.ModelSpace], OpenMode.ForWrite);
-                    foreach (ObjectId id in msTarget)
+                    ObjectIdCollection createdBtrs = new ObjectIdCollection();
+                    using (Transaction trTarget = dbTarget.TransactionManager.StartTransaction())
                     {
-                        Entity ent = trTarget.GetObject(id, OpenMode.ForWrite) as Entity;
-                        ObjectId createdBtrId = ObjectId.Null;
-                        //Для полилинии имя нового блока должно быть равно имени типа линии + номер
-                        //Для штриховки - "Штриховка" + номер
-                        if (ent is Curve)
+                        continuousLtype = Utils.GetContinuousLinetype(dbTarget);
+                        //Обработка объектов в новой базе данных
+                        BlockTable btTarget
+                            = trTarget.GetObject(dbTarget.BlockTableId, OpenMode.ForWrite) as BlockTable;
+                        BlockTableRecord msTarget
+                                = (BlockTableRecord)trTarget
+                                .GetObject(btTarget[BlockTableRecord.ModelSpace], OpenMode.ForWrite);
+                        foreach (ObjectId id in msTarget)
                         {
-                            Curve curve = ent as Curve;
-                            if (ent is Polyline2d)
+                            Entity ent = trTarget.GetObject(id, OpenMode.ForWrite) as Entity;
+                            ObjectId createdBtrId = ObjectId.Null;
+                            //Для полилинии имя нового блока должно быть равно имени типа линии + номер
+                            //Для штриховки - "Штриховка" + номер
+                            if (ent is Curve)
                             {
-                                Polyline poly = new Polyline();
-                                poly.ConvertFrom(ent, false);
-                                curve = poly;
+                                Curve curve = ent as Curve;
+                                if (ent is Polyline2d)
+                                {
+                                    Polyline poly = new Polyline();
+                                    poly.ConvertFrom(ent, false);
+                                    curve = poly;
+                                }
+
+                                createdBtrId = ProcessEntity(curve as Polyline, btTarget);
+                            }
+                            else if (ent is Hatch)
+                            {
+                                createdBtrId = ProcessEntity(ent as Hatch, btTarget);
                             }
 
-                            createdBtrId = ProcessEntity(curve as Polyline, btTarget);
-                        }
-                        else if (ent is Hatch)
-                        {
-                            createdBtrId = ProcessEntity(ent as Hatch, btTarget);
-                        }
+                            //Вставка нового вхождения блока
+                            if (createdBtrId != ObjectId.Null)
+                            {
+                                createdBtrs.Add(createdBtrId);
+                                //ЗДЕСЬ НЕ СОЗДАЕТ ВХОЖДЕНИЕ БЛОКА!
+                                //BlockReference br = new BlockReference(Point3d.Origin, createdBtrId);
+                                //msTarget.AppendEntity(br);
+                                //trTarget.AddNewlyCreatedDBObject(br, true);
+                            }
 
-                        //Вставка нового вхождения блока
-                        if (createdBtrId != ObjectId.Null)
-                        {
-                            createdBtrs.Add(createdBtrId);
-                            //ЗДЕСЬ НЕ СОЗДАЕТ ВХОЖДЕНИЕ БЛОКА!
-                            //BlockReference br = new BlockReference(Point3d.Origin, createdBtrId);
-                            //msTarget.AppendEntity(br);
-                            //trTarget.AddNewlyCreatedDBObject(br, true);
+
+                            //Удаление исходного объекта
+                            ent.Erase();
                         }
 
 
-                        //Удаление исходного объекта
-                        ent.Erase();
+
+
+                        trTarget.Commit();
+
                     }
 
-
-
-
-                    trTarget.Commit();
-
-                }
-
-                //Создание вхождений блоков
-                using (Transaction trTarget = dbTarget.TransactionManager.StartTransaction())
-                {
-                    BlockTable btTarget
-                        = trTarget.GetObject(dbTarget.BlockTableId, OpenMode.ForWrite) as BlockTable;
-                    BlockTableRecord msTarget
-                            = (BlockTableRecord)trTarget
-                            .GetObject(btTarget[BlockTableRecord.ModelSpace], OpenMode.ForWrite);
-
-                    foreach (ObjectId id in createdBtrs)
+                    //Создание вхождений блоков
+                    using (Transaction trTarget = dbTarget.TransactionManager.StartTransaction())
                     {
-                        BlockReference br = new BlockReference(Point3d.Origin, id);
-                        msTarget.AppendEntity(br);
-                        trTarget.AddNewlyCreatedDBObject(br, true);
+                        BlockTable btTarget
+                            = trTarget.GetObject(dbTarget.BlockTableId, OpenMode.ForWrite) as BlockTable;
+                        BlockTableRecord msTarget
+                                = (BlockTableRecord)trTarget
+                                .GetObject(btTarget[BlockTableRecord.ModelSpace], OpenMode.ForWrite);
+
+                        foreach (ObjectId id in createdBtrs)
+                        {
+                            BlockReference br = new BlockReference(Point3d.Origin, id);
+                            msTarget.AppendEntity(br);
+                            trTarget.AddNewlyCreatedDBObject(br, true);
+                        }
                     }
+
+
+                    //TODO: Учесть возможные ошибки из-за отсутствия прав
+                    //Создание нового чертежа и открытие его
+                    //string targetDocFullPath = null;
+                    //int n = 0;
+                    //do
+                    //{
+                    //    targetDocFullPath = Path.Combine(Path.GetDirectoryName(adoc.Name), "RoadMarkingBoundaries" + n + ".dwg");
+                    //    n++;
+                    //} while (File.Exists(targetDocFullPath));
+
+                    string targetDocFullPath
+                        = Common.Utils.GetNonExistentFileName(Path.GetDirectoryName(adoc.Name), "RoadMarkingBoundaries", "dwg");
+                    dbTarget.SaveAs(targetDocFullPath, DwgVersion.Current);
+                    adocTarget = Application.DocumentManager.Open(targetDocFullPath, false);
                 }
 
-
-                //TODO: Учесть возможные ошибки из-за отсутствия прав
-                //Создание нового чертежа и открытие его
-                //string targetDocFullPath = null;
-                //int n = 0;
-                //do
-                //{
-                //    targetDocFullPath = Path.Combine(Path.GetDirectoryName(adoc.Name), "RoadMarkingBoundaries" + n + ".dwg");
-                //    n++;
-                //} while (File.Exists(targetDocFullPath));
-
-                string targetDocFullPath
-                    = Common.Utils.GetNonExistentFileName(Path.GetDirectoryName(adoc.Name), "RoadMarkingBoundaries", "dwg");
-                dbTarget.SaveAs(targetDocFullPath, DwgVersion.Current);
-                adocTarget = Application.DocumentManager.Open(targetDocFullPath, false);
+                
 
 
 
@@ -295,6 +298,7 @@ namespace Civil3DInfoTools.RoadMarking
                     throw new System.Exception("Не определена глобальная ширина кривой");
                 }
 
+
                 //Анализ типа линии. Получить длину штриха и длину пробела
                 LinetypeTableRecord ltype = tr.GetObject(curve.LinetypeId, OpenMode.ForRead) as LinetypeTableRecord;
                 //Создать слой, который будет называться как тип линии
@@ -305,7 +309,10 @@ namespace Civil3DInfoTools.RoadMarking
                 //string ltypeDef = ltype.Comments;
                 //double patternLength = ltype.PatternLength;
                 //int numDashes = ltype.NumDashes;
-
+                if (ltype.Name.Equals("ByLayer"))
+                {
+                    ltype = tr.GetObject(layerSample.LinetypeObjectId, OpenMode.ForRead) as LinetypeTableRecord;
+                }
                 List<double> pattern = Utils.GetLinePattern(ltype, ltScale);
 
                 bool startFromDash = false;//паттерн начинается со штриха (не пробела)

@@ -51,7 +51,7 @@ namespace NavisWorksInfoTools
                             {
                                 ComApi.InwURLOverride urlOverride = state.GetOverrideURL(p_path);
                                 ComApi.InwURLColl oURLColl = urlOverride.URLs();
-                                bool changed = false;
+                                bool changed = false;//становится true если была поменяна хотябы 1 ссылка
                                 foreach (ComApi.InwURL2 url in oURLColl)
                                 {
                                     //Проверять исходный URL
@@ -59,6 +59,37 @@ namespace NavisWorksInfoTools
 
                                     if (!String.IsNullOrEmpty(initialUrl))
                                     {
+                                        string newUrl = null;
+                                        if (changeLinksPropsWindow.ChangeAllUrls)
+                                        {
+                                            //Нужно заменить целиком весь путь до файла
+                                            char slash = '\\';
+                                            if (initialUrl.Contains("/"))
+                                            {
+                                                slash = '/';
+                                            }
+                                            List<string> temp = initialUrl.Split(slash).ToList();
+                                            temp.RemoveAt(temp.Count - 1);
+                                            string fileName = initialUrl.Split(slash).Last();
+                                            newUrl = changeLinksPropsWindow.NewUrlFragment + slash + fileName;
+                                        }
+                                        else if (initialUrl.Contains(changeLinksPropsWindow.OldUrlFragment))
+                                        {
+                                            //Если путь содержит подстроку, введенную в окне, то нужно заменить эту подстроку
+                                            newUrl = initialUrl.Replace(changeLinksPropsWindow.OldUrlFragment, changeLinksPropsWindow.NewUrlFragment);
+                                        }
+
+                                        if (newUrl != null)
+                                        {
+                                            url.URL = newUrl;
+                                            changed = true;
+                                        }
+
+
+
+
+
+                                        /*
                                         //Получение директории по-разному для локальных путей и для интернета
                                         string initialDir = null;
                                         char slash = '\\';
@@ -101,6 +132,7 @@ namespace NavisWorksInfoTools
                                             url.URL = newUrl + divider + fileName;
                                             changed = true;
                                         }
+                                        */
                                     }
 
                                 }

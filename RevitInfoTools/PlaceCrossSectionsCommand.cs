@@ -67,7 +67,7 @@ namespace RevitInfoTools
                         //Выбор семейства из числа загруженных семейств формы
                         //Определить id категории Форма
                         Categories categories = doc.Settings.Categories;
-                        ElementId IdForm = categories.get_Item(BuiltInCategory.OST_Mass).Id;//TODO: В Revit 2019 не находит семейства форм. Нужно использовать другую категорию?
+                        ElementId IdForm = categories.get_Item(BuiltInCategory.OST_Mass).Id;
 
                         SelectTypeWindow selectTypeWindow = new SelectTypeWindow(doc, IdForm);
                         bool? result = selectTypeWindow.ShowDialog();

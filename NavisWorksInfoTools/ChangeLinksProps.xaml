@@ -5,15 +5,16 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:local="clr-namespace:NavisWorksInfoTools"
         mc:Ignorable="d"
-        Title="Замена ссылок на файлы" Height="263.5" Width="534.5" ResizeMode="NoResize" 
-        WindowStartupLocation="CenterScreen">
+        Title="Замена ссылок на файлы" Height="298.5" Width="575.5" ResizeMode="NoResize" 
+        WindowStartupLocation="CenterScreen" Loaded="Window_Loaded">
     <Grid>
-        <Label Content="Введите старый путь до файла" HorizontalAlignment="Left" Margin="10,10,0,0" VerticalAlignment="Top"/>
-        <TextBox Name="oldUrlTextBox" HorizontalAlignment="Left" Height="65" Margin="188,14,0,0" TextWrapping="Wrap" Text="https://abc.stpr.ru/DocLib1/A/B/" VerticalAlignment="Top" Width="330"/>
-        <CheckBox Name="changeAllUrlsCheckBox" Content="Любой" HorizontalAlignment="Left" Margin="188,84,0,0" VerticalAlignment="Top" Checked="CheckBox_Checked" Unchecked="CheckBox_Unchecked"/>
-        <Label Content="Введите новый путь до файла" HorizontalAlignment="Left" VerticalAlignment="Top" Margin="10,119,0,0"/>
-        <TextBox Name="newUrlTextBox" HorizontalAlignment="Left" Height="65" Margin="188,122,0,0" TextWrapping="Wrap" Text="https://abc.stpr.ru/DocLib1/A/B/" VerticalAlignment="Top" Width="330"/>
-        <Button Content="OK" HorizontalAlignment="Left" Margin="443,205,0,0" VerticalAlignment="Top" Width="75" Click="Button_Click"/>
+        <Label Content="Введите старый фрагмент ссылки:" HorizontalAlignment="Left" Margin="10,48,0,0" VerticalAlignment="Top"/>
+        <TextBox Name="oldUrlTextBox" HorizontalAlignment="Left" Height="65" Margin="212,52,0,0" TextWrapping="Wrap" Text="https://abc.stpr.ru/DocLib1/A/B/" VerticalAlignment="Top" Width="330"/>
+        <Label Content="Введите новый фрагмент ссылки:" HorizontalAlignment="Left" VerticalAlignment="Top" Margin="10,119,0,0"/>
+        <TextBox Name="newUrlTextBox" HorizontalAlignment="Left" Height="65" Margin="212,122,0,0" TextWrapping="Wrap" Text="https://abc.stpr.ru/DocLib1/A/B/" VerticalAlignment="Top" Width="330"/>
+        <Button Content="OK" HorizontalAlignment="Left" Margin="443,205,0,0" VerticalAlignment="Top" Width="91" Click="Button_Click" Height="54"/>
+        <RadioButton Name="changeOnlySpecifiedFragmRadioBtn" Content="Замена указанного фрагмента ссылки" HorizontalAlignment="Left" Margin="10,13,0,0" VerticalAlignment="Top" IsChecked="True" Checked="changeOnlySpecifiedFragmRadioBtn_CheckedChanged" Unchecked="changeOnlySpecifiedFragmRadioBtn_CheckedChanged"/>
+        <RadioButton Name="changeAllUrlsRadioBtn" Content="Замена всего пути до файла во всех ссылках" HorizontalAlignment="Left" Margin="10,28,0,0" VerticalAlignment="Top"/>
 
     </Grid>
 </Window>
