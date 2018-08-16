@@ -17,7 +17,7 @@ namespace Civil3DInfoTools.SurfaceMeshByBoundary
     /// Дерево для хранения данных о вложенности полилиний
     /// Предполагается, что все линии замкнуты, не имеют самопересечений и пересечений друг с другом
     /// </summary>
-    public class PolylineNesting
+    public class PolylineNesting : IDisposable
     {
         /// <summary>
         /// Корневой узел - фиктивный, не имеет полилинии
@@ -306,6 +306,12 @@ namespace Civil3DInfoTools.SurfaceMeshByBoundary
 
         }
 
+        /// <summary>
+        /// Создание 3d полилиний по границам участков. Полилинии сразу создаются в пространстве модели
+        /// Не используется из-за того, что при большом количестве 3d полилиний возникают проблемы при загрузке модели в Navis
+        /// </summary>
+        /// <param name="db"></param>
+        /// <returns></returns>
         public List<ObjectId> CreateBorderPolylines(Database db)
         {
             List<ObjectId> polylines = new List<ObjectId>();
@@ -321,6 +327,13 @@ namespace Civil3DInfoTools.SurfaceMeshByBoundary
 
 
             return polylines;
+        }
+
+        public List<Line> CreateBorderLines()
+        {
+            List<Line> lines = new List<Line>();
+            Root.CreateBorderLinesRecurse(lines);
+            return lines;
         }
 
 
@@ -1235,11 +1248,20 @@ namespace Civil3DInfoTools.SurfaceMeshByBoundary
             pt.Node.IntersectingTriangles.Add(triangle);
         }
 
+        /// <summary>
+        /// Вызвать Dispose для всех полилиний
+        /// </summary>
+        public void Dispose()
+        {
+            Root.Dispose();
+        }
+
+
 
         /// <summary>
         /// Узел дерева - 1 полилиния
         /// </summary>
-        public class Node
+        public class Node : IDisposable
         {
             /// <summary>
             /// Ссылка на дерево
@@ -1276,21 +1298,8 @@ namespace Civil3DInfoTools.SurfaceMeshByBoundary
             public HashSet<TinSurfaceTriangle> IntersectingTriangles = new HashSet<TinSurfaceTriangle>();
 
             /// <summary>
-            /// Коллекции 3d точек вдоль полилинии, лежащих на поверхности, отсортированных по параметру,
-            /// которая включает в себя вершины полилинии и точки перелома поверхности
-            /// Параметр при этом равен параметру 2d полилинии
-            /// Каждая коллекция привязана к номеру участка полилинии
+            /// Участки полилинии, лежащие на поверхности
             /// </summary>
-            //public Dictionary<int, SortedDictionary<double, Point3d>> BordersPoints3D { get; private set; }
-            //    = new Dictionary<int, SortedDictionary<double, Point3d>>();
-
-            /// <summary>
-            /// Параметр начала, конца и номер участка
-            /// </summary>
-            //public List<Tuple<double, double, int>> BorderParts { get; private set; }
-            //    = new List<Tuple<double, double, int>>();
-
-
             public List<BorderPart> BorderParts { get; private set; } = new List<BorderPart>();
 
 
@@ -1371,28 +1380,9 @@ namespace Civil3DInfoTools.SurfaceMeshByBoundary
                     foreach (BorderPart p in BorderParts)
                     {
                         SortedDictionary<double, PolylinePt> part = p.PointsOrderedByParameter;
-                        //Если на этом участке есть переход через 0, то нужно переставить участок с конца последовательности в начало
-                        LinkedList<PolylinePt> partSeq = new LinkedList<PolylinePt>();
-                        LinkedList<PolylinePt> partToReplace = new LinkedList<PolylinePt>();//часть, которую нужно переставить с конца в начало
-                        foreach (PolylinePt pt in part.Values)
-                        {
-                            if (partToReplace.Count > 0//Если запись последовательности для перестановки уже начата, то все остальные точки попадут в нее
-                                || (partSeq.Count > 0 && pt.Parameter - partSeq.Last().Parameter > 1))//Эта точка по разности параметров с предыдущей больше 1
-                            {
-                                partToReplace.AddLast(pt);
-                            }
-                            else
-                            {
-                                partSeq.AddLast(pt);
-                            }
-                        }
+                        LinkedList<PolylinePt> partSeq = BorderPartSequence(part);
 
-                        for (LinkedListNode<PolylinePt> lln = partToReplace.Last; lln != null; lln = lln.Previous)
-                        {
-                            partSeq.AddFirst(lln.Value);
-                        }
-
-                        if (partSeq.Count>0)
+                        if (partSeq.Count > 0)
                         {
                             Polyline3d border = new Polyline3d();
                             border.LayerId = PolylineNesting.Root.NestedNodes.First().Polyline.LayerId;
@@ -1421,6 +1411,79 @@ namespace Civil3DInfoTools.SurfaceMeshByBoundary
                 }
             }
 
+            private static LinkedList<PolylinePt> BorderPartSequence(SortedDictionary<double, PolylinePt> part)
+            {
+                //Если на этом участке есть переход через 0, то нужно переставить участок с конца последовательности в начало
+                LinkedList<PolylinePt> partSeq = new LinkedList<PolylinePt>();
+                LinkedList<PolylinePt> partToReplace = new LinkedList<PolylinePt>();//часть, которую нужно переставить с конца в начало
+                foreach (PolylinePt pt in part.Values)
+                {
+                    if (partToReplace.Count > 0//Если запись последовательности для перестановки уже начата, то все остальные точки попадут в нее
+                        || (partSeq.Count > 0 && pt.Parameter - partSeq.Last().Parameter > 1))//Эта точка по разности параметров с предыдущей больше 1
+                    {
+                        partToReplace.AddLast(pt);
+                    }
+                    else
+                    {
+                        partSeq.AddLast(pt);
+                    }
+                }
+
+                for (LinkedListNode<PolylinePt> lln = partToReplace.Last; lln != null; lln = lln.Previous)
+                {
+                    partSeq.AddFirst(lln.Value);
+                }
+
+                return partSeq;
+            }
+
+
+            public void CreateBorderLinesRecurse(List<Line> lines)
+            {
+                CreateBorderLines(lines);
+                foreach (Node nn in this.NestedNodes)
+                {
+                    nn.CreateBorderLinesRecurse(lines);
+                }
+            }
+
+            private void CreateBorderLines(List<Line> lines)
+            {
+                if (BorderParts.Count > 0)
+                {
+                    foreach (BorderPart p in BorderParts)
+                    {
+                        SortedDictionary<double, PolylinePt> part = p.PointsOrderedByParameter;
+                        LinkedList<PolylinePt> partSeq = BorderPartSequence(part);
+                        if (partSeq.Count > 0)
+                        {
+                            for (LinkedListNode<PolylinePt> lln = partSeq.First; lln != null; lln = lln.Next)
+                            {
+                                LinkedListNode<PolylinePt> llnNext = lln.Next;
+                                if (llnNext == null && AllPointsOnSurface)
+                                {
+                                    //Замыкание полилинии
+                                    llnNext = partSeq.First;
+                                }
+
+                                if (llnNext != null)
+                                {
+                                    Point3d pt1 = new Point3d(lln.Value.Point2D.X, lln.Value.Point2D.Y,
+                                        lln.Value.Z + SurfaceMeshByBoundaryCommand.MeshElevation);
+                                    Point3d pt2 = new Point3d(llnNext.Value.Point2D.X, llnNext.Value.Point2D.Y,
+                                        llnNext.Value.Z + SurfaceMeshByBoundaryCommand.MeshElevation);
+
+                                    Line line = new Line(pt1, pt2);
+                                    line.LayerId = PolylineNesting.Root.NestedNodes.First().Polyline.LayerId;
+                                    line.Color = SurfaceMeshByBoundaryCommand.ColorForBorder;
+
+                                    lines.Add(line);
+                                }
+                            }
+                        }
+                    }
+                }
+            }
 
 
             public override int GetHashCode()
@@ -1428,8 +1491,18 @@ namespace Civil3DInfoTools.SurfaceMeshByBoundary
                 return Polyline.Id.GetHashCode();
             }
 
+            public void Dispose()
+            {
+                if (Polyline!=null)
+                {
+                    Polyline.Dispose();
+                }
 
-
+                foreach (Node nn in NestedNodes)
+                {
+                    nn.Dispose();
+                }
+            }
         }
 
 

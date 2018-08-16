@@ -14,18 +14,27 @@ using System.Text;
 using System.Threading.Tasks;
 using static Common.ExceptionHandling.ExeptionHandlingProcedures;
 using Autodesk.AutoCAD.Colors;
+using Civil3DInfoTools.RBush;
+using RBush;
 
 [assembly: CommandClass(typeof(Civil3DInfoTools.SurfaceMeshByBoundary.SurfaceMeshByBoundaryCommand))]
 
 
-//!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!НЕДОДЕЛАЛ ГРАНИЦЫ УЧАСТКОВ!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
 namespace Civil3DInfoTools.SurfaceMeshByBoundary
 {
-    //TODO: Получить последовательности 3d точек по границам
+    //ОТМЕНЕНО//TODO: Получить последовательности 3d точек по границам
     //Сделать отдельный объект для обозначения границ (выдваливание по траектории) 
     // - http://www.keanw.com/2010/01/sweeping-an-autocad-solid-using-net.html
     // с другим более темным цветом - https://stackoverflow.com/questions/6615002/given-an-rgb-value-how-do-i-create-a-tint-or-shade
+    //С выдавливанием по траектории есть много проблем
+    //Попытался создать хотябы 3d полилинию, но при большом количестве таких полилиний модель невозможно открыть в Navis
+    //ГОТОВО//TODO: Попробовать с простыми линиями. С ПРОСТЫМИ ЛИНИЯМИ ВСЕ РАБОТАЕТ ГОРАЗДО ЛУЧШЕ
+    //ГОТОВО//TODO: Добавить запрос, нужно ли создавать границы (сделать запрос ключевых слов для настройки параметров)
+    //ГОТОВО//TODO: Подсветить поверхность при выборе блоков (сохранять выбор поверхности для следующего раза)
+
+    //ОТМЕНЕНО//TODO: Возможно лучше преобразовывать SubDMesh в Surface?
+    //SubDMesh не всегда конвертируется в Surface (проблемы когда есть многократно вложенные островки)
 
     //TODO: Попробовать разобраться с созданием островков внутри треугольников --- https://www.geometrictools.com/Documentation/TriangulationByEarClipping.pdf
     //ГОТОВО//TODO: Если блок имеет более одного вхождения, то сеть создавать не внутри блока, а в пространстве модели. Но при этом слой использовать такой же как у полилинии
@@ -58,10 +67,17 @@ namespace Civil3DInfoTools.SurfaceMeshByBoundary
 
         public static Color ColorForBorder { get; private set; } = Color.FromColorIndex(ColorMethod.ByAci, 256);
 
+        private static ObjectId tinSurfId = ObjectId.Null;
+
+        private static SelectionSet acSSet = null;
+
+        private static double approxParam = 0.02;//Максимальное отклонение от дуги при аппроксимации//TODO: Добавить ввод
+
+        private static bool createBorders = false;
+
         [CommandMethod("S1NF0_SurfaceMeshByBoundary", CommandFlags.Modal | CommandFlags.UsePickSet)]
         public void SurfaceMeshByBoundary()
         {
-
 
             Document adoc = Application.DocumentManager.MdiActiveDocument;
             if (adoc == null) return;
@@ -92,171 +108,223 @@ namespace Civil3DInfoTools.SurfaceMeshByBoundary
                 }
 
 
-                TinSurface tinSurf = null;
-                //BlockReference blockReference = null;
-
-                //Выбрать поверхность
-                PromptEntityOptions peo1 = new PromptEntityOptions("\nУкажите поверхность для построения 3d тела по обертывающей");
-                peo1.SetRejectMessage("\nМожно выбрать только поверхность TIN");
-                peo1.AddAllowedClass(typeof(TinSurface), true);
-                PromptEntityResult per1 = ed.GetEntity(peo1);
-                if (per1.Status == PromptStatus.OK)
+                if (!TinSurfIdIsValid())
                 {
-                    //Запрос возвышения создаваемой сети над поверхностью
-                    PromptDoubleOptions pdo = new PromptDoubleOptions("Введите требуемое возвышение над поверхностью TIN");
-                    pdo.AllowArbitraryInput = false;
-                    pdo.AllowNegative = true;
-                    pdo.AllowNone = true;
-                    pdo.AllowZero = true;
-                    pdo.DefaultValue = MeshElevation;
-                    PromptDoubleResult pdr = ed.GetDouble(pdo);
-                    if (pdr.Status == PromptStatus.OK)
+                    //Выбрать поверхность
+                    if (!PickTinSurf(ed))
                     {
-                        MeshElevation = pdr.Value;
+                        return;//Если выбор не успешен, прервать выполнение
+                    }
+                }
+                //Подсветить поверхность
+                HighlightTinSurf(true);
 
-                        using (Transaction tr = db.TransactionManager.StartTransaction())
-                        {
-                            tinSurf = tr.GetObject(per1.ObjectId, OpenMode.ForRead) as TinSurface;
-                            tr.Commit();
-                        }
-                        //Проверка текущего набора выбора
-                        SelectionSet acSSet = null;
-                        PromptSelectionResult acSSPrompt;
-                        acSSPrompt = ed.SelectImplied();
-                        if (acSSPrompt.Status == PromptStatus.OK)
-                        {
-                            acSSet = acSSPrompt.Value;
-                        }
-                        else
-                        {
-                            //Множественный выбор блоков
-                            TypedValue[] tv = new TypedValue[]
+
+                //Запрос ключевых слов
+                while (true)
+                {
+                    const string kw1 = "ПОВерхность";
+                    const string kw2 = "ВОЗвышение";
+                    const string kw3 = "ОТКлонкниеОтДуг";
+                    const string kw4 = "СОЗдаватьГраницы";
+
+                    PromptKeywordOptions pko = new PromptKeywordOptions("\nЗадайте параметры или пустой ввод для продолжения");
+                    pko.Keywords.Add(kw1);
+                    pko.Keywords.Add(kw2);
+                    pko.Keywords.Add(kw3);
+                    pko.Keywords.Add(kw4);
+                    pko.AllowNone = true;
+                    PromptResult pr = ed.GetKeywords(pko);
+                    if (pr.Status== PromptStatus.Cancel)
+                    {
+                        return;
+                    }
+
+                    if (String.IsNullOrEmpty(pr.StringResult))
+                    {
+                        break;
+                    }
+                
+                    switch (pr.StringResult)
+                    {
+                        case kw1:
+                            if (!PickTinSurf(ed))
                             {
-                            new TypedValue(0, "INSERT")
-                            };
-                            SelectionFilter flt = new SelectionFilter(tv);
-
-                            PromptSelectionOptions pso = new PromptSelectionOptions();
-                            pso.MessageForAdding = "\nВыберите блоки участков";
-
-                            acSSPrompt = adoc.Editor.GetSelection(pso, flt);
-                            if (acSSPrompt.Status == PromptStatus.OK)
-                            {
-                                acSSet = acSSPrompt.Value;
+                                return;
                             }
-                        }
-
-                        if (acSSet != null)
-                        {
-                            foreach (SelectedObject acSSObj in acSSet)
+                            break;
+                        case kw2:
+                            if (!GetMeshElevation(ed))
                             {
+                                return;
+                            }
+                            break;
+                        case kw3:
+                            if (!GetApproxParam(ed))
+                            {
+                                return;
+                            }
+                            break;
+                        case kw4:
+                            if (!GetCreateBorders(ed))
+                            {
+                                return;
+                            }
+                            
+                            break;
+                    }
+                }
 
-                                string blockName = null;
-                                try
+
+                //Проверка текущего набора выбора
+                acSSet = null;
+                PromptSelectionResult acSSPrompt;
+                acSSPrompt = ed.SelectImplied();
+                if (acSSPrompt.Status == PromptStatus.OK)
+                {
+                    acSSet = acSSPrompt.Value;
+                }
+                else
+                {
+                    //Множественный выбор блоков
+                    TypedValue[] tv = new TypedValue[]
+                    {
+                            new TypedValue(0, "INSERT")
+                    };
+                    SelectionFilter flt = new SelectionFilter(tv);
+
+
+                    PromptSelectionOptions pso = new PromptSelectionOptions();
+                    pso.MessageForAdding = "\nВыберите блоки участков";
+
+                    acSSPrompt = adoc.Editor.GetSelection(pso, flt);
+                    if (acSSPrompt.Status == PromptStatus.OK)
+                    {
+                        acSSet = acSSPrompt.Value;
+                    }
+                }
+
+                if (acSSet != null)
+                {
+                    Common.Timer timerMain = new Common.Timer();
+                    timerMain.Start();
+                    foreach (SelectedObject acSSObj in acSSet)
+                    {
+
+                        string blockName = null;
+                        Common.Timer timer = new Common.Timer();
+                        timer.Start();
+                        try
+                        {
+                            if (acSSObj != null)
+                            {
+                                //полилинии внутри блока
+                                List<ObjectId> polylines = new List<ObjectId>();
+                                BlockReference blockReference = null;
+                                ObjectId btrId = ObjectId.Null;
+                                using (Transaction tr = db.TransactionManager.StartTransaction())
                                 {
-                                    if (acSSObj != null)
+                                    //блок внутри набора выбора
+                                    blockReference = tr.GetObject(acSSObj.ObjectId, OpenMode.ForRead) as BlockReference;
+                                    tr.Commit();
+                                }
+                                Matrix3d transform = Matrix3d.Identity;
+                                if (blockReference != null)
+                                {
+                                    //трансформация из системы координат блока в мировую систему координат
+                                    transform = blockReference.BlockTransform;
+
+                                    //Перебор всех объектов внутри блока
+                                    //Найти все правильные полилинии в блоке
+                                    using (Transaction tr = db.TransactionManager.StartTransaction())
                                     {
-                                        //полилинии внутри блока
-                                        List<Polyline> polylines = new List<Polyline>();
-                                        BlockReference blockReference = null;
-                                        ObjectId btrId = ObjectId.Null;
-                                        using (Transaction tr = db.TransactionManager.StartTransaction())
-                                        {
-                                            //блок внутри набора выбора
-                                            blockReference = tr.GetObject(acSSObj.ObjectId, OpenMode.ForRead) as BlockReference;
-                                            tr.Commit();
-                                        }
-                                        Matrix3d transform = Matrix3d.Identity;
-                                        if (blockReference != null)
-                                        {
-                                            //трансформация из системы координат блока в мировую систему координат
-                                            transform = blockReference.BlockTransform;
+                                        btrId = blockReference.BlockTableRecord;
+                                        BlockTableRecord blockTableRecord = tr.GetObject(btrId, OpenMode.ForRead) as BlockTableRecord;
 
-                                            //Перебор всех объектов внутри блока
-                                            //Найти все правильные полилинии в блоке
-                                            using (Transaction tr = db.TransactionManager.StartTransaction())
+                                        if (blockTableRecord.XrefStatus == XrefStatus.NotAnXref)
+                                        {
+                                            blockName = blockTableRecord.Name;
+                                            foreach (ObjectId id in blockTableRecord)
                                             {
-                                                btrId = blockReference.BlockTableRecord;
-                                                BlockTableRecord blockTableRecord = tr.GetObject(btrId, OpenMode.ForRead) as BlockTableRecord;
-
-                                                if (blockTableRecord.XrefStatus != XrefStatus.NotAnXref)
+                                                using (Polyline poly = tr.GetObject(id, OpenMode.ForRead) as Polyline)
                                                 {
-                                                    //Если это внешняя ссылка, то не интересно
-                                                    continue;
-                                                }
-
-
-                                                blockName = blockTableRecord.Name;
-                                                foreach (ObjectId id in blockTableRecord)
-                                                {
-                                                    AcadDb.Entity ent = tr.GetObject(id, OpenMode.ForRead) as AcadDb.Entity;
-                                                    if (ent is Polyline)
+                                                    if (poly != null
+                                                        && (poly.Closed || poly.GetPoint2dAt(0).Equals(poly.GetPoint2dAt(poly.NumberOfVertices - 1)))//Полилиния замкнута
+                                                        && !Utils.PolylineIsSelfIntersecting(poly)//Не имеет самопересечений
+                                                        && poly.Visible == true//Учет многовидовых блоков
+                                                        && poly.Bounds != null
+                                                        )
                                                     {
-                                                        Polyline poly = ent as Polyline;
-                                                        if ((poly.Closed || poly.GetPoint2dAt(0).Equals(poly.GetPoint2dAt(poly.NumberOfVertices - 1)))//Полилиния замкнута
-                                                            && !Utils.PolylineIsSelfIntersecting(poly)//Не имеет самопересечений
-                                                                                                      //&& !poly.HasBulges//Не имеет криволинейных сегментов
-                                                            && poly.Visible ==true//Учет многовидовых блоков
-                                                            )
-                                                        {
-
-                                                            polylines.Add(poly);
-                                                        }
-
+                                                        polylines.Add(id);
                                                     }
                                                 }
 
+                                                AcadDb.Entity ent = tr.GetObject(id, OpenMode.ForRead) as AcadDb.Entity;
+                                                if (ent is Polyline)
+                                                {
+                                                    Polyline poly = ent as Polyline;
 
-                                                tr.Commit();
+
+                                                }
                                             }
+
+
+
 
 
 
                                             if (polylines.Count > 0)
                                             {
                                                 //Проверить все линии на пересечение друг с другом. Удалить из списка те, которые имеют пересечения
-                                                HashSet<Polyline> polylinesWithNoIntersections = new HashSet<Polyline>(polylines);
-                                                for (int i = 0; i < polylines.Count; i++)
+                                                HashSet<ObjectId> polylinesWithNoIntersections = new HashSet<ObjectId>(polylines);
+                                                //Сделать RBush для всех полилиний
+                                                RBush<SpatialEntity> polylinesTree = new RBush<SpatialEntity>();
+                                                List<SpatialEntity> spatialEntities = new List<SpatialEntity>();
+                                                foreach (ObjectId polyId in polylines)
                                                 {
-                                                    for (int j = i + 1; j < polylines.Count; j++)
-                                                    {
-                                                        Extents3d? ext1 = polylines[i].Bounds;
-                                                        Extents3d? ext2 = polylines[j].Bounds;
-                                                        if (ext1 != null && ext2 != null)
-                                                        {
-                                                            Extents2d ext1_2d = Utils.Extents2DBy3D(ext1.Value);
-                                                            Extents2d ext2_2d = Utils.Extents2DBy3D(ext2.Value);
+                                                    spatialEntities.Add(new SpatialEntity(polyId));
+                                                }
+                                                polylinesTree.BulkLoad(spatialEntities);
 
-                                                            if (Utils.BoxesAreSuperimposed(ext1_2d, ext2_2d))
+                                                foreach (SpatialEntity se in spatialEntities)
+                                                {
+                                                    //Нахождение всех объектов, расположенных в пределах BoundingBox для этой полилинии
+                                                    IReadOnlyList<SpatialEntity> nearestNeighbors = polylinesTree.Search(se.Envelope);
+                                                    if (nearestNeighbors.Count > 1)
+                                                    {
+                                                        Polyline thisPoly = tr.GetObject(se.ObjectId, OpenMode.ForRead) as Polyline;
+
+                                                        foreach (SpatialEntity n in nearestNeighbors)
+                                                        {
+                                                            if (!n.Equals(se))//Всегда будет находиться та же самая полилиния
                                                             {
-                                                                //Сначала проверяем перекрываются ли BoundingBox.
-                                                                //Во многих случаях это гораздо производительнее и затем считаем персечения
-                                                                Point3dCollection intersectionPts = new Point3dCollection();
-                                                                polylines[i].IntersectWith(polylines[j], Intersect.OnBothOperands,
-                                                                new Plane(Point3d.Origin, Vector3d.ZAxis),
-                                                                intersectionPts, IntPtr.Zero, IntPtr.Zero);
-                                                                if (intersectionPts.Count > 0)
+                                                                Polyline otherPoly = tr.GetObject(n.ObjectId, OpenMode.ForRead) as Polyline;
+                                                                Point3dCollection pts = new Point3dCollection();
+                                                                thisPoly.IntersectWith(otherPoly, Intersect.OnBothOperands, pts, IntPtr.Zero, IntPtr.Zero);
+                                                                if (pts.Count > 0)
                                                                 {
-                                                                    polylinesWithNoIntersections.Remove(polylines[i]);
-                                                                    polylinesWithNoIntersections.Remove(polylines[j]);
+                                                                    polylinesWithNoIntersections.Remove(thisPoly.Id);
+                                                                    polylinesWithNoIntersections.Remove(otherPoly.Id);
+                                                                    break;
                                                                 }
                                                             }
-
                                                         }
-
-
                                                     }
+
                                                 }
 
                                                 //Аппроксимация всех полилиний, которые имеют кривизну
-                                                List<Polyline> polylinesWithNoBulges = new List<Polyline>();
-                                                foreach (Polyline poly in polylinesWithNoIntersections)
+                                                List<Polyline> polylinesToProcess = new List<Polyline>();
+                                                foreach (ObjectId polyId in polylinesWithNoIntersections)
                                                 {
-                                                    polylinesWithNoBulges.Add(ApproximatePolyBulges(poly, 0.02));
+                                                    using (Polyline poly = tr.GetObject(polyId, OpenMode.ForRead) as Polyline)
+                                                    {
+                                                        polylinesToProcess.Add(ApproximatePolyBulges(poly, approxParam));//Какой допуск оптимален?
+                                                    }
                                                 }
 
                                                 //Удалить все повторяющиеся подряд точки полилинии
-                                                foreach (Polyline poly in polylinesWithNoBulges)
+                                                foreach (Polyline poly in polylinesToProcess)
                                                 {
                                                     for (int i = 0; i < poly.NumberOfVertices;)
                                                     {
@@ -276,170 +344,242 @@ namespace Civil3DInfoTools.SurfaceMeshByBoundary
                                                 }
 
 
-
                                                 //Построение дерева вложенности полилиний
-                                                PolylineNesting polylineNesting = new PolylineNesting(tinSurf);
-                                                foreach (Polyline poly in polylinesWithNoBulges)
+                                                using (TinSurface tinSurf = tr.GetObject(tinSurfId, OpenMode.ForRead) as TinSurface)
                                                 {
-                                                    poly.TransformBy(transform);
-                                                    polylineNesting.Insert(poly);
-                                                }
-
-                                                //Расчет полигонов
-                                                polylineNesting.CalculatePoligons();
-
-                                                //Построение сети
-                                                SubDMesh sdm = polylineNesting.CreateSubDMesh();
-                                                //Создание 3d полилиний по границе
-                                                //List<ObjectId> polylineIds3d = polylineNesting.CreateBorderPolylines(db);//Полилинии уже созданы в пространстве модели
-                                                //Объекты постоены в координатах пространства модели
-                                                if (sdm != null)
-                                                {
-                                                    using (Transaction tr = db.TransactionManager.StartTransaction())
+                                                    using (PolylineNesting polylineNesting = new PolylineNesting(tinSurf))
                                                     {
-                                                        BlockTableRecord btr = (BlockTableRecord)tr.GetObject(btrId, OpenMode.ForWrite);
-                                                        if (btr.GetBlockReferenceIds(true, false).Count > 1)
+                                                        foreach (Polyline poly in polylinesToProcess)
                                                         {
-                                                            //Если у блока несколько вхождений, то создавать объекты в пространстве модели
-                                                            BlockTable bt = tr.GetObject(db.BlockTableId, OpenMode.ForWrite) as BlockTable;
-                                                            BlockTableRecord ms = (BlockTableRecord)tr.GetObject(bt[BlockTableRecord.ModelSpace], OpenMode.ForWrite);
-                                                            ms.AppendEntity(sdm);
-                                                            tr.AddNewlyCreatedDBObject(sdm, true);
+                                                            poly.TransformBy(transform);
+                                                            polylineNesting.Insert(poly);
                                                         }
-                                                        else
-                                                        {
-                                                            //Если у блока только одно вхождение, то создавать сеть внутри блока
-                                                            sdm.TransformBy(transform.Inverse());
-                                                            btr.AppendEntity(sdm);
-                                                            tr.AddNewlyCreatedDBObject(sdm, true);
 
-                                                            //foreach (ObjectId pId in polylineIds3d)//Перенести полилинии из модели в блок
-                                                            //{
-                                                            //    Polyline3d p = (Polyline3d)tr.GetObject(pId, OpenMode.ForWrite);
-                                                            //    Polyline3d pTransf = (Polyline3d)p.Clone();
-                                                            //    pTransf.TransformBy(transform.Inverse());
-                                                            //    btr.AppendEntity(pTransf);
-                                                            //    tr.AddNewlyCreatedDBObject(pTransf, true);
-                                                            //    p.Erase();
-                                                            //}
+                                                        //Расчет полигонов
+                                                        polylineNesting.CalculatePoligons();
+
+                                                        //Построение сети
+                                                        using (SubDMesh sdm = polylineNesting.CreateSubDMesh())
+                                                        {
+                                                            List<Line> lines = new List<Line>();
+                                                            if (createBorders)
+                                                            {
+                                                                //Создание 3d линий по границе
+                                                                lines = polylineNesting.CreateBorderLines();
+                                                            }
+                                                            
+                                                            //Объекты постоены в координатах пространства модели
+                                                            if (sdm != null)
+                                                            {
+                                                                BlockTableRecord btr = (BlockTableRecord)tr.GetObject(btrId, OpenMode.ForWrite);
+                                                                if (btr.GetBlockReferenceIds(true, false).Count > 1)
+                                                                {
+                                                                    //Если у блока несколько вхождений, то создавать объекты в пространстве модели
+                                                                    BlockTable bt = tr.GetObject(db.BlockTableId, OpenMode.ForWrite) as BlockTable;
+                                                                    BlockTableRecord ms = (BlockTableRecord)tr.GetObject(bt[BlockTableRecord.ModelSpace], OpenMode.ForWrite);
+                                                                    ms.AppendEntity(sdm);
+                                                                    tr.AddNewlyCreatedDBObject(sdm, true);
+
+                                                                    foreach (Line line in lines)
+                                                                    {
+                                                                        ms.AppendEntity(line);
+                                                                        tr.AddNewlyCreatedDBObject(line, true);
+                                                                    }
+                                                                }
+                                                                else
+                                                                {
+                                                                    //Если у блока только одно вхождение, то создавать сеть внутри блока
+                                                                    sdm.TransformBy(transform.Inverse());
+                                                                    btr.AppendEntity(sdm);
+                                                                    tr.AddNewlyCreatedDBObject(sdm, true);
+
+                                                                    foreach (Line line in lines)
+                                                                    {
+                                                                        line.TransformBy(transform.Inverse());
+                                                                        btr.AppendEntity(line);
+                                                                        tr.AddNewlyCreatedDBObject(line, true);
+                                                                    }
+                                                                }
+                                                            }
+
+                                                            foreach (Line line in lines)
+                                                            {
+                                                                line.Dispose();
+                                                            }
                                                         }
-                                                        tr.Commit();
+
                                                     }
+
                                                 }
-
-
-
-                                                //TEST
-                                                //using (Transaction tr = db.TransactionManager.StartTransaction())
-                                                //{
-                                                //    BlockTable bt = tr.GetObject(db.BlockTableId, OpenMode.ForWrite) as BlockTable;
-                                                //    BlockTableRecord ms = (BlockTableRecord)tr.GetObject(bt[BlockTableRecord.ModelSpace], OpenMode.ForWrite);
-                                                //    int colorIndex = 1;
-                                                //    foreach (TriangleGraph tg in polylineNesting.TriangleGraphs.Values)
-                                                //    {
-                                                //        foreach (TriangleGraph.PolylinePart pp in tg.PolylineParts)
-                                                //        {
-                                                //            LinkedList<PolylinePt> seq = pp.PolylinePts;
-                                                //            using (Polyline poly = new Polyline())
-                                                //            {
-                                                //                int n = 0;
-                                                //                foreach (PolylinePt pt in seq)
-                                                //                {
-                                                //                    poly.AddVertexAt(n, pt.Point2D, 0, 0, 0);
-                                                //                    n++;
-                                                //                }
-                                                //                poly.ColorIndex = colorIndex;
-                                                //                colorIndex = (colorIndex + 1) % 6 + 1;
-                                                //                poly.LineWeight = LineWeight.LineWeight030;
-                                                //                ms.AppendEntity(poly);
-                                                //                tr.AddNewlyCreatedDBObject(poly, true);
-                                                //            }
-                                                //        }
-
-                                                //        foreach (List<Point3d> poligon in tg.Polygons)
-                                                //        {
-                                                //            using (Polyline poly = new Polyline())
-                                                //            {
-                                                //                for (int i = 0; i < poligon.Count; i++)
-                                                //                {
-                                                //                    poly.AddVertexAt(i, Utils.Point2DBy3D(poligon[i]), 0, 0, 0);
-                                                //                }
-                                                //                poly.Closed = true;
-                                                //                poly.ColorIndex = 6;
-
-                                                //                ms.AppendEntity(poly);
-                                                //                tr.AddNewlyCreatedDBObject(poly, true);
-                                                //            }
-                                                //        }
-
-                                                //    }
-
-
-
-                                                //    foreach (TinSurfaceVertex vert in polylineNesting.InnerVerts)
-                                                //    {
-                                                //        using (Circle circle1 = new Circle(vert.Location, Vector3d.ZAxis, 0.3))
-                                                //        {
-                                                //            circle1.ColorIndex = 7;
-                                                //            ms.AppendEntity(circle1);
-                                                //            tr.AddNewlyCreatedDBObject(circle1, true);
-                                                //        }
-                                                //    }
-
-                                                //    foreach (TinSurfaceTriangle triangle in polylineNesting.InnerTriangles)
-                                                //    {
-                                                //        using (Polyline poly = new Polyline())
-                                                //        {
-                                                //            poly.AddVertexAt(0, new Point2d(triangle.Vertex1.Location.X, triangle.Vertex1.Location.Y), 0, 0, 0);
-                                                //            poly.AddVertexAt(1, new Point2d(triangle.Vertex2.Location.X, triangle.Vertex2.Location.Y), 0, 0, 0);
-                                                //            poly.AddVertexAt(2, new Point2d(triangle.Vertex3.Location.X, triangle.Vertex3.Location.Y), 0, 0, 0);
-                                                //            poly.Closed = true;
-                                                //            poly.ColorIndex = 6;
-                                                //            ms.AppendEntity(poly);
-                                                //            tr.AddNewlyCreatedDBObject(poly, true);
-                                                //        }
-                                                //    }
-
-                                                //    tr.Commit();
-                                                //}
-                                                //TEST
-
 
                                             }
                                         }
 
+                                        tr.Commit();
+                                    }
+
+                                }
 
 
-                                    }
-                                }
-                                catch (System.Exception ex)
-                                {
-                                    string message = "Возникла ошибка при обработке одного из выбранных объектов";
-                                    if (!String.IsNullOrEmpty(blockName))
-                                    {
-                                        message = "Возникла ошибка при обработке вхождения блока " + blockName;
-                                    }
-                                    Utils.ErrorToCommandLine(ed, message, ex);
-                                }
+
                             }
-
-                            ed.Regen();
                         }
-
+                        catch (System.Exception ex)
+                        {
+                            string message = "Возникла ошибка при обработке одного из выбранных объектов";
+                            if (!String.IsNullOrEmpty(blockName))
+                            {
+                                message = "Возникла ошибка при обработке вхождения блока " + blockName;
+                            }
+                            Utils.ErrorToCommandLine(ed, message, ex);
+                        }
+                        timer.TimeOutput(blockName);
                     }
 
+                    ed.WriteMessage("\n" +
+                        timerMain.TimeOutput("Затрачено времени (параметр аппроксимации - " + approxParam + ")")
+                        );
 
-
-
+                    ed.Regen();
                 }
+
 
             }
             catch (System.Exception ex)
             {
                 CommonException(ex, "Ошибка при создании сетей по участкам поверхности");
             }
+            finally
+            {
+                HighlightTinSurf(false);
+            }
 
         }
+
+        private static void HighlightTinSurf(bool on)
+        {
+            try
+            {
+                if (TinSurfIdIsValid() && DB != null)
+                    using (Transaction tr = DB.TransactionManager.StartTransaction())
+                    {
+                        TinSurface tinSurface = tr.GetObject(tinSurfId, OpenMode.ForRead) as TinSurface;
+                        if (on)
+                        {
+                            tinSurface.Highlight();
+                        }
+                        else
+                        {
+                            tinSurface.Unhighlight();
+                        }
+                        tr.Commit();
+                    }
+            }
+            catch{}
+        }
+
+        private static bool TinSurfIdIsValid()
+        {
+            return !tinSurfId.IsNull && !tinSurfId.IsErased && !tinSurfId.IsEffectivelyErased && tinSurfId.IsValid;
+        }
+
+
+        /// <summary>
+        /// Выбор поверхности пользователем
+        /// </summary>
+        /// <param name="ed"></param>
+        /// <returns></returns>
+        private static bool PickTinSurf(Editor ed)
+        {
+            //Сбросить подсветку поверхности если есть
+            HighlightTinSurf(false);
+
+            PromptEntityOptions peo = new PromptEntityOptions("\nУкажите поверхность для построения 3d тела по обертывающей");
+            peo.SetRejectMessage("\nМожно выбрать только поверхность TIN");
+            peo.AddAllowedClass(typeof(TinSurface), true);
+            PromptEntityResult per1 = ed.GetEntity(peo);
+            if (per1.Status == PromptStatus.OK)
+            {
+                tinSurfId = per1.ObjectId;
+                //Подсветить поверхность
+                HighlightTinSurf(true);
+                return true;
+            }
+            return false;
+        }
+
+
+        /// <summary>
+        /// Ввод возвышения над поверхностью
+        /// </summary>
+        /// <param name="ed"></param>
+        private static bool GetMeshElevation(Editor ed)
+        {
+            PromptDoubleOptions pdo = new PromptDoubleOptions("Введите требуемое возвышение над поверхностью TIN");
+            pdo.AllowArbitraryInput = false;
+            pdo.AllowNegative = true;
+            pdo.AllowNone = false;
+            pdo.AllowZero = true;
+            pdo.DefaultValue = MeshElevation;
+            PromptDoubleResult pdr = ed.GetDouble(pdo);
+            if (pdr.Status == PromptStatus.OK)
+            {
+                MeshElevation = pdr.Value;
+                return true;
+            }
+            return false;
+        }
+
+
+        /// <summary>
+        /// Ввод максимального отклонения от дуги
+        /// </summary>
+        /// <param name="ed"></param>
+        private static bool GetApproxParam(Editor ed)
+        {
+            PromptDoubleOptions pdo = new PromptDoubleOptions("Введите максимальное отклонение от дуги полилинии");
+            pdo.AllowArbitraryInput = false;
+            pdo.AllowNegative = false;
+            pdo.AllowNone = false;
+            pdo.AllowZero = false;
+            pdo.DefaultValue = approxParam;
+            PromptDoubleResult pdr = ed.GetDouble(pdo);
+            if (pdr.Status == PromptStatus.OK)
+            {
+                approxParam = pdr.Value;
+                return true;
+            }
+            return false;
+        }
+
+        private static bool GetCreateBorders(Editor ed)
+        {
+
+            PromptKeywordOptions pko = new PromptKeywordOptions("\nСоздавать границы?");
+            pko.Keywords.Add("Да");
+            pko.Keywords.Add("Нет");
+            pko.Keywords.Default = createBorders ? "Да" : "Нет";
+            pko.AllowNone = false;
+            PromptResult pr = ed.GetKeywords(pko);
+            if (pr.Status == PromptStatus.OK)
+            {
+                switch (pr.StringResult)
+                {
+                    case "Да":
+                        createBorders = true;
+                        break;
+                    case "Нет":
+                        createBorders = false;
+                        break;
+                }
+                return true;
+            }
+            return false;
+
+            
+        }
+
+        
 
 
         /// <summary>
@@ -452,8 +592,6 @@ namespace Civil3DInfoTools.SurfaceMeshByBoundary
         /// <returns></returns>
         private static Polyline ApproximatePolyBulges(Polyline poly, double delta)
         {
-
-
             if (poly.HasBulges)
             {
                 Polyline approxPoly = new Polyline();

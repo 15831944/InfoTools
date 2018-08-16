@@ -74,13 +74,22 @@ namespace Civil3DInfoTools.SurfaceMeshByBoundary
                 {
                     triangle = TinSurfaceTriangle;
                 }
-                double lambda1;
-                double lambda2;
-                Utils.BarycentricCoordinates(Point2D, triangle, out lambda1, out lambda2);
 
-                double lambda3 = 1 - lambda1 - lambda2;
+                if (triangle != null)
+                {
+                    double lambda1;
+                    double lambda2;
+                    Utils.BarycentricCoordinates(Point2D, triangle, out lambda1, out lambda2);
 
-                Z = lambda1 * triangle.Vertex1.Location.Z + lambda2 * triangle.Vertex2.Location.Z + lambda3 * triangle.Vertex3.Location.Z;
+                    double lambda3 = 1 - lambda1 - lambda2;
+
+                    Z = lambda1 * triangle.Vertex1.Location.Z + lambda2 * triangle.Vertex2.Location.Z + lambda3 * triangle.Vertex3.Location.Z;
+                }
+                else
+                {
+                    //???
+                }
+                
             }
         }
 
@@ -91,9 +100,11 @@ namespace Civil3DInfoTools.SurfaceMeshByBoundary
         /// </summary>
         public void AddToPolylinePart()
         {
-            borderPart = Node.BorderParts.Find(t =>
-               (t.StartParam < t.EndParam && t.StartParam <= Parameter && t.EndParam >= Parameter)
-               || (t.StartParam > t.EndParam && (t.StartParam <= Parameter || t.EndParam >= Parameter)));
+            borderPart = Node.BorderParts.Find(p =>
+               (p.StartParam < p.EndParam && p.StartParam <= Parameter && p.EndParam >= Parameter)
+               || (p.StartParam > p.EndParam && (p.StartParam <= Parameter || p.EndParam >= Parameter))//На участке происходит переход через ноль
+               || p.StartParam == p.EndParam//Такое бывает если за пределами поверхности только одна точка
+               );
 
             if (borderPart != null)
             {

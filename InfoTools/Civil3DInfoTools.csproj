@@ -76,6 +76,9 @@
       <HintPath>C:\Program Files\Autodesk\AutoCAD 2018\Map\ManagedMapApi.dll</HintPath>
       <Private>False</Private>
     </Reference>
+    <Reference Include="RBush">
+      <HintPath>..\..\Создание поверхностей для обозначения участков\RBush-master\RBush\bin\Debug\netstandard1.2\RBush.dll</HintPath>
+    </Reference>
     <Reference Include="System" />
     <Reference Include="System.Core" />
     <Reference Include="System.Windows.Forms" />
@@ -88,6 +91,7 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="App.cs" />
+    <Compile Include="AuxiliaryCommands\AddPointToSurfaceWithoutDeformCommand.cs" />
     <Compile Include="Constants.cs" />
     <Compile Include="DisplayUtils.cs" />
     <Compile Include="AuxiliaryCommands\CreateLandSiteBlockCommand.cs" />
@@ -95,6 +99,7 @@
     <Compile Include="ObjectInsertion\InsertByCoordinatesCommand.cs" />
     <Compile Include="PolylineCaptionOverrule.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="RBush\SpatialEntity.cs" />
     <Compile Include="RoadMarking\CreateBoundariesCommand.cs" />
     <Compile Include="Spillway\ExtractSpillwayPositionsCommand.cs" />
     <Compile Include="Spillway\Poly3DFromCorridorFeatureLinesCommand.cs" />
