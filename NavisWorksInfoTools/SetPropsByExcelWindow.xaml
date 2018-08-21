@@ -42,7 +42,7 @@
             <ComboBox Name="excelColComboBox" DisplayMemberPath="DisplayString" Grid.Column="1" Margin="0,0,0,0" Grid.Row="3" IsEnabled="False" SelectionChanged="excelColComboBox_SelectionChanged"/>
             <ComboBox Name="navisDataTabComboBox" DisplayMemberPath="DisplayName" Grid.Column="1" Margin="0,0,0,0" Grid.Row="4" SelectionChanged="navisDataTabComboBox_SelectionChanged"/>
             <ComboBox Name="navisPropertyComboBox" DisplayMemberPath="DisplayName" Grid.Column="1" Margin="0,0,0,0" Grid.Row="5" SelectionChanged="navisPropertyComboBox_SelectionChanged"/>
-            <TextBox Name="tabNameTextBox"  Grid.Column="1" Margin="0,0,0,0" Grid.Row="6" TextWrapping="Wrap" Text="АТРИБУТЫ"/>
+            <TextBox Name="tabNameTextBox"  Grid.Column="1" Margin="0,0,0,0" Grid.Row="6" TextWrapping="Wrap" Text="АТРИБУТЫ" TextChanged="tabNameTextBox_TextChanged"/>
 
         </Grid>
 
@@ -50,7 +50,7 @@
         <Grid Height="114" VerticalAlignment="Bottom">
             <Button Name="okButton" Content="OK" Margin="0,4,10,10" HorizontalAlignment="Right"
                     Width="72" RenderTransformOrigin="0.569,0.545" Click="Button_Click" IsEnabled="False"/>
-            <TextBlock Margin="10,4,87,0" TextWrapping="Wrap"><Run Text="При нажатии"/><Run Text=" кнопки ОК, будут найдены все элементы модели, которые содержат указанное ключевое свойство. Для каждого из них будет выполнен поиск строки в таблице "/><Run Text="Excel"/><Run Text=", содержащей "/><Run Text="в указанном ключевом столбце значение равное значению ключевого свойства. На вкладку данных пользователя будут добавлены свойства в соответствии с таблицей. Названия свойств берутся из строки с шапкой таблицы."/><Run Text=" Те же свойства будут созданы для всех вложенных элементов."/><LineBreak/><Run Text="Если элемент содержит не"/><Run Text="сколько вкладок данных пользователя, то все они будут заменены на одну, содержащую все свойства."/></TextBlock>
+            <TextBlock Margin="10,4,87,0" TextWrapping="Wrap"><Run Text="При нажатии"/><Run Text=" кнопки ОК, будут найдены все элементы модели, которые содержат указанное ключевое свойство. Для каждого из них будет выполнен поиск строки в таблице "/><Run Text="Excel"/><Run Text=", содержащей "/><Run Text="в указанном ключевом столбце значение равное значению ключевого свойства. "/><Run Text="Будет добавлена вкладка"/><Run Text=" данных пользователя "/><Run Text="со"/><Run Text=" свойства"/><Run Text="ми"/><Run Text=" в соответствии с таблицей. Названия свойств берутся из строки с шапкой таблицы."/><Run Text=" Те же свойства будут созданы для всех вложенных элементов."/><LineBreak/><Run Text="Если элемент "/><Run Text="уже"/><Run Text=" содержит"/><Run Text=" вкладку данных пользователя с таким же названием, то она будет полностью заменена."/><Run Text=" "/></TextBlock>
         </Grid>
     </Grid>
 </Window>

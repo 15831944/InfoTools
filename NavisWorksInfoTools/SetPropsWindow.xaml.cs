@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Autodesk.Navisworks.Api;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -14,6 +15,7 @@ using System.Windows.Shapes;
 
 namespace NavisWorksInfoTools
 {
+    //TODO: Удаление строк таблиц 
     /// <summary>
     /// Логика взаимодействия для SetPropsWindow.xaml
     /// </summary>
@@ -50,24 +52,18 @@ namespace NavisWorksInfoTools
         }
 
 
-        public string TabName {
-            get
-            {
-                return tabNameTextBox.Text;
-            }
-            set
-            {
-                tabNameTextBox.Text = value;
-            }
-        }
-        public List<DisplayProperty> Props { get; private set; }
+
+
+        public string DataTabDisplayName { get; private set; }
+
+        public List<DisplayDataTab> DataTabs { get; private set; }
 
         public List<DisplayURL> URLs { get; private set; }
 
 
-        public SetPropsWindow(List<DisplayProperty> props, List<DisplayURL> urls)
+        public SetPropsWindow(List<DisplayDataTab> dataTabs, List<DisplayURL> urls)
         {
-            Props = props;
+            DataTabs = dataTabs;
             URLs = urls;
             InitializeComponent();
         }
@@ -80,7 +76,9 @@ namespace NavisWorksInfoTools
             //вызвать обработчики событий для переключения чекбоксов
             overwriteUserAttrCheckBox_CheckedChanged(null, null);
             overwriteLinksCheckBox_CheckedChanged(null, null);
-            propsDataGrid.ItemsSource = Props;
+
+            //Назначение источников данных
+            tabsDataGrid.ItemsSource = DataTabs;
             linksDataGrid.ItemsSource = URLs;
         }
 
@@ -92,20 +90,106 @@ namespace NavisWorksInfoTools
             this.Close();
         }
 
-        
+
 
         private void overwriteUserAttrCheckBox_CheckedChanged(object sender, RoutedEventArgs e)
         {
-            propsDataGrid.IsEnabled = overwriteUserAttrCheckBox.IsChecked.Value;
-            tabNameTextBox.IsEnabled = overwriteUserAttrCheckBox.IsChecked.Value;
+            if (overwriteUserAttrCheckBox.IsChecked != null)
+            {
+                tabsDataGrid.IsEnabled = overwriteUserAttrCheckBox.IsChecked.Value;
+                //propsDataGrid.IsEnabled = overwriteUserAttrCheckBox.IsChecked.Value;
+            }
+
         }
 
 
         private void overwriteLinksCheckBox_CheckedChanged(object sender, RoutedEventArgs e)
         {
-            linksDataGrid.IsEnabled = overwriteLinksCheckBox.IsChecked.Value;
+            if (overwriteLinksCheckBox.IsChecked != null)
+                linksDataGrid.IsEnabled = overwriteLinksCheckBox.IsChecked.Value;
+        }
+
+        /// <summary>
+        /// Назначает источник данных для таблицы свойств
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="e"></param>
+        private void tabsDataGrid_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        {
+            DisplayDataTab selectedDataTab = tabsDataGrid.SelectedItem as DisplayDataTab;
+            if (selectedDataTab != null)
+            {
+                propsDataGrid.ItemsSource = selectedDataTab.DisplayProperties;
+                propsDataGrid.IsEnabled = true;
+            }
+            else
+            {
+                propsDataGrid.ItemsSource = new List<DisplayProperty>();
+                propsDataGrid.IsEnabled = false;
+            }
+        }
+
+        /// <summary>
+        /// ОТМЕНЕНО
+        /// Если в таблице изменяется DisplayName то проверить его уникальность
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="e"></param>
+        private void dataGrid_CellEditEnding(object sender, DataGridCellEditEndingEventArgs e)
+        {
+            DataGrid dataGrid = sender as DataGrid;
+            if (dataGrid!=null)
+            {
+                DataGridBoundColumn boundColumn = e.Column as DataGridBoundColumn;
+                Binding binding = boundColumn.Binding as Binding;
+                if (binding!=null && binding.Path.Path.Equals("DisplayName"))
+                {
+                    //...
+                }
+            }
+
         }
 
 
+    }
+
+    /// <summary>
+    /// Класс для хранения данных о вводе пользователем новых пользовательских панелей
+    /// </summary>
+    public class DisplayDataTab
+    {
+        public string DisplayName { get; set; }
+
+        public List<DisplayProperty> DisplayProperties = new List<DisplayProperty>();
+
+        public Autodesk.Navisworks.Api.Interop.ComApi.InwOaPropertyVec InwOaPropertyVec { get; set; }
+            = null;
+
+    }
+
+    /// <summary>
+    /// Класс для хранения данных о вводе пользователем новых пользовательских свойств
+    /// </summary>
+    public class DisplayProperty
+    {
+        public string DisplayName { get; set; }
+        public string DisplayValue { get; set; }
+        public object Value { get; private set; } = null;
+
+        public void ConvertValue()
+        {
+            Value = Utils.ConvertValueByString(DisplayValue);
+        }
+
+    }
+
+    /// <summary>
+    /// Класс для хранения данных о вводе пользователем гиперссылок
+    /// </summary>
+    public class DisplayURL
+    {
+        public string DisplayName { get; set; }
+
+        public string URL { get; set; }
     }
 }

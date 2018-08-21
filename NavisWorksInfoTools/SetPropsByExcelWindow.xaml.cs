@@ -183,19 +183,33 @@ namespace NavisWorksInfoTools
             {
                 //Start Excel and get Application object.
                 OXL = new Excel.Application();
+                Excel.Workbooks workbooks = null;
+                Excel.Sheets sheets = null;
                 try
-                { OWB = OXL.Workbooks.Open(ExcelPath, 0, true); }
-                catch { }
-
-                if (OWB != null)
                 {
-                    Excel.Sheets sheets = OWB.Worksheets;
-                    foreach (Excel._Worksheet sheet in sheets)
-                    {
-                        excelWorkSheets.Add(sheet);
-                    }
+                    workbooks = OXL.Workbooks;
+                    OWB = workbooks.Open(ExcelPath, 0, true);
 
+                    if (OWB != null)
+                    {
+                        sheets = OWB.Worksheets;
+                        foreach (Excel._Worksheet sheet in sheets)
+                        {
+                            excelWorkSheets.Add(sheet);
+                        }
+
+                    }
                 }
+                catch { }
+                finally
+                {
+                    if(workbooks!=null)
+                        System.Runtime.InteropServices.Marshal.ReleaseComObject(workbooks);
+                    if (sheets != null)
+                        System.Runtime.InteropServices.Marshal.ReleaseComObject(sheets);
+                }
+
+                
             }
 
             excelSheetComboBox.ItemsSource = excelWorkSheets;
@@ -230,16 +244,32 @@ namespace NavisWorksInfoTools
 
         public void CloseUsingExcel()
         {
+            //TODO: Процесс все равно остается в диспетчере задач
+            //Возможно нужно освобождать вообще все объекты, которые использовались - https://stackoverflow.com/a/28080347
+            //При этом процесс исчезает при нормальном закрытии Navis
+
+            if (excelWorkSheets != null)
+            {
+                foreach (Excel._Worksheet ws in excelWorkSheets)
+                {
+                    System.Runtime.InteropServices.Marshal.ReleaseComObject(ws);
+                }
+            }
+            
+
+
             //Закрытие предыдущей используемой книги Excel
             if (OWB != null)
             {
                 try { OWB.Close(false); } catch { }
+                System.Runtime.InteropServices.Marshal.ReleaseComObject(OWB);
                 OWB = null;
             }
             //Закрытие Excel
             if (OXL != null)
             {
                 try { OXL.Quit(); } catch { }
+                System.Runtime.InteropServices.Marshal.ReleaseComObject(OXL);
                 OXL = null;
             }
         }
@@ -321,23 +351,33 @@ namespace NavisWorksInfoTools
             EnableOKButton();
         }
 
+        private void tabNameTextBox_TextChanged(object sender, TextChangedEventArgs e)
+        {
+            EnableOKButton();
+        }
+
         /// <summary>
         /// Включить кнопку ОК если все заполнено
         /// </summary>
         private void EnableOKButton()
         {
-            if (excelSheetComboBox.SelectedItem != null
+            if (okButton != null)
+            {
+                if (excelSheetComboBox.SelectedItem != null
                 && excelColComboBox.SelectedItem != null
                 && navisDataTabComboBox.SelectedItem != null
                 && navisPropertyComboBox.SelectedItem != null
-                && TabelHeader != null && TabelHeader.Count > 0)
-            {
-                okButton.IsEnabled = true;
+                && TabelHeader != null && TabelHeader.Count > 0
+                && !String.IsNullOrWhiteSpace(tabNameTextBox.Text) && !tabNameTextBox.Text.Equals(SetIds.IdDataTabDisplayName))
+                {
+                    okButton.IsEnabled = true;
+                }
+                else
+                {
+                    okButton.IsEnabled = false;
+                }
             }
-            else
-            {
-                okButton.IsEnabled = false;
-            }
+            
         }
 
 
@@ -360,5 +400,7 @@ namespace NavisWorksInfoTools
         {
             //CloseUsingExcel();
         }
+
+        
     }
 }

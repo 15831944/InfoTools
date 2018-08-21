@@ -20,15 +20,19 @@ namespace NavisWorksInfoTools
         DisplayName = "Заполнить атрибуты по таблице Excel")]
     class SetPropsByExcel : AddInPlugin
     {
+        //Обнаружена очень большая проблема - https://forums.autodesk.com/t5/navisworks-api/disable-screen-updating/m-p/8211317/highlight/false#M4165
+        //Открытые панели могут тормозить работу программы
+
+
+        //TODO: Проверить поиск в Excel если в ячейке находится не строка
+
+        private int matchCount = 0;
         public override int Execute(params string[] parameters)
         {
-
             SetPropsByExcelWindow setPropsByExcelWindow = null;
             try
             {
                 Document doc = Application.ActiveDocument;
-
-                
 
                 ModelItemCollection selection = doc.CurrentSelection.SelectedItems;
 
@@ -41,7 +45,13 @@ namespace NavisWorksInfoTools
 
                 ModelItem sampleItem = selection.First;
 
-                string initialPath = Path.GetDirectoryName(doc.FileName);
+
+                string initialPath = Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments);
+                string docFileName = doc.FileName;
+                if (!String.IsNullOrEmpty(docFileName))
+                {
+                    initialPath = Path.GetDirectoryName(docFileName);
+                }
                 setPropsByExcelWindow = new SetPropsByExcelWindow(sampleItem, initialPath);
                 bool? result = null;
                 result = setPropsByExcelWindow.ShowDialog();
@@ -50,14 +60,24 @@ namespace NavisWorksInfoTools
 
                 if (result != null && result.Value)
                 {
+                    Common.Timer timer = new Common.Timer();
+                    timer.Start();
+
                     PropertyCategory propertyCategory = setPropsByExcelWindow.SelectedPropertyCategory;
-                    string catDispName = propertyCategory.DisplayName;
+                    NamedConstant keyCatCombName = propertyCategory.CombinedName;//.DisplayName;
                     DataProperty dataProperty = setPropsByExcelWindow.SelectedDataProperty;
-                    string propDispName = dataProperty.DisplayName;
+                    NamedConstant keyPropCombName = dataProperty.CombinedName;//.DisplayName;
 
                     Excel._Worksheet worksheet = setPropsByExcelWindow.SelectedWorkSheet;
                     Common.ExcelInterop.CellValue excelColumn = setPropsByExcelWindow.SelectedColumn;
-                    Excel.Range keyColumn = worksheet.Columns[excelColumn.ColumnNum];
+
+
+                    //Перенести все значения из столбца в словарь - не ускоряет работу
+                    //Dictionary<string, int> keyValues
+                    //    = Common.ExcelInterop.Utils.GetColumnValues(worksheet, excelColumn.ColumnNum);
+
+                    Excel.Range columns = worksheet.Columns;
+                    Excel.Range keyColumn = columns[excelColumn.ColumnNum];
 
                     SortedDictionary<int, Common.ExcelInterop.CellValue> tableHeader = setPropsByExcelWindow.TabelHeader;
                     Dictionary<string, int> columnHeaderLookup = new Dictionary<string, int>();
@@ -66,106 +86,41 @@ namespace NavisWorksInfoTools
                         columnHeaderLookup.Add(kvp.Value.DisplayString, kvp.Key);
                     }
 
-                    //dynamic x = keyColumn.Value2;
+                    //get state object of COM API
+                    ComApi.InwOpState3 oState = ComApiBridge.ComApiBridge.State;
+
+                    string tabName = setPropsByExcelWindow.TabName;
 
                     //Поиск всех объектов, у которых есть указанное свойство
                     //http://adndevblog.typepad.com/aec/2012/05/navisworks-net-api-find-item.html
+
                     Search search = new Search();
                     search.Selection.SelectAll();
+                    search.PruneBelowMatch = true;//В наборе не будет вложенных элементов
                     search.SearchConditions
-                        .Add(SearchCondition.HasPropertyByDisplayName(catDispName, propDispName));
+                        .Add(SearchCondition.HasPropertyByCombinedName(keyCatCombName, keyPropCombName));
                     ModelItemCollection items = search.FindAll(doc, false);
 
-                    //get state object of COM API
-                    ComApi.InwOpState3 oState = ComApiBridge.ComApiBridge.State;
-                    foreach (ModelItem item in items)
-                    {
-                        DataProperty property = item.PropertyCategories.FindPropertyByDisplayName(catDispName, propDispName);
-                        string searchStringValue = property.Value.ToDisplayString();
 
-                        //Найти в выбранном столбце Excel ячейку с таким же значением (если его перевести в строку)
-                        Excel.Range row = keyColumn.Find(searchStringValue,
-                            LookIn: Excel.XlFindLookIn.xlValues, LookAt: Excel.XlLookAt.xlWhole, SearchOrder: Excel.XlSearchOrder.xlByColumns,
-                            MatchByte: false);
-                        if (row!=null)
-                        {
-                            int rowNum = row.Row;
-                            //Получить данные из этой строки таблицы
-                            SortedDictionary<int, Common.ExcelInterop.CellValue> rowValues
-                                = Common.ExcelInterop.Utils.GetRowValues(worksheet, rowNum);
 
-                            foreach (ModelItem dItem in item.DescendantsAndSelf)
-                            {
-                                //Привязать пользовательские атрибуты как в строке таблицы. Если такие атрибуты уже были созданы, то переписать их значение
-                                //convert the .NET collection to COM object
-                                ComApi.InwOaPath oPath = ComApiBridge.ComApiBridge.ToInwOaPath(dItem);
 
-                                ComApi.InwOaPropertyVec propsToSet
-                                    = oState.ObjectFactory(ComApi.nwEObjectType.eObjectType_nwOaPropertyVec);//Набор свойств для задания для этого элемента модели
-                                                                                                             //Получить текущие свойства элемента
-                                ComApi.InwGUIPropertyNode2 propertyNode = (ComApi.InwGUIPropertyNode2)oState.GetGUIPropertyNode(oPath, true);
+                    matchCount = 0;
+                    SearchForExcelTableMatches(doc, items,
+                        keyColumn,
+                        //keyValues,
+                        keyCatCombName, keyPropCombName,
+                        oState, worksheet, tableHeader, tabName
+                        );
 
-                                //Перенести без изменения те свойства, которые не содержатся в таблице Excel
-                                
-                                foreach (ComApi.InwGUIAttribute2 attr in propertyNode.GUIAttributes())
-                                {
-                                    //string x = attr.ClassName;
 
-                                    if (attr.ClassName.Equals("LcOaPropOverrideCat"))
-                                    {
-                                        foreach (ComApi.InwOaProperty prop in attr.Properties())
-                                        {
-                                            //string y = prop.name;
-                                            if (!columnHeaderLookup.ContainsKey(prop.UserName))//Если это свойство не содержится в Excel, 
-                                            {
-                                                //то добавить его без изменений в InwOaPropertyVec
-                                                //Но при этом нужно создать новый объект
-                                                ComApi.InwOaProperty newProp = oState.ObjectFactory(ComApi.nwEObjectType.eObjectType_nwOaProperty);
-                                                newProp.name = prop.name;
-                                                newProp.UserName = prop.UserName;
-                                                newProp.value = prop.value;
-                                                propsToSet.Properties().Add(newProp);
-                                            }
-                                        }
-                                    }
-                                }
+                    System.Runtime.InteropServices.Marshal.ReleaseComObject(columns);
+                    System.Runtime.InteropServices.Marshal.ReleaseComObject(keyColumn);
 
-                                foreach (KeyValuePair<int, Common.ExcelInterop.CellValue> kvp in tableHeader)
-                                {
-                                    int colIndex = kvp.Key;
-                                    string propName = kvp.Value.DisplayString;
-                                    Common.ExcelInterop.CellValue cellValue = null;
-                                    rowValues.TryGetValue(colIndex, out cellValue);
-                                    string propValue = null;
-                                    if (cellValue != null)
-                                    {
-                                        propValue = cellValue.DisplayString;
-                                    }
 
-                                    // create new property
-                                    ComApi.InwOaProperty newP = (ComApi.InwOaProperty)oState
-                                        .ObjectFactory(ComApi.nwEObjectType.eObjectType_nwOaProperty, null, null);
-
-                                    // set the name, username and value of the new property
-                                    newP.name = Guid.NewGuid().ToString();
-                                    newP.UserName = propName;
-                                    if (String.IsNullOrEmpty(propValue))
-                                        propValue = "_";
-                                    newP.value = propValue;
-
-                                    // add the new property to the new property category
-                                    propsToSet.Properties().Add(newP);
-                                }
-
-                                try
-                                { propertyNode.RemoveUserDefined(0); }
-                                catch (System.Runtime.InteropServices.COMException) { }
-                                string tabName = setPropsByExcelWindow.TabName;
-                                propertyNode.SetUserDefined(0, tabName, "S1NF0", propsToSet);
-                            }
-                        }
-                        
-                    }
+                    Win.MessageBox.Show(timer.TimeOutput("Общее время")
+                        + "\nНайдено совпадений - "+ matchCount,
+                        "Готово", Win.MessageBoxButton.OK,
+                        Win.MessageBoxImage.Information);
                 }
             }
             catch (Exception ex)
@@ -181,5 +136,152 @@ namespace NavisWorksInfoTools
 
             return 0;
         }
+
+
+        private void SearchForExcelTableMatches
+            (Document doc, IEnumerable<ModelItem> items,
+            Excel.Range keyColumn,
+            //Dictionary<string, int> keyValues,
+            NamedConstant keyCatCombName, NamedConstant keyPropCombName,
+            ComApi.InwOpState3 oState, Excel._Worksheet worksheet,
+            SortedDictionary<int, Common.ExcelInterop.CellValue> tableHeader, string tabName
+            )
+        {
+            foreach (ModelItem item in items)
+            {
+                DataProperty property
+                    = item.PropertyCategories.FindPropertyByCombinedName(keyCatCombName, keyPropCombName);
+                //object searchValue = Utils.GetUserPropValue(property.Value);
+                string searchValue = Utils.GetDisplayValue(property.Value);
+                //Найти в выбранном столбце Excel ячейку с таким же значением
+
+
+                Excel.Range row = keyColumn.Find(searchValue,
+                    LookIn: Excel.XlFindLookIn.xlValues, LookAt: Excel.XlLookAt.xlWhole,
+                    SearchOrder: Excel.XlSearchOrder.xlByColumns,
+                    MatchByte: false);
+
+                //int rowNum = 0;
+                //keyValues.TryGetValue(searchValue, out rowNum);
+
+                if (/*rowNum != 0*/row != null)
+                {
+                    matchCount++;
+
+                    int rowNum = row.Row;
+                    //Получить данные из этой строки таблицы
+                    SortedDictionary<int, Common.ExcelInterop.CellValue> rowValues
+                        = Common.ExcelInterop.Utils.GetRowValues(worksheet, rowNum);
+                    //Привязать пользовательские атрибуты как в строке таблицы. Если такие атрибуты уже были созданы, то переписать их значение
+                    //Набор свойств для задания для этого элемента модели
+                    ComApi.InwOaPropertyVec propsToSet
+                        = oState.ObjectFactory(ComApi.nwEObjectType.eObjectType_nwOaPropertyVec);
+                    //Заполнить данными из строки Excel
+                    foreach (KeyValuePair<int, Common.ExcelInterop.CellValue> kvp in tableHeader)
+                    {
+                        int colIndex = kvp.Key;
+                        string propName = kvp.Value.DisplayString;
+                        Common.ExcelInterop.CellValue cellValue = null;
+                        rowValues.TryGetValue(colIndex, out cellValue);
+                        object propValue = null;
+                        if (cellValue != null)
+                        {
+                            propValue = cellValue.DisplayString;//.Value2;
+                        }
+
+                        // create new property
+                        ComApi.InwOaProperty newP = Utils.CreateNewUserProp(oState, propName, propValue);
+
+                        // add the new property to the new property category
+                        propsToSet.Properties().Add(newP);
+                    }
+
+
+                    foreach (ModelItem dItem in item.DescendantsAndSelf)
+                    {
+                        //convert the .NET collection to COM object
+                        ComApi.InwOaPath oPath = ComApiBridge.ComApiBridge.ToInwOaPath(dItem);
+                        //Получить текущие свойства элемента
+                        ComApi.InwGUIPropertyNode2 propertyNode
+                            = (ComApi.InwGUIPropertyNode2)oState.GetGUIPropertyNode(oPath, true);
+                        //Проверить есть ли у элемента панель данных пользователя с точно таким же названием
+                        //Получить ее индекс
+                        int indexToSet = 0;
+                        int i = 1;
+                        foreach (ComApi.InwGUIAttribute2 attr in propertyNode.GUIAttributes())
+                        {
+                            if (attr.UserDefined)
+                            {
+                                if (attr.ClassUserName.Equals(tabName))
+                                {
+                                    indexToSet = i;
+                                    break;
+                                }
+                                else
+                                {
+                                    i++;
+                                }
+                            }
+                        }
+
+                        //Перезаписать панель данными из Excel
+                        propertyNode.SetUserDefined(
+                            indexToSet,
+                            tabName, "S1NF0", propsToSet);
+                    }
+                    System.Runtime.InteropServices.Marshal.ReleaseComObject(row);
+
+                }
+                else
+                {
+                    //TODO: Если неправильно указать ключевое свойство и столбец, возникает зависание из-за многократного поиска Search во вложенных элементах
+
+                    //Search search = new Search();
+                    //search.Selection.CopyFrom(item.Descendants);
+                    //search.PruneBelowMatch = true;//объекты без вложенных
+                    //search.SearchConditions
+                    //    .Add(SearchCondition.HasPropertyByCombinedName(keyCatCombName, keyPropCombName));
+                    //ModelItemCollection dItems = search.FindAll(doc, false);
+
+                    //IEnumerable<ModelItem> dItems
+                    //    = item.Descendants.Where(SearchCondition.HasPropertyByCombinedName(keyCatCombName, keyPropCombName));//Не обрезает вложенные объекты
+
+                    //Линейный поиск по дереву до нахождения соответствия
+                    List<ModelItem> dItems = new List<ModelItem>();
+                    SearchHasPropertyByCombinedName(item.Children, keyCatCombName, keyPropCombName, dItems);
+
+
+                    SearchForExcelTableMatches(doc, dItems,
+                        keyColumn,
+                        //keyValues,
+                        keyCatCombName, keyPropCombName,
+                        oState, worksheet, tableHeader, tabName
+                        );
+                }
+            }
+        }
+
+
+
+        private void SearchHasPropertyByCombinedName(IEnumerable<ModelItem> searchColl,
+            NamedConstant keyCatCombName, NamedConstant keyPropCombName, List<ModelItem> resultColl)
+        {
+            foreach(ModelItem item in searchColl)
+            {
+                DataProperty property
+                    = item.PropertyCategories.FindPropertyByCombinedName(keyCatCombName, keyPropCombName);
+                if (property!=null)
+                {
+                    resultColl.Add(item);
+                }
+                else
+                {
+                    SearchHasPropertyByCombinedName(item.Children, keyCatCombName, keyPropCombName, resultColl);
+                }
+            }
+        }
+
+
     }
 }
+

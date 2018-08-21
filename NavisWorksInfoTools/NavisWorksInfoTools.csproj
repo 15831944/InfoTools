@@ -61,6 +61,7 @@
     </Compile>
     <Compile Include="FBXExport.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="SetIds.cs" />
     <Compile Include="SetProps.cs" />
     <Compile Include="SetPropsByExcel.cs" />
     <Compile Include="SetPropsByExcelWindow.xaml.cs">
@@ -69,6 +70,7 @@
     <Compile Include="SetPropsWindow.xaml.cs">
       <DependentUpon>SetPropsWindow.xaml</DependentUpon>
     </Compile>
+    <Compile Include="Utils.cs" />
   </ItemGroup>
   <ItemGroup>
     <Page Include="ChangeLinksProps.xaml">

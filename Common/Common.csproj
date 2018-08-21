@@ -82,6 +82,7 @@
     </Compile>
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Timer.cs" />
+    <Compile Include="Transliteration.cs" />
     <Compile Include="Utils.cs" />
     <Compile Include="XMLClasses\ObjectPosition.cs" />
     <Compile Include="XMLClasses\PositionData.cs" />
