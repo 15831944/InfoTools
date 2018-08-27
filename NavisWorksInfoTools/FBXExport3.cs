@@ -39,7 +39,8 @@ namespace NavisWorksInfoTools
         public override int Execute(params string[] parameters)
         {
             Win.MessageBoxResult result = Win.MessageBox.Show("Перед экспортом FBX, нужно скрыть те элементы модели, которые не нужно экспортировать. "
-                + "А так же нужно настроить параметры экспорта в FBX на экспорт ЛИБО В ФОРМАТЕ ASCII, ЛИБО В ДВОИЧНОМ ФОРМАТЕ ВЕРСИИ НЕ НОВЕЕ 2018"
+                + "А так же нужно настроить параметры экспорта в FBX на экспорт ЛИБО В ФОРМАТЕ ASCII, ЛИБО В ДВОИЧНОМ ФОРМАТЕ ВЕРСИИ НЕ НОВЕЕ 2018. "
+                + "Рекомендуется так же отключить экспорт источников света и камер. "
                 + "\n\nНачать выгрузку FBX?", "Выгрузка FBX", Win.MessageBoxButton.YesNo);
 
             if (result == Win.MessageBoxResult.Yes)
@@ -89,21 +90,32 @@ namespace NavisWorksInfoTools
                                     Queue<FBX.NameReplacement> replacements = new Queue<FBX.NameReplacement>();
                                     DocumentModels docModels = doc.Models;
                                     ModelItemEnumerableCollection rootItems = docModels.RootItems;
-                                    if (rootItems.Count() > 1)
-                                    {
-                                        //Если в Navis несколько корневых узлов (как в nwf), 
-                                        //то один узел в самом начале FBX должен быть пропущен
-                                        //Там появится узел Environment
-                                        replacements.Enqueue(new FBX.NameReplacement());
-                                    }
+                                    //if (rootItems.Count() > 1)
+                                    //{
+                                    //    //Если в Navis несколько корневых узлов (как в nwf), 
+                                    //    //то один узел в самом начале FBX должен быть пропущен
+                                    //    //Там появится узел Environment
+                                    //    replacements.Enqueue(new FBX.NameReplacement());
+                                    //}
                                     ComApi.InwOpState3 oState = ComApiBridge.ComApiBridge.State;
                                     NameReplacementQueue(rootItems, replacements, oState);
                                     if (rootItems.Count() == 1)
                                     {
                                         //Обозначить, что первый узел имеет ненадежное имя.
                                         //В FBX оно всегда - Environment, а в Navis - имя открытого файла
-                                        replacements.Peek().OldNameTrustable = false;
+                                        //replacements.Peek().OldNameTrustable = false;
+
+                                        //Если корневой узел один, то убрать его из списка. Его не будет в FBX
+                                        replacements.Dequeue();
                                     }
+
+                                    //Первый узел в списке замены должен обязательно иметь верное имя
+                                    //(в начале списка могут быть с пустым значением, которые отключены в Navis)
+                                    while (!replacements.Peek().OldNameTrustable)
+                                    {
+                                        replacements.Dequeue();
+                                    }
+
 
                                     //Отредактировать FBX
                                     FBX.ModelNamesEditor fbxEditor = null;

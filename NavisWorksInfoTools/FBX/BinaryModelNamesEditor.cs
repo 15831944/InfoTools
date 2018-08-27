@@ -47,7 +47,7 @@ namespace NavisWorksInfoTools.FBX
                 {
                     binaryFBXVer = BinaryFBXVer.Small;
                 }
-                else if(versionNum <= 7500)
+                else if (versionNum <= 7500)
                 {
                     binaryFBXVer = BinaryFBXVer.Big;
                 }
@@ -73,7 +73,7 @@ namespace NavisWorksInfoTools.FBX
                         {
                             while (ReadWriteFBXNodeBig(br, bw, 0, null)) { }
                         }
-                        
+
 
                         //Дальше идет еще какой-то футер. Не менять его
                         bw.Write(br.ReadBytes((int)br.BaseStream.Length));
@@ -581,12 +581,23 @@ namespace NavisWorksInfoTools.FBX
                     string modelName = str.Replace("\0\u0001Model", "");
 
                     //Последовательность узлов моделей, которые подлежат переименованию
-                    //начинается только после узла Environment
+                    //начинается только после узла, у которого имя совпадает
                     if (!renamingModelsStarted)
                     {
-                        if (modelName.Equals("Environment"))
+                        NameReplacement firstElem = replacements.Peek();
+                        NameReplacement secondElem = replacements.ElementAt(1);
+                        if (
+                            //modelName.Equals("Environment")//УЗЕЛ Environment ЕСТЬ НЕ ВСЕГДА!!! В каких случаях его нет пока не понятно.
+                            firstElem.OldName.Equals(modelName)
+                            )
                         {
                             renamingModelsStarted = true;
+                        }
+                        else if (secondElem.OldNameTrustable && secondElem.OldName.Equals(modelName))
+                        {
+                            // На всякий случай проверяем второй элемент в очереди (возможно 1-й вообще не появится в FBX?)
+                            renamingModelsStarted = true;
+                            replacements.Dequeue();//Удаляем узел, который должен был соответствовать Environment
                         }
                     }
                     if (renamingModelsStarted)

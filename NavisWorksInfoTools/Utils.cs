@@ -178,13 +178,15 @@ namespace NavisWorksInfoTools
 
         /// <summary>
         /// Добавить служебные свойства S1NF0 если их еще нет
-        /// Не меняет свойства если они уже есть
+        /// Не меняет свойства если они уже есть если не передан параметр overwrite = true
         /// Возвращает true если свойства объекта отредактированы
         /// </summary>
         /// <param name="oState"></param>
         /// <param name="item"></param>
-        /// <param name="propValues"></param>
-        public static bool SetS1NF0PropsToItem(ComApi.InwOpState3 oState, ModelItem item, Dictionary<string, object> propValues)
+        /// <param name="propsToWrite"></param>
+        public static bool SetS1NF0PropsToItem
+            (ComApi.InwOpState3 oState, ModelItem item, Dictionary<string, object> propsToWrite,
+            bool overwrite = false)
         {
             ComApi.InwOaPropertyVec propsToSet
                                     = oState.ObjectFactory(ComApi.nwEObjectType.eObjectType_nwOaPropertyVec);
@@ -208,9 +210,12 @@ namespace NavisWorksInfoTools
                         indexToSet = i;
                         foreach (ComApi.InwOaProperty prop in attr.Properties())
                         {
-                            if (propValues.ContainsKey(prop.UserName))
+                            if (propsToWrite.ContainsKey(prop.UserName))
                             {
-                                propValues.Remove(prop.UserName);
+                                if (!overwrite)
+                                    propsToWrite.Remove(prop.UserName);
+                                else
+                                    continue;//Перейти к следующему свойству
                             }
 
                             propsToSet.Properties().Add(Utils.CopyProp(oState, prop));
@@ -224,9 +229,9 @@ namespace NavisWorksInfoTools
                 }
             }
 
-            if (propValues.Count > 0)
+            if (propsToWrite.Count > 0)
             {
-                foreach (KeyValuePair<string, object> kvp in propValues)
+                foreach (KeyValuePair<string, object> kvp in propsToWrite)
                 {
                     string propName = kvp.Key;
                     object value = kvp.Value;

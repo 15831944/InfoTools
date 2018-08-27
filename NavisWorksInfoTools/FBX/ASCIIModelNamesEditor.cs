@@ -70,12 +70,23 @@ namespace NavisWorksInfoTools.FBX
                     string modelName = toReplace.Substring(8, len);
 
                     //Последовательность узлов моделей, которые подлежат переименованию
-                    //начинается только после узла Environment
+                    //начинается только после узла, у которого имя совпадает
                     if (!renamingModelsStarted)
                     {
-                        if (modelName.Equals("Environment"))
+                        NameReplacement firstElem = replacements.Peek();
+                        NameReplacement secondElem = replacements.ElementAt(1);
+                        if (
+                            //modelName.Equals("Environment")//УЗЕЛ Environment ЕСТЬ НЕ ВСЕГДА!!! В каких случаях его нет пока не понятно.
+                            firstElem.OldName.Equals(modelName)
+                            )
                         {
                             renamingModelsStarted = true;
+                        }
+                        else if (secondElem.OldNameTrustable && secondElem.OldName.Equals(modelName))
+                        {
+                            // На всякий случай проверяем второй элемент в очереди (возможно 1-й вообще не появится в FBX?)
+                            renamingModelsStarted = true;
+                            replacements.Dequeue();//Удаляем узел, который должен был соответствовать Environment
                         }
                     }
                     if (renamingModelsStarted)

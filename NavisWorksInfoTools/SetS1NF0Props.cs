@@ -64,8 +64,8 @@ namespace NavisWorksInfoTools
                     {
                     { ID_PROP_DISPLAY_NAME, Utils.S1NF0PropSpecialValue.RandomGUID},
                     { MATERIAL_ID_PROP_DISPLAY_NAME, "_"},
-                    { PROPER_NAME_PROP_DISPLAY_NAME, defProperName},
-                    { PARENT_PROP_DISPLAY_NAME, parentId},
+                    //{ PROPER_NAME_PROP_DISPLAY_NAME, defProperName},
+                    //{ PARENT_PROP_DISPLAY_NAME, parentId},
                     }))
                 {
                     editedCount++;
