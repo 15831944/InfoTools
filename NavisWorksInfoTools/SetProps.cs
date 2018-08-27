@@ -33,7 +33,7 @@ namespace NavisWorksInfoTools
                 Document doc = Application.ActiveDocument;
 
                 ModelItemCollection currSelectionColl = doc.CurrentSelection.SelectedItems;
-
+                
                 if (currSelectionColl.Count > 0)
                 {
                     //Получить список свойств из первого выбранного объекта из пользовательской панели если она есть

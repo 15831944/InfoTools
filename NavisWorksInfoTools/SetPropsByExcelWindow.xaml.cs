@@ -109,6 +109,18 @@ namespace NavisWorksInfoTools
             }
         }
 
+        public bool IgnoreNonVisible
+        {
+            get
+            {
+                return ignoreNonVisibleCheckBox.IsChecked.Value;
+            }
+            set
+            {
+                ignoreNonVisibleCheckBox.IsChecked = value;
+            }
+        }
+
 
         public SetPropsByExcelWindow(ModelItem sampleItem, string initialPath = null)
         {
@@ -203,10 +215,16 @@ namespace NavisWorksInfoTools
                 catch { }
                 finally
                 {
-                    if(workbooks!=null)
-                        System.Runtime.InteropServices.Marshal.ReleaseComObject(workbooks);
+                    if (workbooks != null)
+                    {
+                        //System.Runtime.InteropServices.Marshal.ReleaseComObject(workbooks);
+                    }
+                        
                     if (sheets != null)
-                        System.Runtime.InteropServices.Marshal.ReleaseComObject(sheets);
+                    {
+                        //System.Runtime.InteropServices.Marshal.ReleaseComObject(sheets);
+                    }
+
                 }
 
                 
@@ -245,14 +263,14 @@ namespace NavisWorksInfoTools
         public void CloseUsingExcel()
         {
             //TODO: Процесс все равно остается в диспетчере задач
-            //Возможно нужно освобождать вообще все объекты, которые использовались - https://stackoverflow.com/a/28080347
+            //Возможно нужно освобождать вообще все объекты, которые использовались - https://stackoverflow.com/a/28080347. ЭТО НЕ ПОМОГАЕТ
             //При этом процесс исчезает при нормальном закрытии Navis
 
             if (excelWorkSheets != null)
             {
                 foreach (Excel._Worksheet ws in excelWorkSheets)
                 {
-                    System.Runtime.InteropServices.Marshal.ReleaseComObject(ws);
+                    //System.Runtime.InteropServices.Marshal.ReleaseComObject(ws);
                 }
             }
             
@@ -262,14 +280,14 @@ namespace NavisWorksInfoTools
             if (OWB != null)
             {
                 try { OWB.Close(false); } catch { }
-                System.Runtime.InteropServices.Marshal.ReleaseComObject(OWB);
+                //System.Runtime.InteropServices.Marshal.ReleaseComObject(OWB);
                 OWB = null;
             }
             //Закрытие Excel
             if (OXL != null)
             {
                 try { OXL.Quit(); } catch { }
-                System.Runtime.InteropServices.Marshal.ReleaseComObject(OXL);
+                //System.Runtime.InteropServices.Marshal.ReleaseComObject(OXL);
                 OXL = null;
             }
         }

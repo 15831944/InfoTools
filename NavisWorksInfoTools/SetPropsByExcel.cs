@@ -78,6 +78,8 @@ namespace NavisWorksInfoTools
 
                     Excel.Range columns = worksheet.Columns;
                     Excel.Range keyColumn = columns[excelColumn.ColumnNum];
+                    string tabName = setPropsByExcelWindow.TabName;
+                    bool ignoreNonVisible = setPropsByExcelWindow.IgnoreNonVisible;
 
                     SortedDictionary<int, Common.ExcelInterop.CellValue> tableHeader = setPropsByExcelWindow.TabelHeader;
                     Dictionary<string, int> columnHeaderLookup = new Dictionary<string, int>();
@@ -89,7 +91,7 @@ namespace NavisWorksInfoTools
                     //get state object of COM API
                     ComApi.InwOpState3 oState = ComApiBridge.ComApiBridge.State;
 
-                    string tabName = setPropsByExcelWindow.TabName;
+                    
 
                     //Поиск всех объектов, у которых есть указанное свойство
                     //http://adndevblog.typepad.com/aec/2012/05/navisworks-net-api-find-item.html
@@ -105,7 +107,7 @@ namespace NavisWorksInfoTools
 
 
                     matchCount = 0;
-                    SearchForExcelTableMatches(doc, items,
+                    SearchForExcelTableMatches(doc, items, ignoreNonVisible,
                         keyColumn,
                         //keyValues,
                         keyCatCombName, keyPropCombName,
@@ -113,8 +115,8 @@ namespace NavisWorksInfoTools
                         );
 
 
-                    System.Runtime.InteropServices.Marshal.ReleaseComObject(columns);
-                    System.Runtime.InteropServices.Marshal.ReleaseComObject(keyColumn);
+                    //System.Runtime.InteropServices.Marshal.ReleaseComObject(columns);
+                    //System.Runtime.InteropServices.Marshal.ReleaseComObject(keyColumn);
 
 
                     Win.MessageBox.Show(timer.TimeOutput("Общее время")
@@ -139,7 +141,7 @@ namespace NavisWorksInfoTools
 
 
         private void SearchForExcelTableMatches
-            (Document doc, IEnumerable<ModelItem> items,
+            (Document doc, IEnumerable<ModelItem> items, bool ignoreNonVisible,
             Excel.Range keyColumn,
             //Dictionary<string, int> keyValues,
             NamedConstant keyCatCombName, NamedConstant keyPropCombName,
@@ -149,6 +151,12 @@ namespace NavisWorksInfoTools
         {
             foreach (ModelItem item in items)
             {
+                
+                if (ignoreNonVisible && item.IsHidden)
+                {
+                    continue;//Пропустить скрытый элемент
+                }
+
                 DataProperty property
                     = item.PropertyCategories.FindPropertyByCombinedName(keyCatCombName, keyPropCombName);
                 //object searchValue = Utils.GetUserPropValue(property.Value);
@@ -186,7 +194,7 @@ namespace NavisWorksInfoTools
                         object propValue = null;
                         if (cellValue != null)
                         {
-                            propValue = cellValue.DisplayString;//.Value2;
+                            propValue = Utils.ConvertValueByString(cellValue.DisplayString);//.Value2;
                         }
 
                         // create new property
@@ -229,7 +237,7 @@ namespace NavisWorksInfoTools
                             indexToSet,
                             tabName, "S1NF0", propsToSet);
                     }
-                    System.Runtime.InteropServices.Marshal.ReleaseComObject(row);
+                    //System.Runtime.InteropServices.Marshal.ReleaseComObject(row);
 
                 }
                 else
@@ -251,7 +259,7 @@ namespace NavisWorksInfoTools
                     SearchHasPropertyByCombinedName(item.Children, keyCatCombName, keyPropCombName, dItems);
 
 
-                    SearchForExcelTableMatches(doc, dItems,
+                    SearchForExcelTableMatches(doc, dItems, ignoreNonVisible,
                         keyColumn,
                         //keyValues,
                         keyCatCombName, keyPropCombName,

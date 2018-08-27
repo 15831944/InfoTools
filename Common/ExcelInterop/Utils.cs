@@ -44,8 +44,8 @@ namespace Common.ExcelInterop
             }
             finally
             {
-                System.Runtime.InteropServices.Marshal.ReleaseComObject(rows);
-                System.Runtime.InteropServices.Marshal.ReleaseComObject(row);
+                //System.Runtime.InteropServices.Marshal.ReleaseComObject(rows);
+                //System.Runtime.InteropServices.Marshal.ReleaseComObject(row);
             }
             return excelColumns;
         }
@@ -80,8 +80,8 @@ namespace Common.ExcelInterop
             }
             finally
             {
-                System.Runtime.InteropServices.Marshal.ReleaseComObject(columns);
-                System.Runtime.InteropServices.Marshal.ReleaseComObject(column);
+                //System.Runtime.InteropServices.Marshal.ReleaseComObject(columns);
+                //System.Runtime.InteropServices.Marshal.ReleaseComObject(column);
             }
 
             return colValues;

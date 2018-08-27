@@ -6,7 +6,7 @@
         xmlns:local="clr-namespace:NavisWorksInfoTools"
         xmlns:custom="clr-namespace:Common;assembly=Common"
         mc:Ignorable="d"
-        Title="Задание свойств по таблице Excel" Height="424" Width="844" ResizeMode="NoResize" Loaded="Window_Loaded" Closed="Window_Closed">
+        Title="Задание свойств по таблице Excel" Height="479" Width="844" ResizeMode="NoResize" Loaded="Window_Loaded" Closed="Window_Closed">
     <Grid>
         <Grid Margin="10,10,10,0" Height="288" VerticalAlignment="Top">
             <Grid.RowDefinitions>
@@ -17,6 +17,7 @@
                 <RowDefinition Height="30"/>
                 <RowDefinition Height="30"/>
 
+                <RowDefinition Height="30"/>
                 <RowDefinition Height="30"/>
                 <RowDefinition Height="7*"/>
             </Grid.RowDefinitions>
@@ -31,6 +32,7 @@
             <Label Content="Вкладка данных Navis:" Grid.Row="4" Margin="0,0,0,0" Grid.RowSpan="1"/>
             <Label Content="Ключевое свойство Navis:" Grid.Row="5" Margin="0,0,0,0" Grid.RowSpan="1"/>
             <Label Content="Название вкладки данных пользователя:" Margin="0,0,0,0" Grid.Row="6"/>
+            <Label Content="Игнорировать скрытые элементы:" Margin="0,0,0,0" Grid.Row="7"/>
 
             <custom:FileNameInputControl Name="fileNameInput" OpenFileDialogFilter ="Excel files (*.xlsx;*.xls)|*.xlsx;*.xls"
                                          OpenFileDialogTitle ="Выберите файл Excel" Grid.Row="0" HorizontalAlignment="Left"
@@ -43,6 +45,7 @@
             <ComboBox Name="navisDataTabComboBox" DisplayMemberPath="DisplayName" Grid.Column="1" Margin="0,0,0,0" Grid.Row="4" SelectionChanged="navisDataTabComboBox_SelectionChanged"/>
             <ComboBox Name="navisPropertyComboBox" DisplayMemberPath="DisplayName" Grid.Column="1" Margin="0,0,0,0" Grid.Row="5" SelectionChanged="navisPropertyComboBox_SelectionChanged"/>
             <TextBox Name="tabNameTextBox"  Grid.Column="1" Margin="0,0,0,0" Grid.Row="6" TextWrapping="Wrap" Text="АТРИБУТЫ" TextChanged="tabNameTextBox_TextChanged"/>
+            <CheckBox Name="ignoreNonVisibleCheckBox" Content="" Grid.Column="1"  Margin="0,7,0,0" Grid.Row="7" VerticalAlignment="Top" IsChecked="True"/>
 
         </Grid>
 

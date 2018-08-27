@@ -52,6 +52,17 @@ namespace NavisWorksInfoTools
             return null;
         }
 
+        public static ComApi.InwOaProperty CopyProp(ComApi.InwOpState3 oState,
+            ComApi.InwOaProperty propToCopy)
+        {
+            object value = propToCopy.value;
+            if (value != null)
+            {
+                return Utils.CreateNewUserProp(oState, propToCopy.UserName, value);
+            }
+            return null;
+        }
+
         /// <summary>
         /// Получить значение пользовательского свойства
         /// </summary>
@@ -139,7 +150,6 @@ namespace NavisWorksInfoTools
 
 
         /// <summary>
-        /// Объект приводится к тому типу, который можно использовать в пользовательском свойстве
         /// Все типы кроме string, int, double и bool возвращают строковое отображение объекта
         /// </summary>
         /// <param name="valueObj"></param>
@@ -155,5 +165,8 @@ namespace NavisWorksInfoTools
                 return valueObj.ToString();
             }
         }
+
+
+       
     }
 }

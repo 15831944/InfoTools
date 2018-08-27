@@ -14,10 +14,10 @@ using System.Diagnostics;
 
 namespace NavisWorksInfoTools
 {
-    [Plugin("FBXExport",
-        "S-Info",
-        ToolTip = "Экспорт в FBX",
-        DisplayName = "Экспорт в FBX")]
+    //[Plugin("FBXExport",
+    //    "S-Info",
+    //    ToolTip = "Экспорт в FBX",
+    //    DisplayName = "Экспорт в FBX")]
     class FBXExport : AddInPlugin
     {
         //int n = 0;//TEST
