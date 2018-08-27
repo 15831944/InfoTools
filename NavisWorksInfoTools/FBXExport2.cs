@@ -14,6 +14,7 @@ using System.IO;
 using System.Text.RegularExpressions;
 using ComApi = Autodesk.Navisworks.Api.Interop.ComApi;
 using ComApiBridge = Autodesk.Navisworks.Api.ComApi;
+using static NavisWorksInfoTools.Constants;
 
 namespace NavisWorksInfoTools
 {
@@ -159,8 +160,10 @@ namespace NavisWorksInfoTools
 
                 if (searchMatchesThisLevel)
                 {
-                    DataProperty idProp = item.PropertyCategories.FindPropertyByDisplayName(SetIds.IdDataTabDisplayName, SetIds.IdPropDisplayName);
-                    DataProperty matIdProp = item.PropertyCategories.FindPropertyByDisplayName(SetIds.IdDataTabDisplayName, SetIds.MaterialIdPropDisplayName);
+                    DataProperty idProp = item.PropertyCategories
+                        .FindPropertyByDisplayName(S1NF0_DATA_TAB_DISPLAY_NAME, ID_PROP_DISPLAY_NAME);
+                    DataProperty matIdProp = item.PropertyCategories
+                        .FindPropertyByDisplayName(S1NF0_DATA_TAB_DISPLAY_NAME, MATERIAL_ID_PROP_DISPLAY_NAME);
                     if (idProp != null && matIdProp != null)
                     {
                         //Поиск соответствующей строки в FBX

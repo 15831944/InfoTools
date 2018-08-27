@@ -14,6 +14,7 @@ using Autodesk.Navisworks.Internal.ApiImplementation;
 using System.IO;
 using ComApi = Autodesk.Navisworks.Api.Interop.ComApi;
 using ComApiBridge = Autodesk.Navisworks.Api.ComApi;
+using static NavisWorksInfoTools.Constants;
 
 namespace NavisWorksInfoTools
 {
@@ -134,7 +135,7 @@ namespace NavisWorksInfoTools
                 }
                 catch (Exception ex)
                 {
-                    CommonException(ex, "Ошибка при экспорте в FBX");
+                    CommonException(ex, "Ошибка при экспорте в FBX из Navis");
                 }
             }
 
@@ -156,21 +157,27 @@ namespace NavisWorksInfoTools
                 }
 
                 DataProperty idProp = item.PropertyCategories
-                    .FindPropertyByDisplayName(SetIds.IdDataTabDisplayName,
-                    SetIds.IdPropDisplayName);
+                    .FindPropertyByDisplayName(S1NF0_DATA_TAB_DISPLAY_NAME,
+                    ID_PROP_DISPLAY_NAME);
                 DataProperty matIdProp = item.PropertyCategories
-                    .FindPropertyByDisplayName(SetIds.IdDataTabDisplayName,
-                    SetIds.MaterialIdPropDisplayName);
+                    .FindPropertyByDisplayName(S1NF0_DATA_TAB_DISPLAY_NAME,
+                    MATERIAL_ID_PROP_DISPLAY_NAME);
                 if (idProp == null || matIdProp == null)
                 {
                     //Запускать простановку id перед выгрузкой в fbx, чтобы не решать проблему, когда частично не проставлены id
-                    SetIds.SetIdToItem(oState, item);
+                    Utils.SetS1NF0PropsToItem(oState, item,
+                    new Dictionary<string, object>()
+                    {
+                    { ID_PROP_DISPLAY_NAME, Utils.S1NF0PropSpecialValue.RandomGUID},
+                    { MATERIAL_ID_PROP_DISPLAY_NAME, "_"}
+                    });
+
                     idProp = item.PropertyCategories
-                        .FindPropertyByDisplayName(SetIds.IdDataTabDisplayName,
-                        SetIds.IdPropDisplayName);
+                        .FindPropertyByDisplayName(S1NF0_DATA_TAB_DISPLAY_NAME,
+                        ID_PROP_DISPLAY_NAME);
                     matIdProp = item.PropertyCategories
-                        .FindPropertyByDisplayName(SetIds.IdDataTabDisplayName,
-                        SetIds.MaterialIdPropDisplayName);
+                        .FindPropertyByDisplayName(S1NF0_DATA_TAB_DISPLAY_NAME,
+                       MATERIAL_ID_PROP_DISPLAY_NAME);
                 }
 
 

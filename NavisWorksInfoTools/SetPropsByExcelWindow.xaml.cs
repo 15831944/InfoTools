@@ -14,6 +14,7 @@ using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using System.Windows.Shapes;
 using Excel = Microsoft.Office.Interop.Excel;
+using static NavisWorksInfoTools.Constants;
 
 namespace NavisWorksInfoTools
 {
@@ -386,7 +387,8 @@ namespace NavisWorksInfoTools
                 && navisDataTabComboBox.SelectedItem != null
                 && navisPropertyComboBox.SelectedItem != null
                 && TabelHeader != null && TabelHeader.Count > 0
-                && !String.IsNullOrWhiteSpace(tabNameTextBox.Text) && !tabNameTextBox.Text.Equals(SetIds.IdDataTabDisplayName))
+                && !String.IsNullOrWhiteSpace(tabNameTextBox.Text)
+                && !tabNameTextBox.Text.Equals(S1NF0_DATA_TAB_DISPLAY_NAME))
                 {
                     okButton.IsEnabled = true;
                 }

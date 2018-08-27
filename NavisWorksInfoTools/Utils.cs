@@ -6,6 +6,7 @@ using System.Text;
 using System.Threading.Tasks;
 using ComApi = Autodesk.Navisworks.Api.Interop.ComApi;
 using ComApiBridge = Autodesk.Navisworks.Api.ComApi;
+using static NavisWorksInfoTools.Constants;
 
 namespace NavisWorksInfoTools
 {
@@ -45,7 +46,7 @@ namespace NavisWorksInfoTools
             DataProperty propToCopy)
         {
             object value = GetUserPropValue(propToCopy.Value);
-            if (value!=null)
+            if (value != null)
             {
                 return Utils.CreateNewUserProp(oState, propToCopy.DisplayName, value);
             }
@@ -64,7 +65,7 @@ namespace NavisWorksInfoTools
         }
 
         /// <summary>
-        /// Получить значение пользовательского свойства
+        /// Получить значение свойства, которое можно присвоить пользовательскому свойству
         /// </summary>
         /// <param name="variantData"></param>
         /// <returns></returns>
@@ -156,7 +157,7 @@ namespace NavisWorksInfoTools
         /// <returns></returns>
         public static object ObjectToSetAsUserPropertyValue(object valueObj)
         {
-            if(valueObj is string || valueObj is int || valueObj is double || valueObj is bool)
+            if (valueObj is string || valueObj is int || valueObj is double || valueObj is bool)
             {
                 return valueObj;
             }
@@ -167,6 +168,89 @@ namespace NavisWorksInfoTools
         }
 
 
-       
+        /// <summary>
+        /// Значение передаваемое в качестве значения для свойства в методе SetS1NF0PropsToItem для создания случа
+        /// </summary>
+        public enum S1NF0PropSpecialValue
+        {
+            RandomGUID,
+        }
+
+        /// <summary>
+        /// Добавить служебные свойства S1NF0 если их еще нет
+        /// Не меняет свойства если они уже есть
+        /// Возвращает true если свойства объекта отредактированы
+        /// </summary>
+        /// <param name="oState"></param>
+        /// <param name="item"></param>
+        /// <param name="propValues"></param>
+        public static bool SetS1NF0PropsToItem(ComApi.InwOpState3 oState, ModelItem item, Dictionary<string, object> propValues)
+        {
+            ComApi.InwOaPropertyVec propsToSet
+                                    = oState.ObjectFactory(ComApi.nwEObjectType.eObjectType_nwOaPropertyVec);
+
+            //convert the .NET collection to COM object
+            ComApi.InwOaPath oPath = ComApiBridge.ComApiBridge.ToInwOaPath(item);
+            //Получить текущие свойства элемента
+            ComApi.InwGUIPropertyNode2 propertyNode
+                = (ComApi.InwGUIPropertyNode2)oState.GetGUIPropertyNode(oPath, true);
+            //Поиск панели Id
+            int indexToSet = 0;
+            int i = 1;
+
+
+            foreach (ComApi.InwGUIAttribute2 attr in propertyNode.GUIAttributes())
+            {
+                if (attr.UserDefined)
+                {
+                    if (attr.ClassUserName.Equals(S1NF0_DATA_TAB_DISPLAY_NAME))
+                    {
+                        indexToSet = i;
+                        foreach (ComApi.InwOaProperty prop in attr.Properties())
+                        {
+                            if (propValues.ContainsKey(prop.UserName))
+                            {
+                                propValues.Remove(prop.UserName);
+                            }
+
+                            propsToSet.Properties().Add(Utils.CopyProp(oState, prop));
+                        }
+
+                    }
+                    else
+                    {
+                        i++;
+                    }
+                }
+            }
+
+            if (propValues.Count > 0)
+            {
+                foreach (KeyValuePair<string, object> kvp in propValues)
+                {
+                    string propName = kvp.Key;
+                    object value = kvp.Value;
+                    if (value is S1NF0PropSpecialValue)
+                    {
+                        if ((S1NF0PropSpecialValue)value == S1NF0PropSpecialValue.RandomGUID)
+                        {
+                            value = Guid.NewGuid().ToString();
+                        }
+                        else
+                        {
+                            value = "_";
+                        }
+                    }
+                    
+                    propsToSet.Properties().Add(CreateNewUserProp(oState, propName, value));
+                }
+
+                propertyNode.SetUserDefined(indexToSet, S1NF0_DATA_TAB_DISPLAY_NAME, "S1NF0", propsToSet);
+                return true;
+            }
+            return false;
+        }
+
+
     }
 }

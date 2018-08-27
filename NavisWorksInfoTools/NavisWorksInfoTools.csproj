@@ -34,11 +34,12 @@
     <Reference Include="Autodesk.Navisworks.Api">
       <HintPath>D:\Program Files\Autodesk\Navisworks Manage 2018\Autodesk.Navisworks.Api.dll</HintPath>
     </Reference>
-    <Reference Include="Autodesk.Navisworks.ComApi">
+    <Reference Include="Autodesk.Navisworks.ComApi, Version=15.0.1314.36, Culture=neutral, PublicKeyToken=d85e58fa5af9b484, processorArchitecture=AMD64">
+      <SpecificVersion>False</SpecificVersion>
       <HintPath>D:\Program Files\Autodesk\Navisworks Manage 2018\Autodesk.Navisworks.ComApi.dll</HintPath>
     </Reference>
     <Reference Include="Autodesk.Navisworks.Interop.ComApi">
-      <HintPath>C:\Program Files\Autodesk\Navisworks Manage 2018\Autodesk.Navisworks.Interop.ComApi.dll</HintPath>
+      <HintPath>D:\Program Files\Autodesk\Navisworks Manage 2018\Autodesk.Navisworks.Interop.ComApi.dll</HintPath>
       <EmbedInteropTypes>True</EmbedInteropTypes>
     </Reference>
     <Reference Include="PresentationCore" />
@@ -60,6 +61,7 @@
     <Compile Include="ChangeLinksProps.xaml.cs">
       <DependentUpon>ChangeLinksProps.xaml</DependentUpon>
     </Compile>
+    <Compile Include="Constants.cs" />
     <Compile Include="FBXExport3.cs" />
     <Compile Include="FBX\ASCIIModelNamesEditor.cs" />
     <Compile Include="FBX\BinaryModelNamesEditor.cs" />
@@ -76,6 +78,7 @@
     <Compile Include="SetPropsWindow.xaml.cs">
       <DependentUpon>SetPropsWindow.xaml</DependentUpon>
     </Compile>
+    <Compile Include="SetS1NF0Props.cs" />
     <Compile Include="Utils.cs" />
   </ItemGroup>
   <ItemGroup>

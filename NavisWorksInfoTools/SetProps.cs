@@ -9,6 +9,7 @@ using System.Threading.Tasks;
 using static Common.ExceptionHandling.ExeptionHandlingProcedures;
 using ComApi = Autodesk.Navisworks.Api.Interop.ComApi;
 using ComApiBridge = Autodesk.Navisworks.Api.ComApi;
+using static NavisWorksInfoTools.Constants;
 
 namespace NavisWorksInfoTools
 {
@@ -22,6 +23,17 @@ namespace NavisWorksInfoTools
         DisplayName = "Заполнить атрибуты")]
     public class SetProps : AddInPlugin
     {
+        /// <summary>
+        /// Свойства, которые не должны изменяться с помощью этой команды
+        /// </summary>
+        private static HashSet<string> propsNotModifiable = new HashSet<string>()
+        {
+            ID_PROP_DISPLAY_NAME,
+            PROPER_NAME_PROP_DISPLAY_NAME,
+            PARENT_PROP_DISPLAY_NAME
+        };
+
+
         public override int Execute(params string[] parameters)
         {
             try
@@ -75,9 +87,8 @@ namespace NavisWorksInfoTools
                                 DisplayDataTab dataTab = new DisplayDataTab() { DisplayName = c.DisplayName };
                                 foreach (DataProperty p in c.Properties)
                                 {
-                                    if (/*p.Value.IsDisplayString &&*/
-                                        (!c.DisplayName.Equals(SetIds.IdDataTabDisplayName)
-                                        || !p.DisplayName.Equals(SetIds.IdPropDisplayName)))//Не переносить в окно свойство Id объекта!!!
+                                    if ((!c.DisplayName.Equals(S1NF0_DATA_TAB_DISPLAY_NAME)
+                                        || !propsNotModifiable.Contains(p.DisplayName)))
                                     {
                                         dataTab.DisplayProperties
                                             .Add(new DisplayProperty()
@@ -142,13 +153,14 @@ namespace NavisWorksInfoTools
                         setPropsWindow.URLs.RemoveAll(dUrl =>
                         String.IsNullOrEmpty(dUrl.DisplayName) || String.IsNullOrEmpty(dUrl.URL));
 
-                        //Если пользователь зачем-то ввел значение свойства Id, то убрать его (Id должны быть уникальными)
-                        DisplayDataTab idDataTab = setPropsWindow.DataTabs.Find(ddt => ddt.DisplayName.Equals(SetIds.IdDataTabDisplayName));
+                        //Если пользователь зачем-то ввел значение нередактируемого свойства, то убрать его
+                        DisplayDataTab idDataTab
+                            = setPropsWindow.DataTabs.Find(ddt => ddt.DisplayName.Equals(S1NF0_DATA_TAB_DISPLAY_NAME));
                         
                         if (idDataTab != null)
                         {
                             idDataTab.DisplayProperties.RemoveAll(p
-                                => p.DisplayName.Equals(SetIds.IdPropDisplayName));
+                                => propsNotModifiable.Contains(p.DisplayName));
                         }
 
                         //Конвертировать значения всех свойств
@@ -191,7 +203,7 @@ namespace NavisWorksInfoTools
 
                         foreach (DisplayDataTab ddt in setPropsWindow.DataTabs)
                         {
-                            if (!ddt.DisplayName.Equals(SetIds.IdDataTabDisplayName))
+                            if (!ddt.DisplayName.Equals(S1NF0_DATA_TAB_DISPLAY_NAME))
                             {
                                 ddt.InwOaPropertyVec = (ComApi.InwOaPropertyVec)oState
                                         .ObjectFactory(ComApi.nwEObjectType.eObjectType_nwOaPropertyVec,
@@ -203,7 +215,6 @@ namespace NavisWorksInfoTools
                                             = Utils.CreateNewUserProp(oState, dp.DisplayName, dp.Value);
                                     // add the new property to the new property category
                                     ddt.InwOaPropertyVec.Properties().Add(newP);
-
                                 }
                             }
                         }
@@ -243,14 +254,17 @@ namespace NavisWorksInfoTools
 
                                 ComApi.InwOaPropertyVec idDataTabPropertyVecCurr = idDataTabPropertyVec.Copy();
 
-                                //Добавить свойство Id если оно есть в исходном
-                                DataProperty idProp = item.PropertyCategories
-                                    .FindPropertyByDisplayName(SetIds.IdDataTabDisplayName,
-                                    SetIds.IdPropDisplayName);
-                                if (idProp != null && idProp.Value.IsDisplayString)
+                                //Добавить нередактируемые свойства если они есть в исходном
+                                foreach (string dn in propsNotModifiable)
                                 {
-                                    ComApi.InwOaProperty copyProp = Utils.CopyProp(oState, idProp);
-                                    idDataTabPropertyVecCurr.Properties().Add(copyProp);
+                                    DataProperty prop = item.PropertyCategories
+                                    .FindPropertyByDisplayName(S1NF0_DATA_TAB_DISPLAY_NAME, dn);
+
+                                    if (prop!=null)
+                                    {
+                                        ComApi.InwOaProperty copyProp = Utils.CopyProp(oState, prop);
+                                        idDataTabPropertyVecCurr.Properties().Add(copyProp);
+                                    }
                                 }
 
 
@@ -271,7 +285,7 @@ namespace NavisWorksInfoTools
                                     //Создание панели Id
                                     if (idDataTabPropertyVecCurr.Properties().Count > 0)
                                     {
-                                        propn.SetUserDefined(0, SetIds.IdDataTabDisplayName, "S1NF0",
+                                        propn.SetUserDefined(0, S1NF0_DATA_TAB_DISPLAY_NAME, "S1NF0",
                                             idDataTabPropertyVecCurr);
                                     }
                                     
