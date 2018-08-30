@@ -1,0 +1,60 @@
+﻿<Window x:Class="NavisWorksInfoTools.S1NF0_SOFTWARE.StructureWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:local="clr-namespace:NavisWorksInfoTools.S1NF0_SOFTWARE"
+        mc:Ignorable="d"
+        Title="Структура проекта" Height="736.266" Width="754.287" Loaded="Window_Loaded" WindowStartupLocation="CenterScreen" Closing="Window_Closing">
+
+
+    <!--import the conversion class-->
+    <!--<Control.Resources>
+        <local:ObjValueConverter x:Key="ObjValueConverter"/>
+    </Control.Resources>-->
+    <!--<Window.Resources>
+        <local:BoolToVisibilityConverter x:Key="converter"/>
+    </Window.Resources>-->
+
+
+    <Grid>
+        <!--<ScrollViewer x:Name="scrollViewer" Focusable="False" FocusManager.IsFocusScope="False">-->
+        <TreeView Name="structureTree" Margin="10,10,157,57"
+                  ItemsSource="{Binding Path=NestedDisplayObjects}" SelectedItemChanged="structureTree_SelectedItemChanged">
+            <TreeView.ItemContainerStyle>
+                <Style TargetType="{x:Type TreeViewItem}">
+                    <Setter Property="IsExpanded" Value="True" />
+                    <EventSetter Event="Selected" Handler="TreeViewSelectedItemChanged" />
+                </Style>
+            </TreeView.ItemContainerStyle>
+            <TreeView.ItemTemplate >
+                <HierarchicalDataTemplate  ItemsSource="{Binding Path=NestedDisplayObjects }">
+                    <TextBlock Text="{Binding Path=DisplayName}" Foreground ="{Binding Path=Color}" />
+                </HierarchicalDataTemplate>
+            </TreeView.ItemTemplate>
+        </TreeView>
+        <!--</ScrollViewer>-->
+        <Button Name="addItemsButton" Margin="0,0,10,230" VerticalAlignment="Bottom" Height="78" HorizontalAlignment="Right" Width="142" IsEnabled="False" Click="addItemsButton_Click">
+            <TextBlock TextWrapping="Wrap" Text="Добавить выбранные объекты геометрии в узел структуры" Height="65" Width="117"/>
+        </Button>
+        <Button Name="removeItemsButton" Margin="0,0,10,181" HorizontalAlignment="Right" Width="142" Height="44" VerticalAlignment="Bottom" Click="removeItemsButton_Click" IsEnabled="False">
+            <TextBlock TextWrapping="Wrap" Text="Удалить все объекты геометрии из узла" Height="34" Width="118"/>
+        </Button>
+        <Button Name="saveButton" Margin="0,0,10,59" Height="56" VerticalAlignment="Bottom" HorizontalAlignment="Right" Width="142" Background="#FFB8F075" Click="saveButton_Click">
+            <TextBlock TextWrapping="Wrap" Text="Сохранить отредактированную структуру" Height="55" Width="121"/>
+        </Button>
+        <Button Name="canсelButton" Margin="0,0,10,10" HorizontalAlignment="Right" Width="97" Height="44" VerticalAlignment="Bottom" Background="#FFEA9F9F" Click="canсelButton_Click">
+            <TextBlock TextWrapping="Wrap" Text="Отменить редактирование" Height="34"/>
+        </Button>
+        <Button Name="selectNotAddedButton" Margin="0,0,10,120" HorizontalAlignment="Right" Width="142" Height="56" VerticalAlignment="Bottom" Click="selectNotAddedButton_Click">
+            <TextBlock TextWrapping="Wrap" Text="Показать еще не добавленные объекты" Height="53" Width="117"/>
+        </Button>
+        <Label Content="Узлы, содержащие объекты геометрии из других документов Navis" HorizontalAlignment="Left" Margin="10,0,0,31" VerticalAlignment="Bottom" Foreground="Blue"/>
+        <Label Content="Узлы, содержащие объекты геометрии из текущего документа Navis" HorizontalAlignment="Left" Margin="10,0,0,10" Foreground="Red" Height="26" VerticalAlignment="Bottom"/>
+        <Label Content="Выбрано - " Margin="0,10,81,0" VerticalAlignment="Top" HorizontalAlignment="Right" Width="71"/>
+        <Label Content="Добавлено - " Margin="0,35,69,0" VerticalAlignment="Top" HorizontalAlignment="Right" Width="83"/>
+        <Label Name="selectedCountLabel" Content="0" HorizontalAlignment="Right" Margin="0,10,32,0" VerticalAlignment="Top"/>
+        <Label Name="addedCountLabel" Content="0" HorizontalAlignment="Right" Margin="0,35,32,0" VerticalAlignment="Top"/>
+
+    </Grid>
+</Window>

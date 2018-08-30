@@ -11,12 +11,12 @@ using ComApiBridge = Autodesk.Navisworks.Api.ComApi;
 using Win = System.Windows;
 using static Common.ExceptionHandling.ExeptionHandlingProcedures;
 
-namespace NavisWorksInfoTools
+namespace NavisWorksInfoTools.S1NF0_SOFTWARE
 {
-    [Plugin("SetS1NF0Props",
+    [Plugin("1SetS1NF0Props",
         "S-Info",
         ToolTip = "Добавить служебные свойства S1NF0 со значениями по умолчанию",
-        DisplayName = "Добавить служебные свойства")]
+        DisplayName = S1NF0_APP_NAME + ". 1. Добавить служебные свойства")]
     public class SetS1NF0Props : AddInPlugin
     {
         private static int editedCount = 0;
@@ -27,23 +27,29 @@ namespace NavisWorksInfoTools
         /// <returns></returns>
         public override int Execute(params string[] parameters)
         {
-            try
-            {
-                //Все элементы модели получают свойство Id и Id материала (пустое)
-                ComApi.InwOpState3 oState = ComApiBridge.ComApiBridge.State;
+            Win.MessageBoxResult result = Win.MessageBox.Show("Начать раздачу служебных свойств S1NF0?", "Добавить служебные свойства", Win.MessageBoxButton.YesNo);
 
-                Document doc = Application.ActiveDocument;
-                ModelItemEnumerableCollection rootItems = doc.Models.RootItems;
-                editedCount = 0;
-                SetTreePropsRecurse(rootItems, oState, "ROOT");
-
-                Win.MessageBox.Show("Всего объектов с добавленными свойствами - " + editedCount,
-                    "Готово", Win.MessageBoxButton.OK, Win.MessageBoxImage.Information);
-            }
-            catch (Exception ex)
+            if (result == Win.MessageBoxResult.Yes)
             {
-                CommonException(ex, "Ошибка при раздаче служебных свойств S1NF0 в Navis");
+                try
+                {
+                    //Все элементы модели получают свойство Id и Id материала (пустое)
+                    ComApi.InwOpState3 oState = ComApiBridge.ComApiBridge.State;
+
+                    Document doc = Application.ActiveDocument;
+                    ModelItemEnumerableCollection rootItems = doc.Models.RootItems;
+                    editedCount = 0;
+                    SetTreePropsRecurse(rootItems, oState, "ROOT");
+
+                    Win.MessageBox.Show("Всего объектов с добавленными свойствами - " + editedCount,
+                        "Готово", Win.MessageBoxButton.OK, Win.MessageBoxImage.Information);
+                }
+                catch (Exception ex)
+                {
+                    CommonException(ex, "Ошибка при раздаче служебных свойств S1NF0 в Navis");
+                }
             }
+                
 
             return 0;
         }

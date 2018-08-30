@@ -14,5 +14,6 @@ namespace NavisWorksInfoTools
         public const string PROPER_NAME_PROP_DISPLAY_NAME  = "NodeName";
         public const string PARENT_PROP_DISPLAY_NAME  = "ParentNode";
 
+        public const string S1NF0_APP_NAME = "Myakish";
     }
 }

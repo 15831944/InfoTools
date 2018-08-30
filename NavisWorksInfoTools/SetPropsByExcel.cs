@@ -24,8 +24,6 @@ namespace NavisWorksInfoTools
         //Открытые панели могут тормозить работу программы
 
 
-        //TODO: Проверить поиск в Excel если в ячейке находится не строка
-
         private int matchCount = 0;
         public override int Execute(params string[] parameters)
         {
