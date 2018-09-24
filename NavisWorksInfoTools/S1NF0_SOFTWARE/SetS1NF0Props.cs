@@ -13,8 +13,8 @@ using static Common.ExceptionHandling.ExeptionHandlingProcedures;
 
 namespace NavisWorksInfoTools.S1NF0_SOFTWARE
 {
-    [Plugin("1SetS1NF0Props",
-        "S-Info",
+    [Plugin("SetS1NF0Props",
+        DEVELOPER_ID,
         ToolTip = "Добавить служебные свойства S1NF0 со значениями по умолчанию",
         DisplayName = S1NF0_APP_NAME + ". 1. Добавить служебные свойства")]
     public class SetS1NF0Props : AddInPlugin

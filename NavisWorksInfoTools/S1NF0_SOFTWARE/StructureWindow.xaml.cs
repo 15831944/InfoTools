@@ -69,13 +69,13 @@ namespace NavisWorksInfoTools.S1NF0_SOFTWARE
             
         }
 
-        private DataStorage dataStorage = null;
+        private StructureDataStorage dataStorage = null;
 
         //private static double verticalOffset = -1;
         private static bool finalClose = false;
 
         private XML.St.Object selectedItem = null;
-        public StructureWindow(DataStorage dataStorage)
+        public StructureWindow(StructureDataStorage dataStorage)
         {
             finalClose = false;
 
@@ -112,6 +112,7 @@ namespace NavisWorksInfoTools.S1NF0_SOFTWARE
         private void EnableRemoveItemsButton()
         {
             removeItemsButton.IsEnabled = selectedItem != null;
+            removeAllItemsButton.IsEnabled = selectedItem != null;
         }
 
         private void addItemsButton_Click(object sender, RoutedEventArgs e)
@@ -120,8 +121,9 @@ namespace NavisWorksInfoTools.S1NF0_SOFTWARE
             {
                 foreach (ModelItem item in selectedNotAddedGeometryModelItems)
                 {
-                    dataStorage.CreateNewObject(selectedItem, item);
+                    dataStorage.CreateNewModelObject(selectedItem, item);
                 }
+                selectedItem.NotifyPropertyChanged();//Оповестить только один раз в конце!
                 SetSelectedNotAddedGeometryModelItems();
             }
             EnableAddItemsButton();
@@ -138,20 +140,29 @@ namespace NavisWorksInfoTools.S1NF0_SOFTWARE
             EnableRemoveItemsButton();
         }
 
+        private void removeAllItemsButton_Click(object sender, RoutedEventArgs e)
+        {
+            if (selectedItem != null)
+            {
+                dataStorage.RemoveNestedObjectsOtherDocuments(selectedItem);
+            }
+            EnableAddItemsButton();
+            EnableRemoveItemsButton();
+        }
+
         private void selectNotAddedButton_Click(object sender, RoutedEventArgs e)
         {
             this.Close();
-            dataStorage.SelectNotAdded();
+            dataStorage.SelectAdded();
         }
 
         private void saveButton_Click(object sender, RoutedEventArgs e)
         {
             finalClose = true;
             this.Close();
-            //verticalOffset = -1;//Забыть значение положения скролбара
             //Сериализовать объекты
             dataStorage.SerializeStruture();
-            GetStructure.DataStorage = null;
+            AddObjectsToStructure.DataStorage = null;
             MessageBox.Show("Данные сохранены", "Готово", MessageBoxButton.OK);
         }
 
@@ -160,7 +171,7 @@ namespace NavisWorksInfoTools.S1NF0_SOFTWARE
             finalClose = true;
             this.Close();
             //verticalOffset = -1;//Забыть значение положения скролбара
-            GetStructure.DataStorage = null;
+            AddObjectsToStructure.DataStorage = null;
         }
 
 
@@ -186,6 +197,8 @@ namespace NavisWorksInfoTools.S1NF0_SOFTWARE
             
 
         }
+
+        
     }
 
 }

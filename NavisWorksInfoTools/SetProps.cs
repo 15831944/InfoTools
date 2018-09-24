@@ -18,7 +18,7 @@ namespace NavisWorksInfoTools
     /// http://adndevblog.typepad.com/aec/2012/08/addmodifyremove-custom-attribute-using-com-api.html
     /// </summary>
     [Plugin("SetProps",
-        "S-Info",
+        DEVELOPER_ID,
         ToolTip = "Заполнить атрибуты",
         DisplayName = "Заполнить атрибуты")]
     public class SetProps : AddInPlugin
@@ -60,6 +60,19 @@ namespace NavisWorksInfoTools
                         foreach (DataProperty oDP in oPC.Properties)
                         {
                             Debug.Print("\t[Display Name]: " + oDP.DisplayName + "\t[Internal Name]:" + oDP.Name + "\t[Value]: " + oDP.Value.ToString());
+                            //if (oDP.Value.IsNamedConstant)
+                            //{
+                            //    NamedConstant namedConstant = oDP.Value.ToNamedConstant();
+                            //    int v = namedConstant.Value;
+                            //    string bn = namedConstant.BaseName;
+                            //    string dn = namedConstant.DisplayName;
+
+                            //    NamedConstant clone = new NamedConstant(v, bn, dn);
+                            //    bool eq1 = namedConstant.Equals(clone);
+                            //    VariantData vd1 = new VariantData(namedConstant);
+                            //    VariantData vd2 = new VariantData(clone);
+                            //    bool eq2 = vd1.Equals(vd2);
+                            //}
                         }
                     }
 

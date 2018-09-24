@@ -37,11 +37,29 @@ namespace NavisWorksInfoTools.S1NF0_SOFTWARE.XML.Cl
         }
 
         /// <summary>
-        /// СВОЙСТВА МОГУТ ИМЕТЬ ОДИНАКОВЫЕ ИМЕНА. В МЯКИШЕ ВСЕ ИМЕНА ДОЛЖНЫ БЫТЬ РАЗНЫМИ
+        /// Так как в мякише названия свойств становятся названиями полей таблиц базы данных
+        /// к ним предъявляются особые требования
         /// </summary>
-        public void DeleteDuplicateProps()
+        public void PropsCorrection()
         {
-            Properties = (new SortedSet<Property>(Properties)).ToList();
+            Properties = PropsCorrection(Properties);
+        }
+
+
+        public static List<Property> PropsCorrection(List<Property> clProps)
+        {
+            List<Property> editedProps = new List<Property>(clProps);
+            //УДАЛИТЬ ВСЕ НЕДОПУСТИМЫЕ СИМВОЛЫ В НАЗВАНИЯХ СВОЙСТВ
+            //ДЛИНА НАЗВАНИЯ СВОЙСТВА НЕ БОЛЕЕ 127 СИМВОЛОВ
+            foreach (Property p in editedProps)
+            {
+                p.Name = Utils.GetSafeS1NF0AppPropName(p.Name);
+            }
+
+            //СВОЙСТВА МОГУТ ИМЕТЬ ОДИНАКОВЫЕ ИМЕНА. В МЯКИШЕ ВСЕ ИМЕНА ДОЛЖНЫ БЫТЬ РАЗНЫМИ. УДАЛИТЬ ДУБЛИКАТЫ
+            editedProps = (new SortedSet<Property>(editedProps)).ToList();
+
+            return editedProps;
         }
     }
 }

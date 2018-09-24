@@ -14,7 +14,7 @@ using Autodesk.Navisworks.Api.Plugins;
 namespace NavisWorksInfoTools
 {
     //[Plugin("SetCustomNesting",
-    //    "S-Info",
+    //    DEVELOPER_ID,
     //    ToolTip = "Задание свойства вложенности объектов",
     //    DisplayName = "Настройка вложенности")]
     public class SetCustomNesting : AddInPlugin

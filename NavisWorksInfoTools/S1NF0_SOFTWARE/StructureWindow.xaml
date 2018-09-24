@@ -5,7 +5,7 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:local="clr-namespace:NavisWorksInfoTools.S1NF0_SOFTWARE"
         mc:Ignorable="d"
-        Title="Структура проекта" Height="736.266" Width="754.287" Loaded="Window_Loaded" WindowStartupLocation="CenterScreen" Closing="Window_Closing">
+        Title="Структура проекта" Height="735.266" Width="757.287" Loaded="Window_Loaded" WindowStartupLocation="CenterScreen" Closing="Window_Closing">
 
 
     <!--import the conversion class-->
@@ -34,11 +34,14 @@
             </TreeView.ItemTemplate>
         </TreeView>
         <!--</ScrollViewer>-->
-        <Button Name="addItemsButton" Margin="0,0,10,230" VerticalAlignment="Bottom" Height="78" HorizontalAlignment="Right" Width="142" IsEnabled="False" Click="addItemsButton_Click">
+        <Button Name="addItemsButton" Margin="0,0,10,312" VerticalAlignment="Bottom" Height="78" HorizontalAlignment="Right" Width="142" Click="addItemsButton_Click" IsEnabled="False">
             <TextBlock TextWrapping="Wrap" Text="Добавить выбранные объекты геометрии в узел структуры" Height="65" Width="117"/>
         </Button>
-        <Button Name="removeItemsButton" Margin="0,0,10,181" HorizontalAlignment="Right" Width="142" Height="44" VerticalAlignment="Bottom" Click="removeItemsButton_Click" IsEnabled="False">
-            <TextBlock TextWrapping="Wrap" Text="Удалить все объекты геометрии из узла" Height="34" Width="118"/>
+        <Button Name="removeItemsButton" Margin="0,0,10,249" HorizontalAlignment="Right" Width="142" Height="58" VerticalAlignment="Bottom" Click="removeItemsButton_Click" IsEnabled="False">
+            <TextBlock TextWrapping="Wrap" Text="Удалить все объекты геометрии текущего документа из узла" Height="53" Width="118" Foreground="Red"/>
+        </Button>
+        <Button Name="removeAllItemsButton" Margin="0,0,10,181" HorizontalAlignment="Right" Width="142" Height="63" VerticalAlignment="Bottom" Click="removeAllItemsButton_Click" IsEnabled="False">
+            <TextBlock TextWrapping="Wrap" Text="Удалить все объекты геометрии других документов из узла" Height="53" Width="121" Foreground="Blue"/>
         </Button>
         <Button Name="saveButton" Margin="0,0,10,59" Height="56" VerticalAlignment="Bottom" HorizontalAlignment="Right" Width="142" Background="#FFB8F075" Click="saveButton_Click">
             <TextBlock TextWrapping="Wrap" Text="Сохранить отредактированную структуру" Height="55" Width="121"/>
@@ -47,7 +50,7 @@
             <TextBlock TextWrapping="Wrap" Text="Отменить редактирование" Height="34"/>
         </Button>
         <Button Name="selectNotAddedButton" Margin="0,0,10,120" HorizontalAlignment="Right" Width="142" Height="56" VerticalAlignment="Bottom" Click="selectNotAddedButton_Click">
-            <TextBlock TextWrapping="Wrap" Text="Показать еще не добавленные объекты" Height="53" Width="117"/>
+            <TextBlock TextWrapping="Wrap" Text="Выбрать уже добавленные объекты" Height="53" Width="117"/>
         </Button>
         <Label Content="Узлы, содержащие объекты геометрии из других документов Navis" HorizontalAlignment="Left" Margin="10,0,0,31" VerticalAlignment="Bottom" Foreground="Blue"/>
         <Label Content="Узлы, содержащие объекты геометрии из текущего документа Navis" HorizontalAlignment="Left" Margin="10,0,0,10" Foreground="Red" Height="26" VerticalAlignment="Bottom"/>
@@ -55,6 +58,7 @@
         <Label Content="Добавлено - " Margin="0,35,69,0" VerticalAlignment="Top" HorizontalAlignment="Right" Width="83"/>
         <Label Name="selectedCountLabel" Content="0" HorizontalAlignment="Right" Margin="0,10,32,0" VerticalAlignment="Top"/>
         <Label Name="addedCountLabel" Content="0" HorizontalAlignment="Right" Margin="0,35,32,0" VerticalAlignment="Top"/>
+
 
     </Grid>
 </Window>

@@ -11,11 +11,12 @@ using Excel = Microsoft.Office.Interop.Excel;
 using ComApi = Autodesk.Navisworks.Api.Interop.ComApi;
 using ComApiBridge = Autodesk.Navisworks.Api.ComApi;
 using System.IO;
+using static NavisWorksInfoTools.Constants;
 
 namespace NavisWorksInfoTools
 {
     [Plugin("SetPropsByExcel",
-        "S-Info",
+        DEVELOPER_ID,
         ToolTip = "Заполнить атрибуты по таблице Excel",
         DisplayName = "Заполнить атрибуты по таблице Excel")]
     class SetPropsByExcel : AddInPlugin

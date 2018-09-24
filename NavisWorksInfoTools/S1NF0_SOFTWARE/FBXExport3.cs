@@ -17,11 +17,11 @@ using static NavisWorksInfoTools.Constants;
 
 namespace NavisWorksInfoTools
 {
-    [Plugin("2FBXExport",
-        "S-Info",
+    [Plugin("FBXExport",
+        DEVELOPER_ID,
         ToolTip = "Экспорт в FBX с идентификацией объектов",
         DisplayName = S1NF0_APP_NAME + ". 2. Экспорт в FBX")]
-    public class FBXExport3 : AddInPlugin
+    public class FBXExport : AddInPlugin
     {
         private static HashSet<string> notReliableClassDisplayNames =
             new HashSet<string>()
@@ -165,7 +165,7 @@ namespace NavisWorksInfoTools
                 string baseName, replacementName;
                 bool baseNameTrustable;
                 object id;
-                CreateReplacementName(oState, item, out baseName, out baseNameTrustable, out replacementName, out id);
+                CreateReplacementName(oState, item, out baseName, out baseNameTrustable, out replacementName, out id, true);
 
                 replacements.Enqueue(new FBX.NameReplacement(baseName, baseNameTrustable, replacementName));
 
@@ -173,8 +173,20 @@ namespace NavisWorksInfoTools
             }
         }
 
+        /// <summary>
+        /// Создает имя с id для экспорта в fbx
+        /// 
+        /// </summary>
+        /// <param name="oState"></param>
+        /// <param name="item"></param>
+        /// <param name="baseName"></param>
+        /// <param name="baseNameTrustable"></param>
+        /// <param name="replacementName"></param>
+        /// <param name="id"></param>
+        /// <param name="createIdIfNotExists">ЕСЛИ У ОБЪЕКТА НЕТ ID, ТО ОН БУДЕТ СОЗДАН</param>
         public static void CreateReplacementName(ComApi.InwOpState3 oState, ModelItem item,
-            out string baseName, out bool baseNameTrustable, out string replacementName, out object id)
+            out string baseName, out bool baseNameTrustable, out string replacementName, out object id,
+            bool createIdIfNotExists)
         {
             DataProperty idProp = item.PropertyCategories
                                 .FindPropertyByDisplayName(S1NF0_DATA_TAB_DISPLAY_NAME,
@@ -184,20 +196,32 @@ namespace NavisWorksInfoTools
                 MATERIAL_ID_PROP_DISPLAY_NAME);
             if (idProp == null || matIdProp == null)
             {
-                //Запускать простановку id перед выгрузкой в fbx, чтобы не решать проблему, когда частично не проставлены id
-                Utils.SetS1NF0PropsToItem(oState, item,
-                new Dictionary<string, object>()
+                if (createIdIfNotExists)
                 {
+                    //Запускать простановку id перед выгрузкой в fbx, чтобы не решать проблему, когда частично не проставлены id
+                    Utils.SetS1NF0PropsToItem(oState, item,
+                    new Dictionary<string, object>()
+                    {
                     { ID_PROP_DISPLAY_NAME, Utils.S1NF0PropSpecialValue.RandomGUID},
                     { MATERIAL_ID_PROP_DISPLAY_NAME, "_"}
-                });
+                    });
 
-                idProp = item.PropertyCategories
-                    .FindPropertyByDisplayName(S1NF0_DATA_TAB_DISPLAY_NAME,
-                    ID_PROP_DISPLAY_NAME);
-                matIdProp = item.PropertyCategories
-                    .FindPropertyByDisplayName(S1NF0_DATA_TAB_DISPLAY_NAME,
-                   MATERIAL_ID_PROP_DISPLAY_NAME);
+                    idProp = item.PropertyCategories
+                        .FindPropertyByDisplayName(S1NF0_DATA_TAB_DISPLAY_NAME,
+                        ID_PROP_DISPLAY_NAME);
+                    matIdProp = item.PropertyCategories
+                        .FindPropertyByDisplayName(S1NF0_DATA_TAB_DISPLAY_NAME,
+                       MATERIAL_ID_PROP_DISPLAY_NAME);
+                }
+                else
+                {
+                    id = null;
+                    replacementName = null;
+                    baseNameTrustable = false;
+                    baseName = null;
+                    return;
+                }
+                
             }
 
 
@@ -237,8 +261,15 @@ namespace NavisWorksInfoTools
             }
             id = Utils.GetDisplayValue(idProp.Value);
             replacementName = baseName + "|" + id + "|" + Utils.GetDisplayValue(matIdProp.Value);
+
+            return;
         }
 
+        /// <summary>
+        /// FBX файл в формате ASCII?
+        /// </summary>
+        /// <param name="fbxFilename"></param>
+        /// <returns></returns>
         private bool IsASCIIFBXFile(string fbxFilename)
         {
             bool yes = false;
@@ -258,6 +289,11 @@ namespace NavisWorksInfoTools
         }
 
 
+        /// <summary>
+        /// Прочитать версию из бинарного файла FBX
+        /// </summary>
+        /// <param name="fbxFilename"></param>
+        /// <returns></returns>
         private uint GetBinaryVersionNum(string fbxFilename)
         {
             uint versionNum = uint.MaxValue;

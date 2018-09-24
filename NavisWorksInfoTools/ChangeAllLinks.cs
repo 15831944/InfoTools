@@ -10,12 +10,13 @@ using ComApi = Autodesk.Navisworks.Api.Interop.ComApi;
 using ComApiBridge = Autodesk.Navisworks.Api.ComApi;
 using static Common.ExceptionHandling.ExeptionHandlingProcedures;
 using Win = System.Windows;
+using static NavisWorksInfoTools.Constants;
 
 
 namespace NavisWorksInfoTools
 {
     [Plugin("ChangeAllLinks",
-        "S-Info",
+        DEVELOPER_ID,
         ToolTip = "Поменять все ссылки",
         DisplayName = "Поменять все ссылки")]
     public class ChangeAllLinks : AddInPlugin

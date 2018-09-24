@@ -12,13 +12,13 @@ using Win = System.Windows;
 using static Common.ExceptionHandling.ExeptionHandlingProcedures;
 using System.Diagnostics;
 
-namespace NavisWorksInfoTools
+namespace NavisWorksInfoTools.S1NF0_SOFTWARE
 {
     //[Plugin("FBXExport",
-    //    "S-Info",
+    //    DEVELOPER_ID,
     //    ToolTip = "Экспорт в FBX",
     //    DisplayName = "Экспорт в FBX")]
-    class FBXExport : AddInPlugin
+    class FBXExport0 : AddInPlugin
     {
         //int n = 0;//TEST
         public override int Execute(params string[] parameters)

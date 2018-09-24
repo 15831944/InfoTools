@@ -19,7 +19,7 @@ using static NavisWorksInfoTools.Constants;
 namespace NavisWorksInfoTools
 {
     //[Plugin("FBXExport",
-    //    "S-Info",
+    //    DEVELOPER_ID,
     //    ToolTip = "Экспорт в FBX",
     //    DisplayName = "Экспорт в FBX")]
     public class FBXExport2 : AddInPlugin

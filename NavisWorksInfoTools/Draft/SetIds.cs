@@ -20,7 +20,7 @@ namespace NavisWorksInfoTools
     /// содержащие идентификаторы не должны перезаписываться другими командами
     /// </summary>
     //[Plugin("SetIds",
-    //    "S-Info",
+    //    DEVELOPER_ID,
     //    ToolTip = "Раздать идентификаторы",
     //    DisplayName = "Раздать идентификаторы")]
     public class SetIds : AddInPlugin

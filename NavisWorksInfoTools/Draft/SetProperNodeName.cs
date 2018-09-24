@@ -14,7 +14,7 @@ using Autodesk.Navisworks.Api.Plugins;
 namespace NavisWorksInfoTools
 {
     //[Plugin("SetProperNodeName",
-    //    "S-Info",
+    //    DEVELOPER_ID,
     //    ToolTip = "Задание свойства имени узла",
     //    DisplayName = "Настройка имени узла")]
     public class SetProperNodeName : AddInPlugin

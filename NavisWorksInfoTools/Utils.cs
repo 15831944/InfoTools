@@ -257,5 +257,19 @@ namespace NavisWorksInfoTools
         }
 
 
+        public static string GetSafeS1NF0AppPropName(string propName)
+        {
+            //ДЛИНА НАЗВАНИЯ СВОЙСТВА НЕ БОЛЕЕ 127 СИМВОЛОВ
+            if (propName.Length>127)
+            {
+                propName = propName.Substring(0, 127);
+            }
+
+            //УДАЛИТЬ ВСЕ НЕДОПУСТИМЫЕ СИМВОЛЫ В НАЗВАНИЯХ СВОЙСТВ
+            propName = string.Join("_", propName.Split(new char[] { '[', ']', '(', ')', '{', '}', '/', '\\'})).Trim();
+
+            return propName;
+        }
+
     }
 }

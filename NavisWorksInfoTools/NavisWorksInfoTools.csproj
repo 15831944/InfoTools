@@ -34,6 +34,7 @@
   <ItemGroup>
     <Reference Include="AdWindows">
       <HintPath>D:\Program Files\Autodesk\Navisworks Manage 2018\AdWindows.dll</HintPath>
+      <Private>False</Private>
     </Reference>
     <Reference Include="Autodesk.Navisworks.Api">
       <HintPath>D:\Program Files\Autodesk\Navisworks Manage 2018\Autodesk.Navisworks.Api.dll</HintPath>
@@ -48,6 +49,7 @@
     </Reference>
     <Reference Include="navisworks.gui.roamer">
       <HintPath>D:\Program Files\Autodesk\Navisworks Manage 2018\navisworks.gui.roamer.dll</HintPath>
+      <Private>False</Private>
     </Reference>
     <Reference Include="PresentationCore" />
     <Reference Include="PresentationFramework" />
@@ -68,16 +70,21 @@
     <Compile Include="ChangeLinksProps.xaml.cs">
       <DependentUpon>ChangeLinksProps.xaml</DependentUpon>
     </Compile>
+    <Compile Include="S1NF0_RibbonPanel.cs" />
     <Compile Include="Constants.cs" />
-    <Compile Include="EventController.cs" />
+    <Compile Include="Draft\EventController.cs" />
+    <Compile Include="S1NF0_SOFTWARE\CreateStructure.cs" />
     <Compile Include="S1NF0_SOFTWARE\FBXExport3.cs" />
     <Compile Include="FBX\ASCIIModelNamesEditor.cs" />
     <Compile Include="FBX\BinaryModelNamesEditor.cs" />
     <Compile Include="FBX\ModelNamesEditor.cs" />
-    <Compile Include="FBXExport.cs" />
-    <Compile Include="FBXExport2.cs" />
-    <Compile Include="S1NF0_SOFTWARE\DataStorage.cs" />
-    <Compile Include="S1NF0_SOFTWARE\GetStructure.cs" />
+    <Compile Include="Draft\FBXExport.cs" />
+    <Compile Include="Draft\FBXExport2.cs" />
+    <Compile Include="S1NF0_SOFTWARE\SelectRootFolderWindow.xaml.cs">
+      <DependentUpon>SelectRootFolderWindow.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="S1NF0_SOFTWARE\StructureDataStorage.cs" />
+    <Compile Include="S1NF0_SOFTWARE\AddObjectsToStructure.cs" />
     <Compile Include="S1NF0_SOFTWARE\StructureWindow.xaml.cs">
       <DependentUpon>StructureWindow.xaml</DependentUpon>
     </Compile>
@@ -88,9 +95,9 @@
     <Compile Include="S1NF0_SOFTWARE\XML\St\Property.cs" />
     <Compile Include="S1NF0_SOFTWARE\XML\St\Structure.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
-    <Compile Include="SetCustomNesting.cs" />
-    <Compile Include="SetIds.cs" />
-    <Compile Include="SetProperNodeName.cs" />
+    <Compile Include="Draft\SetCustomNesting.cs" />
+    <Compile Include="Draft\SetIds.cs" />
+    <Compile Include="Draft\SetProperNodeName.cs" />
     <Compile Include="SetProps.cs" />
     <Compile Include="SetPropsByExcel.cs" />
     <Compile Include="SetPropsByExcelWindow.xaml.cs">
@@ -100,10 +107,19 @@
       <DependentUpon>SetPropsWindow.xaml</DependentUpon>
     </Compile>
     <Compile Include="S1NF0_SOFTWARE\SetS1NF0Props.cs" />
+    <Compile Include="Test.cs" />
     <Compile Include="Utils.cs" />
   </ItemGroup>
   <ItemGroup>
     <Page Include="ChangeLinksProps.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="S1NF0_RibbonPanel.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="S1NF0_SOFTWARE\SelectRootFolderWindow.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>
@@ -156,6 +172,25 @@
       <Isolated>False</Isolated>
       <EmbedInteropTypes>True</EmbedInteropTypes>
     </COMReference>
+  </ItemGroup>
+  <ItemGroup>
+    <Resource Include="Images\SetProps.png" />
+  </ItemGroup>
+  <ItemGroup>
+    <Resource Include="Images\ChangeAllLinks.png" />
+  </ItemGroup>
+  <ItemGroup>
+    <Resource Include="Images\SetPropsByExcel.png" />
+  </ItemGroup>
+  <ItemGroup>
+    <Resource Include="Images\SetS1NF0Props.png" />
+  </ItemGroup>
+  <ItemGroup>
+    <Resource Include="Images\FBXExport.png" />
+  </ItemGroup>
+  <ItemGroup>
+    <Resource Include="Images\AddObjectsToStructure.png" />
+    <Resource Include="Images\CreateStructure.png" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
 </Project>

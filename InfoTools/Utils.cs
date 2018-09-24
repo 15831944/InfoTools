@@ -115,7 +115,7 @@ namespace Civil3DInfoTools
         /// <returns></returns>
         public static string GetSafeSymbolName(string name)
         {
-            return string.Join("_", name.Split(new char[] { '<', '>', '/', '\\', '"', '"', ':', ';', '?', '*', '|', ',', '=', '`' }));
+            return string.Join("_", name.Split(new char[] { '<', '>', '/', '\\', '"', '"', ':', ';', '?', '*', '|', ',', '=', '`' })).Trim();
         }
 
         /// <summary>
@@ -407,7 +407,20 @@ namespace Civil3DInfoTools
             Point2d minPt1 = ext1_2d.MinPoint;
             Point2d maxPt2 = ext2_2d.MaxPoint;
             Point2d minPt2 = ext2_2d.MinPoint;
+            return BoxesAreSuperimposed(maxPt1, minPt1, maxPt2, minPt2);
+        }
 
+        /// <summary>
+        /// 2 BoundingBox накладываются друг на друга
+        /// </summary>
+        /// <param name="maxPt1"></param>
+        /// <param name="minPt1"></param>
+        /// <param name="maxPt2"></param>
+        /// <param name="minPt2"></param>
+        /// <returns></returns>
+        public static bool BoxesAreSuperimposed
+            (Point2d maxPt1, Point2d minPt1, Point2d maxPt2, Point2d minPt2)
+        {
             //Характеристики двух прямоугольников
             double dX1 = maxPt1.X - minPt1.X;
             double dY1 = maxPt1.Y - minPt1.Y;
@@ -739,8 +752,61 @@ namespace Civil3DInfoTools
         }
 
 
+        public static bool SpecifyWindow(out Point3d? pt1, out Point3d? pt2, Editor adocEd)
+        {
+            pt1 = null;
+            pt2 = null;
+            Point3d _pt1 = new Point3d();
+            Point3d _pt2 = new Point3d();
+
+            PromptPointOptions ppo = new PromptPointOptions("\n\tУкажите первый угол рамки: ");
+            PromptPointResult ppr = adocEd.GetPoint(ppo);
+            if (ppr.Status != PromptStatus.OK) return false;
+            PromptCornerOptions pco = new PromptCornerOptions("\n\tУкажите второй угол рамки: ", ppr.Value);
+            PromptPointResult pcr = adocEd.GetCorner(pco);
+            if (pcr.Status != PromptStatus.OK) return false;
+            _pt1 = ppr.Value;
+            _pt2 = pcr.Value;
+            if (_pt1.X == _pt2.X || _pt1.Y == _pt2.Y)
+            {
+                adocEd.WriteMessage("\nНеправильно указаны точки");
+                return false;
+            }
+
+            pt1 = _pt1;
+            pt2 = _pt2;
+            return true;
+        }
+
+        public static void ZoomWin(Editor ed, Point3d pt1, Point3d pt2)
+        {
+            ViewTableRecord view =
+              new ViewTableRecord();
+
+            view.CenterPoint = new Point2d((pt1.X + pt2.X) / 2, (pt1.Y + pt2.Y) / 2);
+            view.Height = Math.Abs(pt1.Y - pt2.Y);
+            view.Width = Math.Abs(pt1.X - pt2.X);
+            ed.SetCurrentView(view);
+        }
 
 
+        public static void Highlight(IEnumerable<Entity> selectedPolylines, bool yes)
+        {
+            if (selectedPolylines != null)
+                foreach (Entity p in selectedPolylines)
+                {
+                    if (yes)
+                    {
+                        p.Highlight();
+                    }
+                    else
+                    {
+                        p.Unhighlight();
+                    }
+                }
+        }
+
+        
 
     }
 }

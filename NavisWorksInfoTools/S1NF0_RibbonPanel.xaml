@@ -1,0 +1,68 @@
+﻿<?xml version="1.0" encoding="utf-8" ?>
+<!-- BEGIN STANDARD SECTION DO NOT EDIT 
+    except for ensuring x:Uid="CustomRibbonTab" has a unique ID
+    -->
+<RibbonControl
+    x:Uid="NavisWorksInfoTools"
+    xmlns="clr-namespace:Autodesk.Windows;assembly=AdWindows"
+    xmlns:wpf="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:adwi="clr-namespace:Autodesk.Internal.Windows;assembly=AdWindows"
+    xmlns:system="clr-namespace:System;assembly=mscorlib"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:local="clr-namespace:Autodesk.Navisworks.Gui.Roamer.AIRLook;assembly=navisworks.gui.roamer">
+    <!-- END STANDARD SECTION DO NOT EDIT -->
+
+    <RibbonTab Id="ID_S1NF0_RibbonTab">
+        <RibbonPanel x:Uid="Props_Panel">
+            <RibbonPanelSource x:Uid="Props_PanelSource" Title="Свойства">
+
+                <local:NWRibbonButton x:Uid="ChangeAllLinks_Button" Id="ID_ChangeAllLinks_Button"
+                            Size="Large"
+                            ShowText="True"
+                            Text="Поменять все ссылки"
+                            Orientation="Vertical"/>
+                <local:NWRibbonButton x:Uid="SetProps_Button" Id="ID_SetProps_Button"
+                            Size="Large"
+                            ShowText="True"
+                            Text="Заполнить атрибуты"
+                            Orientation="Vertical"/>
+                <local:NWRibbonButton x:Uid="SetPropsByExcel_Button" Id="ID_SetPropsByExcel_Button"
+                            Size="Large"
+                            ShowText="True"
+                            Text="Заполнить атрибуты по таблице Excel"
+                            Orientation="Vertical"/>
+
+            </RibbonPanelSource>
+        </RibbonPanel>
+
+        <RibbonPanel x:Uid="S1NF0_SOFTWARE_Panel">
+            <RibbonPanelSource x:Uid="S1NF0_SOFTWARE_PanelSource" Title="S1NF0_SOFTWARE">
+                <local:NWRibbonButton x:Uid="SetS1NF0Props_Button" Id="ID_SetS1NF0Props_Button"
+                            Size="Large"
+                            ShowText="True"
+                            Text="Добавить служебные свойства"
+                            Orientation="Vertical"/>
+                <local:NWRibbonButton x:Uid="FBXExport_Button" Id="ID_FBXExport_Button"
+                            Size="Large"
+                            ShowText="True"
+                            Text="Экспорт в FBX"
+                            Orientation="Vertical"/>
+                <local:NWRibbonButton x:Uid="AddObjectsToStructure_Button" Id="ID_AddObjectsToStructure_Button"
+                            Size="Large"
+                            ShowText="True"
+                            Text="Добавление объектов модели в структуру"
+                            Orientation="Vertical"/>
+                <local:NWRibbonButton x:Uid="CreateStructure_Button" Id="ID_CreateStructure_Button"
+                            Size="Large"
+                            ShowText="True"
+                            Text="Создание структуры из наборов выбора"
+                            Orientation="Vertical"/>
+
+
+            </RibbonPanelSource>
+        </RibbonPanel>
+
+    </RibbonTab>
+
+</RibbonControl>
+

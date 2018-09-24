@@ -9,7 +9,7 @@ using System.Threading.Tasks;
 namespace NavisWorksInfoTools
 {
     //НЕ РАБОТАЕТ!!!
-    //[Plugin("EventWatcher", "S-Info",
+    //[Plugin("EventWatcher", DEVELOPER_ID,
     //  DisplayName = "Event Watcher", SupportsIsSelfEnabled = false)]
 
     //class EventController : EventWatcherPlugin

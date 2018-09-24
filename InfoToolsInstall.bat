@@ -41,6 +41,7 @@ xcopy Civil3DInfoTools.bundle /E /I /F /Y %autodeskBundlePath%\Civil3DInfoTools.
 
 echo сярюмнбйю (намнбкемхе) бшонкмемн сяоеьмн
 pause 
+exit
 
 :ABORTED
 	echo сярюмнбйю (намнбкемхе) ме гюбепьемн

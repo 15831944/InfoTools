@@ -22,6 +22,13 @@ namespace Civil3DInfoTools.AuxiliaryCommands
     {
         private static short colorIndex = 82;
 
+        private static bool firstTimeCall = true;
+
+        private static bool selectOnlyPolylines = true;
+
+        private static bool setColor = true;
+
+
         /// <summary>
         /// Выбор полилиний, указание текстового примитива, создание блока с этими полилиниями и названием из указанного текста
         /// </summary>
@@ -35,18 +42,79 @@ namespace Civil3DInfoTools.AuxiliaryCommands
 
             Editor ed = adoc.Editor;
 
-            List<Polyline> selectedPolylines = null;
+            List<Entity> selectedPolylines = null;
+
+
 
             try
             {
-                //Выбор полилиний
-                TypedValue[] tv = new TypedValue[]
+                if (firstTimeCall)
                 {
-                new TypedValue(0, "LWPOLYLINE")
-                };
-                SelectionFilter flt = new SelectionFilter(tv);
+                    while (true)
+                    {
+                        string kw1 = selectOnlyPolylines ? "НЕТолькоПолилинии" : "ТолькоПолилинии";
+                        string kw2 = setColor ? "ВсеЦветаПоСлою" : "МенятьЦвет";
+                        PromptKeywordOptions pko = new PromptKeywordOptions(
+                            "\nВыбор только полилиний - " + selectOnlyPolylines +
+                            "\nМенять цвет объектов в блоке - " + setColor +
+                            "\nЗадайте параметры или пустой ввод для продолжения");
+                        pko.Keywords.Add(kw1);
+                        pko.Keywords.Add(kw2);
+                        pko.AllowNone = true;
+                        PromptResult pr = ed.GetKeywords(pko);
+                        if (pr.Status == PromptStatus.Cancel)
+                        {
+                            return;
+                        }
+                        if (String.IsNullOrEmpty(pr.StringResult))
+                        {
+                            break;
+                        }
+                        if (pr.StringResult.Equals(kw1))
+                        {
+                            selectOnlyPolylines = !selectOnlyPolylines;
+                        }
+                        else if (pr.StringResult.Equals(kw2))
+                        {
+                            setColor = !setColor;
+                        }
+
+
+                    }
+
+                    Application.DocumentManager.DocumentActivated += DocumentActivated_EventHandler;
+
+
+
+                    firstTimeCall = false;
+                }
+
+
+                //Выбор полилиний
+                
                 PromptSelectionOptions pso = new PromptSelectionOptions();
-                pso.MessageForAdding = "\nВыберите полилинии границ участка";
+                pso.MessageForAdding = selectOnlyPolylines ? "\nВыберите полилинии границ участка" : "\nВыберите объекты";
+                
+                SelectionFilter flt = null;
+                if (selectOnlyPolylines)
+                {
+                    TypedValue[] tv = new TypedValue[]
+                    {
+                    new TypedValue(0, "LWPOLYLINE")
+                    };
+                    flt = new SelectionFilter(tv);
+                    
+                }
+                else
+                {
+                    TypedValue[] tv = new TypedValue[]
+                    {
+                         new TypedValue(-4, "<NOT"),
+                         new TypedValue(0, "INSERT"),
+                         new TypedValue(-4, "NOT>")
+                    };
+                    flt = new SelectionFilter(tv);
+                }
                 PromptSelectionResult acSSPrompt = adoc.Editor.GetSelection(pso, flt);
 
                 if (acSSPrompt.Status == PromptStatus.OK)
@@ -54,28 +122,28 @@ namespace Civil3DInfoTools.AuxiliaryCommands
                     SelectionSet acSSet = acSSPrompt.Value;
 
                     //Подсветить выбранные полилинии
-                    selectedPolylines = new List<Polyline>();
+                    selectedPolylines = new List<Entity>();
                     using (Transaction tr = db.TransactionManager.StartTransaction())
                     {
                         foreach (ObjectId id in acSSet.GetObjectIds())
                         {
-                            Polyline polyline = (Polyline)tr.GetObject(id, OpenMode.ForRead);
-                            selectedPolylines.Add(polyline);
+                            Entity ent = (Entity)tr.GetObject(id, OpenMode.ForRead);
+                            selectedPolylines.Add(ent);
                         }
                         tr.Commit();
                     }
-                    Highlight(selectedPolylines, true);
+                    Utils.Highlight(selectedPolylines, true);
 
 
                     //Указание текстового примитива
-                    PromptEntityOptions peo1 = new PromptEntityOptions("\nУкажите текстовый примитив с названием участка");
+                    PromptEntityOptions peo1 = new PromptEntityOptions("\nУкажите текстовый примитив для создания атрибута");
                     peo1.SetRejectMessage("\nМожно выбрать только поверхность TIN");
                     peo1.AddAllowedClass(typeof(DBText), true);
                     PromptEntityResult per1 = ed.GetEntity(peo1);
                     if (per1.Status == PromptStatus.OK)
                     {
                         //Снять подсветку
-                        Highlight(selectedPolylines, false);
+                        Utils.Highlight(selectedPolylines, false);
 
                         string blockName = null;
 
@@ -119,10 +187,9 @@ namespace Civil3DInfoTools.AuxiliaryCommands
                             //odTable = odTables["ReferenceNumber"];
 
 
-
                             //Создание нового блока
                             BlockTableRecord btr = new BlockTableRecord();
-                            btr.Name = blockName;
+                            btr.Name = blockName.Trim();
                             ObjectId btrId = bt.Add(btr);
                             tr.AddNewlyCreatedDBObject(btr, true);
 
@@ -131,24 +198,30 @@ namespace Civil3DInfoTools.AuxiliaryCommands
                             //Копирование всех полилиний в созданный блок
                             foreach (ObjectId id in acSSet.GetObjectIds())
                             {
-                                Polyline polyline = (Polyline)tr.GetObject(id, OpenMode.ForRead);
+                                Entity polyline = (Entity)tr.GetObject(id, OpenMode.ForRead);
                                 if (layerId == ObjectId.Null)
                                     layerId = polyline.LayerId;//Запомнить слой.
 
-                                Polyline polylineCopy = (Polyline)polyline.Clone();
-                                polylineCopy.Elevation = 0.0;
-                                //Поменять цвет на красный
-                                polylineCopy.ColorIndex = colorIndex;
+                                Entity polylineCopy = (Entity)polyline.Clone();
+                                if (polylineCopy is Polyline)
+                                    (polylineCopy as Polyline).Elevation = 0.0;
+
+                                //Поменять цвет
+                                if (setColor)
+                                    polylineCopy.ColorIndex = colorIndex;
+                                else
+                                    polylineCopy.ColorIndex = 256;//По слою
 
                                 objectIdCollection.Add(btr.AppendEntity(polylineCopy));
                                 tr.AddNewlyCreatedDBObject(polylineCopy, true);
                             }
 
+
                             //Создать атрибут внутри блока
                             //using (Transaction trAttr = db.TransactionManager.StartTransaction())
                             using (AttributeDefinition acAttDef = new AttributeDefinition())
                             {
-                                acAttDef.Position = dBText.Position;
+                                acAttDef.Position = dBText.Position != Point3d.Origin ? dBText.Position : dBText.AlignmentPoint;
                                 acAttDef.Verifiable = true;
                                 acAttDef.Prompt = "Условный номер";
                                 acAttDef.Tag = "ReferenceNumber";
@@ -156,7 +229,10 @@ namespace Civil3DInfoTools.AuxiliaryCommands
                                 acAttDef.Height = dBText.Height;
                                 acAttDef.Justify = dBText.Justify;
                                 acAttDef.TextStyleId = dBText.TextStyleId;
-                                acAttDef.ColorIndex = colorIndex;
+                                if (setColor)
+                                    acAttDef.ColorIndex = colorIndex;
+                                else
+                                    acAttDef.ColorIndex = 256;//По слою
                                 acAttDef.WidthFactor = dBText.WidthFactor;
                                 acAttDef.LayerId = dBText.LayerId;
 
@@ -166,34 +242,42 @@ namespace Civil3DInfoTools.AuxiliaryCommands
                             }
 
                             //Создать штриховку http://adndevblog.typepad.com/autocad/2012/07/hatch-using-the-autocad-net-api.html
-                            using (Hatch oHatch = new Hatch())
+                            if (selectOnlyPolylines)
                             {
-
-                                try
+                                using (Hatch oHatch = new Hatch())
                                 {
-                                    Vector3d normal = new Vector3d(0.0, 0.0, 1.0);
-                                    oHatch.Normal = normal;
-                                    oHatch.Elevation = 0.0;
-                                    oHatch.PatternScale = objectIdCollection.Count == 1 ? 2.0 : 10.0;
-                                    oHatch.SetHatchPattern(HatchPatternType.PreDefined, "ANSI37");
-                                    oHatch.ColorIndex = colorIndex;
 
-                                    btr.AppendEntity(oHatch);
-                                    tr.AddNewlyCreatedDBObject(oHatch, true);
-
-                                    oHatch.Associative = true;
-                                    foreach (ObjectId id in objectIdCollection)
+                                    try
                                     {
-                                        oHatch.AppendLoop((int)HatchLoopTypes.Default, new ObjectIdCollection() { id });
-                                    }
+                                        Vector3d normal = new Vector3d(0.0, 0.0, 1.0);
+                                        oHatch.Normal = normal;
+                                        oHatch.Elevation = 0.0;
+                                        oHatch.PatternScale = objectIdCollection.Count == 1 ? 2.0 : 10.0;
+                                        oHatch.SetHatchPattern(HatchPatternType.PreDefined, "ANSI37");
+                                        if (setColor)
+                                            oHatch.ColorIndex = colorIndex;
+                                        else
+                                            oHatch.ColorIndex = 256;//По слою
+                                        oHatch.LayerId = layerId;
 
-                                    oHatch.EvaluateHatch(true);
-                                }
-                                catch (System.Exception)
-                                {
-                                    try { oHatch.Erase(true); } catch { }
+                                        btr.AppendEntity(oHatch);
+                                        tr.AddNewlyCreatedDBObject(oHatch, true);
+
+                                        oHatch.Associative = true;
+                                        foreach (ObjectId id in objectIdCollection)
+                                        {
+                                            oHatch.AppendLoop((int)HatchLoopTypes.Default, new ObjectIdCollection() { id });
+                                        }
+
+                                        oHatch.EvaluateHatch(true);
+                                    }
+                                    catch (System.Exception)
+                                    {
+                                        try { oHatch.Erase(true); } catch { }
+                                    }
                                 }
                             }
+
 
 
                             //Создание вхождения этого блока
@@ -244,25 +328,15 @@ namespace Civil3DInfoTools.AuxiliaryCommands
             finally
             {
                 //Снять подсветку
-                Highlight(selectedPolylines, false);
+                Utils.Highlight(selectedPolylines, false);
             }
         }
 
 
-        private void Highlight(List<Polyline> selectedPolylines, bool yes)
+
+        private void DocumentActivated_EventHandler(object sender, DocumentCollectionEventArgs e)
         {
-            if (selectedPolylines != null)
-                foreach (Polyline p in selectedPolylines)
-                {
-                    if (yes)
-                    {
-                        p.Highlight();
-                    }
-                    else
-                    {
-                        p.Unhighlight();
-                    }
-                }
+            firstTimeCall = true;
         }
     }
 }
