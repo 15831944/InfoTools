@@ -115,7 +115,7 @@ namespace Civil3DInfoTools.SurfaceMeshByBoundary
             //Определить какие узлы представляют внешнюю границу, а какие внутреннюю
             ResolveOuterBoundary(Root, false);
 
-            //Определить пересечения всех полилиний с ребрами поверхностей. Добавление точек полилиний в графоы треугольников
+            //Определить пересечения всех полилиний с ребрами поверхностей. Добавление точек полилиний в графы треугольников
             TraversePolylines(Root);
 
             //Расчитать координаты Z всех точек
@@ -1475,7 +1475,18 @@ namespace Civil3DInfoTools.SurfaceMeshByBoundary
 
                                     Line line = new Line(pt1, pt2);
                                     line.LayerId = PolylineNesting.Root.NestedNodes.First().Polyline.LayerId;
-                                    line.Color = SurfaceMeshByBoundaryCommand.ColorForBorder;
+                                    if (!SurfaceMeshByBoundaryCommand.ColorForBorder.IsByLayer)
+                                    {
+                                        line.Color = SurfaceMeshByBoundaryCommand.ColorForBorder;
+                                    }
+                                    else
+                                    {
+                                        LayerTableRecord layer = (LayerTableRecord)Polyline.LayerId.GetObject(OpenMode.ForRead);
+                                        Color dimmerColor = Utils.GetDimmerColor(layer.Color,
+                                            SurfaceMeshByBoundaryCommand.BORDER_DIM_MULTIPLIER);
+                                        line.Color = dimmerColor;
+                                    }
+                                    
 
                                     lines.Add(line);
                                 }

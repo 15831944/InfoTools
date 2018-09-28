@@ -8,6 +8,7 @@ EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "IWScripts", "IWScripts", "{78A68C2D-98BA-453D-87C9-38495183C90A}"
 	ProjectSection(SolutionItems) = preProject
 		IWScript_ExtractGeometryCoordinates.js = IWScript_ExtractGeometryCoordinates.js
+		IWScript_GetBuildingDescriptions.js = IWScript_GetBuildingDescriptions.js
 	EndProjectSection
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "RevitInfoTools", "RevitInfoTools\RevitInfoTools.csproj", "{72166630-ED93-46C9-9459-C646AF6BB41F}"

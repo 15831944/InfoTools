@@ -34,7 +34,7 @@
             <Label Content="Название вкладки данных пользователя:" Margin="0,0,0,0" Grid.Row="6"/>
             <Label Content="Игнорировать скрытые элементы:" Margin="0,0,0,0" Grid.Row="7"/>
 
-            <custom:FileNameInputControl Name="fileNameInput" OpenFileDialogFilter ="Excel files (*.xlsx;*.xls)|*.xlsx;*.xls"
+            <custom:FileNameInputControl Name="fileNameInput" OpenFileDialogFilter ="Excel files (*.xlsx;*.xls)|*.xlsx;*.xls;"
                                          OpenFileDialogTitle ="Выберите файл Excel" Grid.Row="0" HorizontalAlignment="Left"
                                          Width="544" Margin="0,0,0,0"
                                          FileNameChanged ="FileNameChanged" Grid.Column="1" Height="Auto"/>

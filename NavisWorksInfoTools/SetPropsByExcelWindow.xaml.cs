@@ -201,7 +201,16 @@ namespace NavisWorksInfoTools
                 try
                 {
                     workbooks = OXL.Workbooks;
-                    OWB = workbooks.Open(ExcelPath, 0, true);
+                    string ext = System.IO.Path.GetExtension(ExcelPath);
+                    //if (ext != "csv")
+                    //{
+                        OWB = workbooks.Open(ExcelPath, 0, true);
+                    //}
+                    //else
+                    //{
+                    //    OWB = workbooks.Open(ExcelPath, 0, true, Excel.XlFileFormat.xlCSVMSDOS,
+                    //        Type.Missing, Type.Missing, Type.Missing, Type.Missing, ";");
+                    //}
 
                     if (OWB != null)
                     {
@@ -220,7 +229,7 @@ namespace NavisWorksInfoTools
                     {
                         //System.Runtime.InteropServices.Marshal.ReleaseComObject(workbooks);
                     }
-                        
+
                     if (sheets != null)
                     {
                         //System.Runtime.InteropServices.Marshal.ReleaseComObject(sheets);
@@ -228,7 +237,7 @@ namespace NavisWorksInfoTools
 
                 }
 
-                
+
             }
 
             excelSheetComboBox.ItemsSource = excelWorkSheets;
@@ -274,7 +283,7 @@ namespace NavisWorksInfoTools
                     //System.Runtime.InteropServices.Marshal.ReleaseComObject(ws);
                 }
             }
-            
+
 
 
             //Закрытие предыдущей используемой книги Excel
@@ -397,7 +406,7 @@ namespace NavisWorksInfoTools
                     okButton.IsEnabled = false;
                 }
             }
-            
+
         }
 
 
@@ -421,6 +430,6 @@ namespace NavisWorksInfoTools
             //CloseUsingExcel();
         }
 
-        
+
     }
 }

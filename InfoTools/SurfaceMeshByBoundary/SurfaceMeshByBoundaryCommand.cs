@@ -30,14 +30,22 @@ namespace Civil3DInfoTools.SurfaceMeshByBoundary
     //С выдавливанием по траектории есть много проблем
     //Попытался создать хотябы 3d полилинию, но при большом количестве таких полилиний модель невозможно открыть в Navis
     //ГОТОВО//TODO: Попробовать с простыми линиями. С ПРОСТЫМИ ЛИНИЯМИ ВСЕ РАБОТАЕТ ГОРАЗДО ЛУЧШЕ
-    //TODO: Попробовать для получения точек по границам использовать TinSurface.SampleElevations Method!!!
+    //ОТМЕНЕНО//TODO: Попробовать для получения точек по границам использовать TinSurface.SampleElevations Method!
+    //Этот метод возвращает единую коллекцию точек. Где пересечения с границами непонятно
+
+
     //ГОТОВО//TODO: Добавить запрос, нужно ли создавать границы (сделать запрос ключевых слов для настройки параметров)
     //ГОТОВО//TODO: Подсветить поверхность при выборе блоков (сохранять выбор поверхности для следующего раза)
 
     //ОТМЕНЕНО//TODO: Возможно лучше преобразовывать SubDMesh в Surface?
     //SubDMesh не всегда конвертируется в Surface (проблемы когда есть многократно вложенные островки)
 
-    //TODO: Попробовать разобраться с созданием островков внутри треугольников --- https://www.geometrictools.com/Documentation/TriangulationByEarClipping.pdf
+    //ГОТОВО//TODO: Попробовать разобраться с созданием островков внутри треугольников --- https://www.geometrictools.com/Documentation/TriangulationByEarClipping.pdf
+
+    //TODO: Учесть  eCannotScaleNonUniformly из-за растянутых блоков.
+    //Сначала нужно аппроксимировать полилинии с учетом самого большого из коэффициентов масштабирования (по X и Y)
+    //Затем точки полилинии пересчитать по трансформации блока
+
     //ГОТОВО//TODO: Если блок имеет более одного вхождения, то сеть создавать не внутри блока, а в пространстве модели. Но при этом слой использовать такой же как у полилинии
     //ГОТОВО//TODO: Сеть создавать в слое как у первой полилинии, находящейся на самом высоком уровне дерева вложенности полилиний
     //ГОТОВО//TODO: Добавить ввод возвышения над поверхностью (запоминать ввод)
@@ -48,13 +56,12 @@ namespace Civil3DInfoTools.SurfaceMeshByBoundary
 
     //TODO: Команду можно вызывать только из пространства модели документа
 
-    //TODO: Подробно изучить CurveCurveIntersector2d Class для расчета пересечений между кривыми!  IsTangential если линии только касаются в точке пересечения?
-    //Подумать об изменении процедуры проверки на пересечение с учетом того, что я узнал о Tolerance  Curve2d
+    //ОТМЕНЕНО//TODO: Подробно изучить CurveCurveIntersector2d Class для расчета пересечений между кривыми!  IsTangential если линии только касаются в точке пересечения?
+    //Алгоритм программы не позволит использовать контуры которые касаются друг друга - возможны сбои.
 
-    //TODO: Учесть  eCannotScaleNonUniformly из-за растянутых блоков. Сначала нужно аппроксимировать полилинии с учетом самого большого из коэффициентов масштабирования (по X и Y)
-    //Затем точки полилинии пересчитать по трансформации блока
 
-    //TODO: Учесть динамические блоки с несколькими состояниями видимости
+
+    //ГОТОВО//TODO: Учесть динамические блоки с несколькими состояниями видимости
 
 
 
@@ -66,6 +73,7 @@ namespace Civil3DInfoTools.SurfaceMeshByBoundary
 
         public static double MeshElevation { get; private set; } = 0.05;
 
+        public const double BORDER_DIM_MULTIPLIER = 0.5;
         public static Color ColorForBorder { get; private set; } = Color.FromColorIndex(ColorMethod.ByAci, 256);
 
         private static ObjectId tinSurfId = ObjectId.Null;
@@ -97,11 +105,9 @@ namespace Civil3DInfoTools.SurfaceMeshByBoundary
                 Color currColor = db.Cecolor;
                 if (!currColor.IsByLayer)//Если текущий слой не по слою, то расчитать более темный цвет для границ участков
                 {
-                    byte red = Convert.ToByte(currColor.Red * 0.5);
-                    byte green = Convert.ToByte(currColor.Green * 0.5);
-                    byte blue = Convert.ToByte(currColor.Blue * 0.5);
+                    Color dimmerColor = Utils.GetDimmerColor(currColor, BORDER_DIM_MULTIPLIER);
 
-                    ColorForBorder = Color.FromRgb(red, green, blue);
+                    ColorForBorder = dimmerColor;
                 }
                 else
                 {
@@ -136,7 +142,7 @@ namespace Civil3DInfoTools.SurfaceMeshByBoundary
                     pko.Keywords.Add(kw4);
                     pko.AllowNone = true;
                     PromptResult pr = ed.GetKeywords(pko);
-                    if (pr.Status== PromptStatus.Cancel)
+                    if (pr.Status == PromptStatus.Cancel)
                     {
                         return;
                     }
@@ -145,7 +151,7 @@ namespace Civil3DInfoTools.SurfaceMeshByBoundary
                     {
                         break;
                     }
-                
+
                     switch (pr.StringResult)
                     {
                         case kw1:
@@ -171,7 +177,7 @@ namespace Civil3DInfoTools.SurfaceMeshByBoundary
                             {
                                 return;
                             }
-                            
+
                             break;
                     }
                 }
@@ -368,7 +374,7 @@ namespace Civil3DInfoTools.SurfaceMeshByBoundary
                                                                 //Создание 3d линий по границе
                                                                 lines = polylineNesting.CreateBorderLines();
                                                             }
-                                                            
+
                                                             //Объекты постоены в координатах пространства модели
                                                             if (sdm != null)
                                                             {
@@ -457,6 +463,8 @@ namespace Civil3DInfoTools.SurfaceMeshByBoundary
 
         }
 
+
+
         private static void HighlightTinSurf(bool on)
         {
             try
@@ -476,12 +484,29 @@ namespace Civil3DInfoTools.SurfaceMeshByBoundary
                         tr.Commit();
                     }
             }
-            catch{}
+            catch { }
         }
 
         private static bool TinSurfIdIsValid()
         {
-            return !tinSurfId.IsNull && !tinSurfId.IsErased && !tinSurfId.IsEffectivelyErased && tinSurfId.IsValid;
+            bool idIsValid = !tinSurfId.IsNull && !tinSurfId.IsErased && !tinSurfId.IsEffectivelyErased && tinSurfId.IsValid;
+            if (idIsValid)
+            {
+                //Проверить что поверхность принадлежит текущему документу
+                bool inCurrentDoc = false;
+                using (Transaction tr = DB.TransactionManager.StartTransaction())
+                {
+                    TinSurface tinSurf = tr.GetObject(tinSurfId, OpenMode.ForRead) as TinSurface;
+                    inCurrentDoc = tinSurf != null;
+                    tr.Commit();
+                }
+                return inCurrentDoc;
+            }
+            else
+            {
+                return false;
+            }
+
         }
 
 
@@ -577,10 +602,10 @@ namespace Civil3DInfoTools.SurfaceMeshByBoundary
             }
             return false;
 
-            
+
         }
 
-        
+
 
 
         /// <summary>

@@ -283,6 +283,25 @@ namespace Civil3DInfoTools
 
         /// <summary>
         /// Определение находится ли точка внутри полилинии по методу winding number algorithm
+        /// Перегрузка для 3d точек. Точки рассматриваются в плане
+        /// </summary>
+        /// <param name="pt"></param>
+        /// <param name="pointsOfPolyline"></param>
+        /// <returns></returns>
+        public static bool PointIsInsidePolylineWindingNumber(Point3d pt, IEnumerable<Point3d> points3d)
+        {
+            Point2dCollection points = new Point2dCollection();
+            foreach (Point3d p in points3d)
+            {
+                points.Add(new Point2d(p.X, p.Y));
+            }
+
+            return PointIsInsidePolylineWindingNumber(new Point2d(pt.X, pt.Y), points);
+        }
+
+
+        /// <summary>
+        /// Определение находится ли точка внутри полилинии по методу winding number algorithm
         /// Не учитывается кривизна сегментов
         /// Основа взята отсюда - https://forums.autodesk.com/t5/net/check-if-the-point-inside-or-outside-the-polyline/m-p/5483878#M43117
         /// Подробности алгоритма - http://geomalgorithms.com/a03-_inclusion.html
@@ -529,7 +548,8 @@ namespace Civil3DInfoTools
         /// <param name="p4"></param>
         /// <param name="overlapping"></param>
         /// <returns></returns>
-        public static Point2d? GetLinesIntersectionCramer(Point2d p1, Point2d p2, Point2d p3, Point2d p4, out bool overlapping)
+        public static Point2d? GetLinesIntersectionCramer
+            (Point2d p1, Point2d p2, Point2d p3, Point2d p4, out bool overlapping)
         {
 
             Point2d? pt = null;
@@ -653,7 +673,6 @@ namespace Civil3DInfoTools
 
         /// <summary>
         /// Порядок точек в наборе соответствует обходу по часовой стрелки
-        /// Точки рассматриваются в горизонтальной плоскости
         /// https://stackoverflow.com/a/1165943
         /// </summary>
         /// <param name="poligon"></param>
@@ -670,17 +689,37 @@ namespace Civil3DInfoTools
             }
             return p > 0;
         }
+        /// <summary>
+        /// Порядок точек в наборе соответствует обходу по часовой стрелки
+        /// Точки рассматриваются в горизонтальной плоскости
+        /// https://stackoverflow.com/a/1165943
+        /// </summary>
+        /// <param name="poligon"></param>
+        /// <returns></returns>
+        public static bool DirectionIsClockwise(IList<Point3d> poligon)
+        {
+            int N = poligon.Count();
+            double p = 0;
+            for (int i = 0; i < N; i++)
+            {
+                Point3d p1 = poligon[i];
+                Point3d p2 = poligon[(i + 1) % N];
+                p += (p2.X - p1.X) * (p2.Y + p1.Y);
+            }
+            return p > 0;
+        }
+
 
         /// <summary>
         /// Получить произвольную точку, которая гарантировано лежит внутри полигона (не на границе)
         /// http://apodeline.free.fr/FAQ/CGAFAQ/CGAFAQ-3.html - 3.6 : How do I find a single point inside a simple polygon?
         /// </summary>
-        /// <param name="poligon"></param>
+        /// <param name="polygon"></param>
         /// <param name="counterClockwise"></param>
         /// <returns></returns>
-        public static Point2d GetAnyPointInsidePoligon(IList<Point2d> poligon, bool clockwise)
+        public static Point2d GetAnyPointInsidePoligon(IList<Point2d> polygon, bool clockwise)
         {
-            int N = poligon.Count();
+            int N = polygon.Count();
             //Найти выпуклую вершину
             int v_index = -1;//выпуклая вершина
             int a_index = -1;//смежная с выпуклой
@@ -691,13 +730,11 @@ namespace Civil3DInfoTools
                 int index2 = (i + 1) % N;
                 int index3 = (i + 2) % N;
 
-                Point2d p1 = poligon[index1];
-                Point2d p2 = poligon[index2];
-                Point2d p3 = poligon[index3];
+                Point2d p1 = polygon[index1];
+                Point2d p2 = polygon[index2];
+                Point2d p3 = polygon[index3];
 
-                double isLeft = IsLeft(p1, p2, p3);
-
-                if ((clockwise && isLeft < 0) || (!clockwise && isLeft > 0))
+                if (PolygonVertexIsConvex(p1, p2, p3, clockwise))
                 {
                     v_index = index2;
                     a_index = index1;
@@ -706,14 +743,14 @@ namespace Civil3DInfoTools
                 }
             }
 
-            if (v_index==-1)
+            if (v_index == -1)
             {
                 throw new Exception("Не найдено ни одной выпуклой вершины у полигона");
             }
 
-            Point2d v = poligon[v_index];
-            Point2d a = poligon[a_index];
-            Point2d b = poligon[b_index];
+            Point2d v = polygon[v_index];
+            Point2d a = polygon[a_index];
+            Point2d b = polygon[b_index];
             //расстояние до точки v расчитывается ортогонально линии ab
             Line2d lineToCalcDistance = new Line2d(v, b - a);
 
@@ -722,7 +759,7 @@ namespace Civil3DInfoTools
             double minDist = double.MaxValue;
             for (int i = (b_index + 1) % N; i != a_index; i = (i + 1) % N)
             {
-                Point2d q = poligon[i];
+                Point2d q = polygon[i];
                 double l1, l2;
                 //Если вершина находится внутри треугольника avb
                 if (BarycentricCoordinates(q, a, v, b, out l1, out l2)//Внутри треугольника
@@ -806,7 +843,43 @@ namespace Civil3DInfoTools
                 }
         }
 
-        
+        public static Color GetDimmerColor(Color currColor, double multiplier)
+        {
+            byte red = Convert.ToByte(currColor.Red * multiplier);
+            byte green = Convert.ToByte(currColor.Green * multiplier);
+            byte blue = Convert.ToByte(currColor.Blue * multiplier);
+            Color dimmerColor = Color.FromRgb(red, green, blue);
+            return dimmerColor;
+        }
+
+        /// <summary>
+        /// Вершина полигона выпуклая
+        /// (точки не лежат на одной линии)
+        /// </summary>
+        /// <param name="p1"></param>
+        /// <param name="p2"></param>
+        /// <param name="p3"></param>
+        /// <param name="polygonIsClockwise"></param>
+        /// <returns></returns>
+        public static bool PolygonVertexIsConvex(Point2d p1, Point2d p2, Point2d p3, bool polygonIsClockwise)
+        {
+            double isLeft = IsLeft(p1, p2, p3);
+            return (polygonIsClockwise && isLeft < 0) || (!polygonIsClockwise && isLeft > 0);
+        }
+        /// <summary>
+        /// Вершина полигона вогнутая
+        /// (точки не лежат на одной линии)
+        /// </summary>
+        /// <param name="p1"></param>
+        /// <param name="p2"></param>
+        /// <param name="p3"></param>
+        /// <param name="polygonIsClockwise"></param>
+        /// <returns></returns>
+        public static bool PolygonVertexIsReflex(Point2d p1, Point2d p2, Point2d p3, bool polygonIsClockwise)
+        {
+            double isLeft = IsLeft(p1, p2, p3);
+            return (polygonIsClockwise && isLeft > 0) || (!polygonIsClockwise && isLeft < 0);
+        }
 
     }
 }

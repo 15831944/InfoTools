@@ -185,7 +185,7 @@ namespace Civil3DInfoTools.SurfaceMeshByBoundary
                     LinkedList<PolylinePt> seq1 = sequences.First();
                     LinkedList<PolylinePt> seq2 = sequences.Last();
 
-                    
+
                     if (
                         //seq1.First().TinSurfaceEdge==null
                         seq2.Last().Parameter >= node.Polyline.EndParam - 1//Нужно проверить параметр последней точки последей последовательности (что он находится в пределах 1.00 от конечного параметра полилинии)
@@ -272,13 +272,13 @@ namespace Civil3DInfoTools.SurfaceMeshByBoundary
                 vgn.IsInnerVertex = polylineNesting.InnerVerts.Contains(verts[vgn.VertNum]);
             }
 
+
+            List<List<Point3d>> holes = new List<List<Point3d>>();
             //Добавление оставшихся узлов и ребер в граф
             foreach (PolylinePart pp in PolylineParts)
             {
-                
-
-                PolylinePt test = pp.PolylinePts.First();
-                if (test.TinSurfaceEdge != null || test.TinSurfaceVertex != null)//Эта полилиния пересекает треугольник?
+                PolylinePt check = pp.PolylinePts.First();
+                if (check.TinSurfaceEdge != null || check.TinSurfaceVertex != null)//Эта полилиния пересекает треугольник?
                 {
                     PolylinePt[] nodePts = new PolylinePt[]//Точки присоединения полилинии к границам треугольника
                     {
@@ -329,7 +329,7 @@ namespace Civil3DInfoTools.SurfaceMeshByBoundary
                 else
                 {
                     //Эта полилиния полностью находится внутри треугоьника
-                    //Эсли эта полилиния - внешняя граница, то добавить полигон по всем точкам полилинии
+                    //Если эта полилиния - внешняя граница, то добавить полигон по всем точкам полилинии
                     if (pp.PolylineNestingNode.IsOuterBoundary)
                     {
                         List<Point3d> poligon = new List<Point3d>();
@@ -341,12 +341,21 @@ namespace Civil3DInfoTools.SurfaceMeshByBoundary
                     }
                     else
                     {
-                        //Если эта полилиния ограничивает островок, то пока что проигнорировать ее.
-                        //TODO: В будущем нужно будет найти решение для такой ситуации
+                        //Если эта полилиния ограничивает островок, то отложить этот полигон для дальнейшей обработки
+                        List<Point3d> hole = new List<Point3d>();
+                        holes.Add(hole);
+                        foreach (PolylinePt pt in pp.PolylinePts)
+                        {
+                            hole.Add(new Point3d(pt.Point2D.X, pt.Point2D.Y, pt.Z));
+                        }
                     }
 
                 }
             }
+
+
+
+
 
             //Составление маршрутов обхода графа
             //Правила
@@ -473,6 +482,86 @@ namespace Civil3DInfoTools.SurfaceMeshByBoundary
 
                 }
             }
+
+
+
+            //~//~//~//~//~//~//~//~//~//~//~//~//~//~//~//~//~//~//~//~//~//~//~//~//~//~//~//~//~//~//~
+            //ОБРАБОТКА ОТВЕРСТИЙ ВНУТРИ ПОЛИГОНОВ
+            if (holes.Count > 0)
+            {
+
+                //Каждое отверстие находится внутри одного из рассчитанных полигонов. Определить полигон, в который вложено отверстие
+                //Эти полигоны будут дополнены участками, включающими в себя отверстия
+                //в соответствии с https://www.geometrictools.com/Documentation/TriangulationByEarClipping.pdf п 3 - 5
+                List<PolygonWithNested> poligonsWithHoles = PolygonWithHoles.ResolveHoles(Polygons, holes);
+
+                
+                foreach (PolygonWithNested p in poligonsWithHoles)
+                {
+                    if (p.Polygon == null)
+                    {
+                        //Если отверстия есть в корневом узле, значит нужно рассматривать полигон равный текущему треугольнику с отверстиями
+                        p.Polygon = new List<Point3d>()
+                        {
+                            tinSurfaceTriangle.Vertex1.Location,
+                            tinSurfaceTriangle.Vertex2.Location,
+                            tinSurfaceTriangle.Vertex3.Location
+                        };
+                    }
+                    else
+                    {
+                        //Если оказывается, что полигон включает в себя отверстие, то он должен быть удален из Polygons
+                        //Такие полигоны будут разбиваться на треугольники
+                        Polygons.Remove(p.Polygon);
+                    }
+
+
+                    p.MakeSimple();
+                    //Polygons.Add(p.Polygon);
+                    //Нельзя просто добавить простой полигон к общему списку полигонов (SubDMesh создается неправильно).
+                    //Необходимо сделать триангуляцию
+                    //TEST
+                    #region Отрисовка простого полигона
+                    //using (Transaction tr
+                    //    = SurfaceMeshByBoundaryCommand.DB.TransactionManager.StartTransaction())
+                    //using (Polyline pline = new Polyline())
+                    //{
+                    //    BlockTable bt = tr.GetObject(SurfaceMeshByBoundaryCommand.DB.BlockTableId, OpenMode.ForWrite) as BlockTable;
+                    //    BlockTableRecord ms = (BlockTableRecord)tr.GetObject(bt[BlockTableRecord.ModelSpace], OpenMode.ForWrite);
+
+                    //    pline.Color = Color.FromColorIndex(ColorMethod.ByAci, 5);
+                    //    foreach (Point3d pt in p.Polygon)
+                    //    {
+                    //        pline.AddVertexAt(0, new Point2d(pt.X, pt.Y), 0, 0, 0);
+                    //    }
+                    //    pline.Closed = true;
+
+                    //    ms.AppendEntity(pline);
+                    //    tr.AddNewlyCreatedDBObject(pline, true);
+
+                    //    tr.Commit();
+                    //}
+                    #endregion
+                    //TEST
+
+
+                    EarClippingTriangulator triangulator = new EarClippingTriangulator(p.Polygon);
+                    foreach (List<Point3d> tr in triangulator.Triangles)
+                    {
+                        Polygons.Add(tr);
+                    }
+
+
+                }
+
+            }
+
+
+
+            //~//~//~//~//~//~//~//~//~//~//~//~//~//~//~//~//~//~//~//~//~//~//~//~//~//~//~//~//~//~//~
+
+
+
         }
 
         /// <summary>

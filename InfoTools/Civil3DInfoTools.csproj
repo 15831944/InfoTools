@@ -100,6 +100,7 @@
     <Compile Include="DisplayUtils.cs" />
     <Compile Include="AuxiliaryCommands\CreateLandSiteBlockCommand.cs" />
     <Compile Include="AuxiliaryCommands\LayersByColorsCommand.cs" />
+    <Compile Include="NetworkCreating\RaiseNetworkTo3dCommand.cs" />
     <Compile Include="ObjectInsertion\InsertByCoordinatesCommand.cs" />
     <Compile Include="PolylineCaptionOverrule.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
@@ -107,6 +108,8 @@
     <Compile Include="RoadMarking\CreateBoundariesCommand.cs" />
     <Compile Include="Spillway\ExtractSpillwayPositionsCommand.cs" />
     <Compile Include="Spillway\Poly3DFromCorridorFeatureLinesCommand.cs" />
+    <Compile Include="SurfaceMeshByBoundary\EarClippingTriangulator.cs" />
+    <Compile Include="SurfaceMeshByBoundary\PoligonWithHoles.cs" />
     <Compile Include="SurfaceMeshByBoundary\PolylineNesting.cs" />
     <Compile Include="SurfaceMeshByBoundary\PolylinePt.cs" />
     <Compile Include="SurfaceMeshByBoundary\SurfaceMeshByBoundaryCommand.cs" />
@@ -121,6 +124,7 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="InfoTools.cuix" />
+    <None Include="NetworkCreating\Кодификатор_М1-500_по_городу_СПб.doc" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\Common\Common.csproj">
@@ -157,6 +161,7 @@
       <EmbedInteropTypes>True</EmbedInteropTypes>
     </COMReference>
   </ItemGroup>
+  <ItemGroup />
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <PropertyGroup>
     <PostBuildEvent>copy "$(ProjectDir)\PackageContents.xml" "$(TargetDir)"
