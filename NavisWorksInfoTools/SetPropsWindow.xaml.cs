@@ -183,9 +183,9 @@ namespace NavisWorksInfoTools
 
         public List<DisplayProperty> DisplayProperties = new List<DisplayProperty>();
 
-        [XmlIgnore]
-        public Autodesk.Navisworks.Api.Interop.ComApi.InwOaPropertyVec InwOaPropertyVec { get; set; }
-            = null;
+        //[XmlIgnore]
+        //public Autodesk.Navisworks.Api.Interop.ComApi.InwOaPropertyVec InwOaPropertyVec { get; set; }
+        //    = null;
 
     }
 

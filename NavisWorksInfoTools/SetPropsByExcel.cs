@@ -64,9 +64,10 @@ namespace NavisWorksInfoTools
                     timer.Start();
 
                     PropertyCategory propertyCategory = setPropsByExcelWindow.SelectedPropertyCategory;
-                    NamedConstant keyCatCombName = propertyCategory.CombinedName;//.DisplayName;
+                    /*NamedConstant*/
+                    string keyCatName = propertyCategory.DisplayName;//.CombinedName;//.DisplayName;
                     DataProperty dataProperty = setPropsByExcelWindow.SelectedDataProperty;
-                    NamedConstant keyPropCombName = dataProperty.CombinedName;//.DisplayName;
+                    /*NamedConstant*/ string keyPropName = dataProperty.DisplayName;//.CombinedName;//
 
                     Excel._Worksheet worksheet = setPropsByExcelWindow.SelectedWorkSheet;
                     Common.ExcelInterop.CellValue excelColumn = setPropsByExcelWindow.SelectedColumn;
@@ -100,7 +101,7 @@ namespace NavisWorksInfoTools
                     search.Selection.SelectAll();
                     search.PruneBelowMatch = true;//В наборе не будет вложенных элементов
                     search.SearchConditions
-                        .Add(SearchCondition.HasPropertyByCombinedName(keyCatCombName, keyPropCombName));
+                        .Add(SearchCondition.HasPropertyByDisplayName/*.HasPropertyByCombinedName*/(keyCatName, keyPropName));
                     ModelItemCollection items = search.FindAll(doc, false);
 
 
@@ -110,7 +111,7 @@ namespace NavisWorksInfoTools
                     SearchForExcelTableMatches(doc, items, ignoreNonVisible,
                         keyColumn,
                         //keyValues,
-                        keyCatCombName, keyPropCombName,
+                        keyCatName, keyPropName,
                         oState, worksheet, tableHeader, tabName
                         );
 
@@ -144,7 +145,7 @@ namespace NavisWorksInfoTools
             (Document doc, IEnumerable<ModelItem> items, bool ignoreNonVisible,
             Excel.Range keyColumn,
             //Dictionary<string, int> keyValues,
-            NamedConstant keyCatCombName, NamedConstant keyPropCombName,
+            /*NamedConstant*/ string keyCatName, /*NamedConstant*/ string keyPropName,
             ComApi.InwOpState3 oState, Excel._Worksheet worksheet,
             SortedDictionary<int, Common.ExcelInterop.CellValue> tableHeader, string tabName
             )
@@ -158,7 +159,7 @@ namespace NavisWorksInfoTools
                 }
 
                 DataProperty property
-                    = item.PropertyCategories.FindPropertyByCombinedName(keyCatCombName, keyPropCombName);
+                    = item.PropertyCategories.FindPropertyByDisplayName/*.FindPropertyByCombinedName*/(keyCatName, keyPropName);
                 //object searchValue = Utils.GetUserPropValue(property.Value);
                 string searchValue = Utils.GetDisplayValue(property.Value);
                 //Найти в выбранном столбце Excel ячейку с таким же значением
@@ -242,7 +243,7 @@ namespace NavisWorksInfoTools
                 }
                 else
                 {
-                    //TODO: Если неправильно указать ключевое свойство и столбец, возникает зависание из-за многократного поиска Search во вложенных элементах
+                    //Если неправильно указать ключевое свойство и столбец, возникает зависание из-за многократного поиска Search во вложенных элементах
 
                     //Search search = new Search();
                     //search.Selection.CopyFrom(item.Descendants);
@@ -254,15 +255,17 @@ namespace NavisWorksInfoTools
                     //IEnumerable<ModelItem> dItems
                     //    = item.Descendants.Where(SearchCondition.HasPropertyByCombinedName(keyCatCombName, keyPropCombName));//Не обрезает вложенные объекты
 
-                    //Линейный поиск по дереву до нахождения соответствия
+
+                    //TODO: Это чревато огромными задержками на большой модели если неправильно задано ключевое поле!!!
+                    //Вместо Search API Линейный поиск по дереву до нахождения соответствия
                     List<ModelItem> dItems = new List<ModelItem>();
-                    SearchHasPropertyByCombinedName(item.Children, keyCatCombName, keyPropCombName, dItems);
+                    SearchHasPropertyByCombinedName(item.Children, keyCatName, keyPropName, dItems);
 
 
                     SearchForExcelTableMatches(doc, dItems, ignoreNonVisible,
                         keyColumn,
                         //keyValues,
-                        keyCatCombName, keyPropCombName,
+                        keyCatName, keyPropName,
                         oState, worksheet, tableHeader, tabName
                         );
                 }
@@ -272,19 +275,19 @@ namespace NavisWorksInfoTools
 
 
         private void SearchHasPropertyByCombinedName(IEnumerable<ModelItem> searchColl,
-            NamedConstant keyCatCombName, NamedConstant keyPropCombName, List<ModelItem> resultColl)
+            /*NamedConstant*/ string keyCatName, /*NamedConstant*/ string keyPropName, List<ModelItem> resultColl)
         {
             foreach(ModelItem item in searchColl)
             {
                 DataProperty property
-                    = item.PropertyCategories.FindPropertyByCombinedName(keyCatCombName, keyPropCombName);
+                    = item.PropertyCategories.FindPropertyByDisplayName/*.FindPropertyByCombinedName*/(keyCatName, keyPropName);
                 if (property!=null)
                 {
                     resultColl.Add(item);
                 }
                 else
                 {
-                    SearchHasPropertyByCombinedName(item.Children, keyCatCombName, keyPropCombName, resultColl);
+                    SearchHasPropertyByCombinedName(item.Children, keyCatName, keyPropName, resultColl);
                 }
             }
         }

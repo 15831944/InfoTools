@@ -141,7 +141,7 @@ namespace NavisWorksInfoTools
         public static string GetDisplayValue(VariantData variantData)
         {
             string[] strs = variantData.ToString().Split(':');
-            string dispValue = String.Join("", strs, 1, strs.Length - 1);
+            string dispValue = String.Join(":", strs, 1, strs.Length - 1);
             if (dispValue == null)
             {
                 dispValue = "";

@@ -43,7 +43,7 @@
             </DataGrid.Columns>
         </DataGrid>
         <Label Content="Ссылки:" Margin="10,0,389,268" VerticalAlignment="Bottom"/>
-        <TextBlock Margin="11,10,10,0" TextWrapping="Wrap" VerticalAlignment="Top" Height="69"><Run Text="Если хотябы в одном из выбранных элементов или вложенных в них есть такие, к которым уже привязаны пользовательские данные или ссылки, то они будут отображены в этом окне. Но при этом отображаются атрибуты только одной вкладки данных пользователя"/><Run Text=". Отображаются те данные, которые находятся выше в дереве выбранных элементов."/></TextBlock>
+        <TextBlock Margin="11,10,10,0" TextWrapping="Wrap" VerticalAlignment="Top" Height="69" Text="Если хотябы в одном из выбранных элементов или вложенных в них есть такие, к которым уже привязаны пользовательские данные или ссылки, то они будут отображены в этом окне. Отображаются те данные, которые находятся выше в дереве выбранных элементов."/>
         <CheckBox Name="overwriteUserAttrCheckBox" Content="Редактировать пользовательские атрибуты" HorizontalAlignment="Left" Margin="11,132,0,0" VerticalAlignment="Top" Unchecked="overwriteUserAttrCheckBox_CheckedChanged" Checked="overwriteUserAttrCheckBox_CheckedChanged"/>
         <CheckBox Name ="overwriteLinksCheckBox"  Content="Редактировать ссылки" HorizontalAlignment="Left" Margin="11,0,0,294" Checked="overwriteLinksCheckBox_CheckedChanged" Unchecked="overwriteLinksCheckBox_CheckedChanged" Height="15" VerticalAlignment="Bottom"/>
 

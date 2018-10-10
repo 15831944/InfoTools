@@ -13,6 +13,9 @@ using static NavisWorksInfoTools.Constants;
 
 namespace NavisWorksInfoTools
 {
+    //TODO: Запретить на этапе ввода свойств ввод 2 свойств с одинаковыми именами!!!
+
+
     /// <summary>
     /// http://adndevblog.typepad.com/aec/2013/03/add-custom-properties-to-all-desired-model-items.html
     /// http://adndevblog.typepad.com/aec/2012/08/addmodifyremove-custom-attribute-using-com-api.html
@@ -167,51 +170,53 @@ namespace NavisWorksInfoTools
             //List<DisplayDataTab> propsToSet = new List<DisplayDataTab>(); 
             #endregion
 
-            HashSet<string> propsDefined = new HashSet<string>();
+            //Словарь свойств, которые добавляются
+            Dictionary<string, DisplayProperty> propsDefined = new Dictionary<string, DisplayProperty>();
 
             //Создать базовые наборы свойств, которые будут привязываться к объектам
             foreach (DisplayDataTab ddt in displayDataTabs)
             {
                 //if (!ddt.DisplayName.Equals(S1NF0_DATA_TAB_DISPLAY_NAME))
                 //{
-                ddt.InwOaPropertyVec = (ComApi.InwOaPropertyVec)oState
-                        .ObjectFactory(ComApi.nwEObjectType.eObjectType_nwOaPropertyVec,
-                        null, null);
+                //ddt.InwOaPropertyVec = (ComApi.InwOaPropertyVec)oState
+                //        .ObjectFactory(ComApi.nwEObjectType.eObjectType_nwOaPropertyVec,
+                //        null, null);
                 //propsToSet.Add(ddt);
                 foreach (DisplayProperty dp in ddt.DisplayProperties)
                 {
-                    ComApi.InwOaProperty newP
-                            = Utils.CreateNewUserProp(oState, dp.DisplayName, dp.Value);
-                    // add the new property to the new property category
-                    ddt.InwOaPropertyVec.Properties().Add(newP);
+                    //ComApi.InwOaProperty newP
+                    //        = Utils.CreateNewUserProp(oState, dp.DisplayName, dp.Value);
+                    //// add the new property to the new property category
+                    //ddt.InwOaPropertyVec.Properties().Add(newP);
 
                     string key = ddt.DisplayName + dp.DisplayName;
-                    if (!propsDefined.Contains(key))
-                        propsDefined.Add(key);
+                    if (!propsDefined.ContainsKey(key))
+                        propsDefined.Add(key, dp);
                 }
                 //}
             }
 
-            HashSet<string> linksDefined = new HashSet<string>();
+            //словарь ссылок, которые добавляются
+            Dictionary<string, string> linksDefined = new Dictionary<string, string>();
 
             //Создание набора ссылок для привязки к объектам
-            ComApi.InwOpState10 state = ComApiBridge.ComApiBridge.State;
-            ComApi.InwURLOverride urlOverride
-                = (ComApi.InwURLOverride)state
-                .ObjectFactory(ComApi.nwEObjectType.eObjectType_nwURLOverride, null, null);
-            ComApi.InwURLColl oURLColl = urlOverride.URLs();
+            //ComApi.InwOpState10 state = ComApiBridge.ComApiBridge.State;
+            //ComApi.InwURLOverride urlOverride
+            //    = (ComApi.InwURLOverride)state
+            //    .ObjectFactory(ComApi.nwEObjectType.eObjectType_nwURLOverride, null, null);
+            //ComApi.InwURLColl oURLColl = urlOverride.URLs();
             foreach (DisplayURL dUrl in displayURLs)
             {
-                ComApi.InwURL2 oUrl = (ComApi.InwURL2)state
-                    .ObjectFactory(ComApi.nwEObjectType.eObjectType_nwURL, null, null);
-                oUrl.name = dUrl.DisplayName;
-                oUrl.URL = dUrl.URL;
-                oUrl.SetCategory("Hyperlink", "LcOaURLCategoryHyperlink");//Тип - всегда гиперссылка
-                oURLColl.Add(oUrl);
+                //ComApi.InwURL2 oUrl = (ComApi.InwURL2)state
+                //    .ObjectFactory(ComApi.nwEObjectType.eObjectType_nwURL, null, null);
+                //oUrl.name = dUrl.DisplayName;
+                //oUrl.URL = dUrl.URL;
+                //oUrl.SetCategory("Hyperlink", "LcOaURLCategoryHyperlink");//Тип - всегда гиперссылка
+                //oURLColl.Add(oUrl);
 
                 string key = dUrl.DisplayName;
-                if (!linksDefined.Contains(key))
-                    linksDefined.Add(key);
+                if (!linksDefined.ContainsKey(key))
+                    linksDefined.Add(key, dUrl.URL);
             }
 
 
@@ -224,18 +229,25 @@ namespace NavisWorksInfoTools
                 //Переделать панель атрибутов в соответствии с заполненными строками в окне
                 if (overwriteUserAttr)//Только если стояла галка в окне!!!
                 {
-                    //Сначала скопировать базовые наборы свойств для каждой из заданных панелей в словарь
-                    //ключ - имя панели
+                    //наборы свойств
+                    //ключ - имя панели, значение - набор свойств для привязки к объекту
                     Dictionary<string, ComApi.InwOaPropertyVec> propVectorsCurr
                         = new Dictionary<string, ComApi.InwOaPropertyVec>();
-                    foreach (DisplayDataTab ddt in displayDataTabs)
-                    {
-                        propVectorsCurr.Add(ddt.DisplayName, ddt.InwOaPropertyVec.Copy());
-                    }
+                    // Сначала скопировать базовые наборы свойств для каждой из заданных панелей в словарь
+                    //foreach (DisplayDataTab ddt in displayDataTabs)
+                    //{
+                    //    propVectorsCurr.Add(ddt.DisplayName, ddt.InwOaPropertyVec.Copy());
+                    //}
 
-                    //К базовым наборам свойств нужно добавить если присутствуют:
+                    //Изучаются текущие свойства объекта модели
+                    //Сначала в наборы свойств нужно добавить если присутствуют:
                     //- свойства, которые не редактируются данной командой
-                    //- если нажата галка Не удалять свойства, то любые свойства, которых не было в окне
+                    //- если нажата галка "Не удалять свойства", то любые свойства, которых не было в окне SetProps
+                    //- свойства которые были заданы в окне SetProps, но они уже присутствуют в модели 
+                    //  (их значение задается как введено в окне,
+                    //  если эти свойства добавлены на этом этапе, то они не должны добавляться на следующем)
+                    HashSet<string> alreadyAdded = new HashSet<string>();//набор ключей свойств, которые добавлены на этом этапе
+
                     ComApi.InwGUIPropertyNode2 propn
                         = (ComApi.InwGUIPropertyNode2)oState.GetGUIPropertyNode(oPath, true);
                     foreach (ComApi.InwGUIAttribute2 attr in propn.GUIAttributes())
@@ -249,7 +261,9 @@ namespace NavisWorksInfoTools
                                 if (
                                     (attr.ClassUserName.Equals(S1NF0_DATA_TAB_DISPLAY_NAME) && propsNotModifiable.Contains(prop.UserName))//- свойства, которые не редактируются данной командой
                                     ||
-                                    (preserveExistingProperties && !propsDefined.Contains(key))//- если нажата галка Не удалять свойства, то любые свойства, которых не было в окне
+                                    (preserveExistingProperties && !propsDefined.ContainsKey(key))//- если нажата галка Не удалять свойства, то любые свойства, которых не было в окне
+                                    ||
+                                    propsDefined.ContainsKey(key)//- свойства которые были заданы в окне SetProps, но они уже присутствуют в модели
                                     )
                                 {
                                     ComApi.InwOaPropertyVec vec = null;
@@ -261,12 +275,48 @@ namespace NavisWorksInfoTools
                                             null, null);
                                         propVectorsCurr.Add(attr.ClassUserName, vec);
                                     }
-                                    vec.Properties().Add(Utils.CopyProp(oState, prop));
+                                    if (!propsDefined.ContainsKey(key))
+                                        vec.Properties().Add(Utils.CopyProp(oState, prop));
+                                    else
+                                    {
+                                        //Учесть введенное значение
+                                        DisplayProperty dp = propsDefined[key];
+                                        vec.Properties().Add(Utils.CreateNewUserProp(oState, dp.DisplayName, dp.Value));
+                                        alreadyAdded.Add(key);
+                                    }
                                 }
                             }
 
                         }
                     }
+
+                    //Затем добавить вновь создаваемые свойства, которых ранее не было в модели
+                    //(с учетом тех, которые были добавлены на предыдущем этапе)
+                    foreach (DisplayDataTab ddt in displayDataTabs)
+                    {
+                        ComApi.InwOaPropertyVec vec = null;
+                        propVectorsCurr.TryGetValue(ddt.DisplayName, out vec);
+                        if (vec == null)
+                        {
+                            vec = (ComApi.InwOaPropertyVec)oState
+                                .ObjectFactory(ComApi.nwEObjectType.eObjectType_nwOaPropertyVec,
+                                null, null);
+                            propVectorsCurr.Add(ddt.DisplayName, vec);
+                        }
+
+                        foreach (DisplayProperty dp in ddt.DisplayProperties)
+                        {
+                            string key = ddt.DisplayName + dp.DisplayName;
+                            if (!alreadyAdded.Contains(key))
+                            {
+                                ComApi.InwOaProperty newP
+                                    = Utils.CreateNewUserProp(oState, dp.DisplayName, dp.Value);
+                                // add the new property to the new property category
+                                vec.Properties().Add(newP);
+                            }
+                        }
+                    }
+
 
                     //Удалить старые панели
                     try
@@ -326,7 +376,7 @@ namespace NavisWorksInfoTools
 
 
                                 }
-                                */ 
+                                */
                     #endregion
                 }
 
@@ -336,43 +386,75 @@ namespace NavisWorksInfoTools
                 //Переделать все ссылки в соответствии с заполненными строками в окне
                 if (overwriteLinks)//Только если стояла галка в окне!!!
                 {
-                    ComApi.InwURLOverride urlOverrideCurr = urlOverride.Copy();
-                    if (preserveExistingProperties)
+                    ComApi.InwURLOverride urlOverrideCurr = (ComApi.InwURLOverride)oState
+                        .ObjectFactory(ComApi.nwEObjectType.eObjectType_nwURLOverride, null, null);//urlOverride.Copy();
+
+                    //Изучаются текущие ссылки
+                    //Сначала в набор ссылок нужно добавить если присутствуют:
+                    //- если нажата галка "Не удалять свойства", то любые ссылки, которых не было в окне SetProps
+                    //- ссылки которые были заданы в окне SetProps, но они уже присутствуют в модели 
+                    //  (их значение задается как введено в окне,
+                    //  если эти ссылки добавлены на этом этапе, то они не должны добавляться на следующем)
+                    HashSet<string> alreadyAdded = new HashSet<string>();//набор ключей ссылок, которые добавлены на этом этапе
+
+                    PropertyCategory linksCat = item.PropertyCategories.FindCategoryByName("LcOaExURLAttribute");
+                    if (linksCat != null)
                     {
-                        //Добавить ссылки, которые есть в этом объекте, но не было задано в окне
-                        PropertyCategory linksCat = item.PropertyCategories.FindCategoryByName("LcOaExURLAttribute");
-                        if (linksCat!=null)
+                        int linksCount = linksCat.Properties.Count / 3;
+
+                        for (int i = 0; i < linksCount; i++)
                         {
-                            int linksCount = linksCat.Properties.Count / 3;
-
-                            for (int i = 0; i < linksCount; i++)
+                            string suffix = i == 0 ? "" : i.ToString();
+                            DataProperty nameProp = item.PropertyCategories
+                                .FindPropertyByName("LcOaExURLAttribute", "LcOaURLAttributeName" + suffix);
+                            DataProperty urlProp = item.PropertyCategories
+                                .FindPropertyByName("LcOaExURLAttribute", "LcOaURLAttributeURL" + suffix);
+                            if (nameProp != null && urlProp != null)
                             {
-                                string suffix = i == 0 ? "" : i.ToString();
-                                DataProperty nameProp = item.PropertyCategories
-                                    .FindPropertyByName("LcOaExURLAttribute", "LcOaURLAttributeName" + suffix);
-                                DataProperty urlProp = item.PropertyCategories
-                                    .FindPropertyByName("LcOaExURLAttribute", "LcOaURLAttributeURL" + suffix);
-                                if (nameProp != null && urlProp != null)
+                                string key = nameProp.Value.ToDisplayString();
+                                if ((preserveExistingProperties && !linksDefined.ContainsKey(key))//- если нажата галка "Не удалять свойства", то любые ссылки, которых не было в окне SetProps
+                                    ||
+                                    (linksDefined.ContainsKey(key)))
                                 {
-                                    string key = nameProp.Value.ToDisplayString();
-                                    if (!linksDefined.Contains(key))
+                                    ComApi.InwURL2 oUrl = (ComApi.InwURL2)oState
+                                        .ObjectFactory(ComApi.nwEObjectType.eObjectType_nwURL, null, null);
+                                    oUrl.name = nameProp.Value.ToDisplayString();
+                                    if (!linksDefined.ContainsKey(key))
+                                        oUrl.URL = urlProp.Value.ToDisplayString();//Сохранить существующее значение
+                                    else
                                     {
-                                        ComApi.InwURL2 oUrl = (ComApi.InwURL2)state
-                                            .ObjectFactory(ComApi.nwEObjectType.eObjectType_nwURL, null, null);
-                                        oUrl.name = nameProp.Value.ToDisplayString();
-                                        oUrl.URL = urlProp.Value.ToDisplayString();
-                                        oUrl.SetCategory("Hyperlink", "LcOaURLCategoryHyperlink");//Тип - всегда гиперссылка
-
-                                        urlOverrideCurr.URLs().Add(oUrl);
+                                        oUrl.URL = linksDefined[key];//присвоить заданное в окне значение ссылки
+                                        alreadyAdded.Add(key);
                                     }
+                                    oUrl.SetCategory("Hyperlink", "LcOaURLCategoryHyperlink");//Тип - всегда гиперссылка
+
+                                    urlOverrideCurr.URLs().Add(oUrl);
                                 }
                             }
                         }
                     }
 
+
+                    foreach (DisplayURL dUrl in displayURLs)
+                    {
+                        string key = dUrl.DisplayName;
+                        if (!alreadyAdded.Contains(key))
+                        {
+                            ComApi.InwURL2 oUrl = (ComApi.InwURL2)oState
+                            .ObjectFactory(ComApi.nwEObjectType.eObjectType_nwURL, null, null);
+                            oUrl.name = dUrl.DisplayName;
+                            oUrl.URL = dUrl.URL;
+                            oUrl.SetCategory("Hyperlink", "LcOaURLCategoryHyperlink");//Тип - всегда гиперссылка
+                            urlOverrideCurr.URLs().Add(oUrl);
+                        }
+
+                        
+                    }
+
+
                     ComApi.InwOpSelection comSelectionOut =
                             ComApiBridge.ComApiBridge.ToInwOpSelection(new ModelItemCollection() { item });
-                    state.SetOverrideURL(comSelectionOut, urlOverrideCurr);
+                    oState.SetOverrideURL(comSelectionOut, urlOverrideCurr);
                 }
 
             }
@@ -453,7 +535,7 @@ namespace NavisWorksInfoTools
 
             return new SetPropsWindow(dataTabs, urls);
 
-            
+
         }
 
 
