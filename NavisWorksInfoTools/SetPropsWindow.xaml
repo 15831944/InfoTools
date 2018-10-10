@@ -13,23 +13,23 @@
                   AutoGenerateColumns="False"
                   SelectionMode="Single"
                   SelectionUnit="FullRow"
-                  Margin="11,130,0,319"
+                  Margin="11,173,0,319"
                   HorizontalAlignment="Left"
                   Width="279" CellEditEnding="dataGrid_CellEditEnding" SelectionChanged="tabsDataGrid_SelectionChanged">
             <DataGrid.Columns>
                 <DataGridTextColumn Binding="{Binding DisplayName}" Header="Название"/>
             </DataGrid.Columns>
         </DataGrid>
-        <DataGrid Name="propsDataGrid" AutoGenerateColumns="False" Margin="295,130,10,319">
+        <DataGrid Name="propsDataGrid" AutoGenerateColumns="False" Margin="295,173,10,319">
             <DataGrid.Columns>
                 <DataGridTextColumn Binding="{Binding DisplayName}" Header="Свойство"/>
                 <DataGridTextColumn Binding="{Binding DisplayValue}" Header="Значение"/>
             </DataGrid.Columns>
         </DataGrid>
         <Button Content="ОК" Margin="0,0,10,10" HorizontalAlignment="Right" Width="75" Height="85" VerticalAlignment="Bottom" Click="Button_Click"/>
-        <TextBlock Margin="10,0,90,10" TextWrapping="Wrap" Height="85" VerticalAlignment="Bottom"><Run Text="При нажатии кнопки OK атрибуты "/><Run Text="и ссылки"/><Run Text=" перепишутся для всех выбранных объектов и всех вложенных"/><Run Text="."/><Run Text=" Нестроковые атрибуты будут сохранены."/></TextBlock>
-        <Label Content="Пользовательские атрибуты:" HorizontalAlignment="Left" Margin="295,104,0,0" VerticalAlignment="Top"/>
-        
+        <TextBlock Margin="10,0,90,10" TextWrapping="Wrap" Height="85" VerticalAlignment="Bottom"><Run Text="При нажатии кнопки OK атрибуты "/><Run Text="и ссылки"/><Run Text=" перепишутся для всех выбранных объектов и всех вложенных"/><Run Text="."/></TextBlock>
+        <Label Content="Пользовательские атрибуты:" HorizontalAlignment="Left" Margin="295,147,0,0" VerticalAlignment="Top"/>
+
         <DataGrid Name="linksDataGrid" AutoGenerateColumns="False"
                   Margin="10,0,10,100" Height="163" VerticalAlignment="Bottom">
             <DataGrid.RowStyle>
@@ -44,10 +44,12 @@
         </DataGrid>
         <Label Content="Ссылки:" Margin="10,0,389,268" VerticalAlignment="Bottom"/>
         <TextBlock Margin="11,10,10,0" TextWrapping="Wrap" VerticalAlignment="Top" Height="69"><Run Text="Если хотябы в одном из выбранных элементов или вложенных в них есть такие, к которым уже привязаны пользовательские данные или ссылки, то они будут отображены в этом окне. Но при этом отображаются атрибуты только одной вкладки данных пользователя"/><Run Text=". Отображаются те данные, которые находятся выше в дереве выбранных элементов."/></TextBlock>
-        <CheckBox Name="overwriteUserAttrCheckBox" Content="Редактировать пользовательские атрибуты" HorizontalAlignment="Left" Margin="11,84,0,0" VerticalAlignment="Top" Unchecked="overwriteUserAttrCheckBox_CheckedChanged" Checked="overwriteUserAttrCheckBox_CheckedChanged"/>
+        <CheckBox Name="overwriteUserAttrCheckBox" Content="Редактировать пользовательские атрибуты" HorizontalAlignment="Left" Margin="11,132,0,0" VerticalAlignment="Top" Unchecked="overwriteUserAttrCheckBox_CheckedChanged" Checked="overwriteUserAttrCheckBox_CheckedChanged"/>
         <CheckBox Name ="overwriteLinksCheckBox"  Content="Редактировать ссылки" HorizontalAlignment="Left" Margin="11,0,0,294" Checked="overwriteLinksCheckBox_CheckedChanged" Unchecked="overwriteLinksCheckBox_CheckedChanged" Height="15" VerticalAlignment="Bottom"/>
-        
-        <Label Content="Пользовательские панели:" HorizontalAlignment="Left" Margin="11,104,0,0" VerticalAlignment="Top"/>
 
+        <Label Content="Пользовательские панели:" HorizontalAlignment="Left" Margin="11,147,0,0" VerticalAlignment="Top"/>
+        <CheckBox Name="dontDeleteAnyPropertyCheckBox" Content="Не удалять свойства, уже существующие в модели,&#x0a;а только изменять значение существующих и добавлять новые" Margin="10,84,47,576"
+                  ToolTip="То есть если у каких-либо объектов есть свойства, которые не были указаны в данном окне, то они не будут удалены при нажатии ОК.&#x0a;При этом если будет изменено имя свойства, то такое свойство будет рассматриваться как новое добавленное свойство.&#x0a;Это касается как пользовательских атрибутов, так и ссылок" 
+                  ToolTipService.ShowDuration="10000"/>
     </Grid>
 </Window>

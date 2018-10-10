@@ -1,0 +1,27 @@
+﻿<UserControl x:Class="Civil3DInfoTools.Controls.SelectLayerUserControl"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
+             xmlns:local="clr-namespace:Civil3DInfoTools.Controls"
+             mc:Ignorable="d"
+             d:DesignHeight="30" d:DesignWidth="400" Loaded="UserControl_Loaded">
+    <!--Loaded="UserControl_Loaded"-->
+    <UserControl.Resources>
+        <DataTemplate x:Key="cmbTemplate">
+            <Grid Margin="0 0 0 0" Height="30">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="300"/>
+                    <ColumnDefinition Width="30*"/>
+                </Grid.ColumnDefinitions>
+                <Label Content="{Binding Name}" VerticalAlignment="Center" HorizontalAlignment="Left"/>
+                <Rectangle Width="15" Height="15" Fill="{Binding Color}" Stroke="Black" StrokeThickness="2" Grid.Column="1"/>
+            </Grid>
+        </DataTemplate>
+    </UserControl.Resources>
+    <Grid>
+        <ComboBox Name="layerComboBox" Margin="0,0,40,0" ItemTemplate="{StaticResource cmbTemplate}"/>
+        <Button Content="^" HorizontalAlignment="Right" Width="40" Click="Button_Click" ToolTip="Нажмите для выбора слоя на чертеже"/>
+
+    </Grid>
+</UserControl>

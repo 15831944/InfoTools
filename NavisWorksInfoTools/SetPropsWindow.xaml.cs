@@ -12,6 +12,7 @@ using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using System.Windows.Shapes;
+using System.Xml.Serialization;
 
 namespace NavisWorksInfoTools
 {
@@ -24,6 +25,21 @@ namespace NavisWorksInfoTools
         //Значение по умолчанию для чекбоксов
         private static bool defaultStateOverwriteUserAttr = false;
         private static bool defaultStateOverwriteLinks = false;
+        private static bool defaultPreserveExistingProperties = false;
+
+        public bool PreserveExistingProperties
+        {
+            get
+            {
+                bool? checkBoxState = dontDeleteAnyPropertyCheckBox.IsChecked;
+                return checkBoxState != null ? checkBoxState.Value : false;
+            }
+            set
+            {
+                dontDeleteAnyPropertyCheckBox.IsChecked = value;
+            }
+        }
+
 
         public bool OverwriteUserAttr
         {
@@ -73,6 +89,7 @@ namespace NavisWorksInfoTools
         {
             overwriteUserAttrCheckBox.IsChecked = defaultStateOverwriteUserAttr;
             overwriteLinksCheckBox.IsChecked = defaultStateOverwriteLinks;
+            dontDeleteAnyPropertyCheckBox.IsChecked = defaultPreserveExistingProperties;
             //вызвать обработчики событий для переключения чекбоксов
             overwriteUserAttrCheckBox_CheckedChanged(null, null);
             overwriteLinksCheckBox_CheckedChanged(null, null);
@@ -86,6 +103,7 @@ namespace NavisWorksInfoTools
         {
             defaultStateOverwriteUserAttr = overwriteUserAttrCheckBox.IsChecked.Value;
             defaultStateOverwriteLinks = overwriteLinksCheckBox.IsChecked.Value;
+            defaultPreserveExistingProperties = dontDeleteAnyPropertyCheckBox.IsChecked.Value;
             this.DialogResult = true;
             this.Close();
         }
@@ -158,10 +176,14 @@ namespace NavisWorksInfoTools
     /// </summary>
     public class DisplayDataTab
     {
+        [XmlAttribute]
         public string DisplayName { get; set; }
+
+        [XmlArray("DisplayProperties"), XmlArrayItem("DisplayProperty")]
 
         public List<DisplayProperty> DisplayProperties = new List<DisplayProperty>();
 
+        [XmlIgnore]
         public Autodesk.Navisworks.Api.Interop.ComApi.InwOaPropertyVec InwOaPropertyVec { get; set; }
             = null;
 
@@ -172,8 +194,11 @@ namespace NavisWorksInfoTools
     /// </summary>
     public class DisplayProperty
     {
+        [XmlAttribute]
         public string DisplayName { get; set; }
+        [XmlAttribute]
         public string DisplayValue { get; set; }
+        [XmlIgnore]
         public object Value { get; private set; } = null;
 
         public void ConvertValue()
@@ -188,8 +213,10 @@ namespace NavisWorksInfoTools
     /// </summary>
     public class DisplayURL
     {
+        [XmlAttribute]
         public string DisplayName { get; set; }
 
+        [XmlAttribute]
         public string URL { get; set; }
     }
 }

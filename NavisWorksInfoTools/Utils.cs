@@ -134,7 +134,7 @@ namespace NavisWorksInfoTools
 
         /// <summary>
         /// Строковое отображение значения свойства без приставки типа данных
-        /// TODO: Если тип данных - double, то 
+        /// TODO: Если тип данных - double, то...?
         /// </summary>
         /// <param name="variantData"></param>
         /// <returns></returns>
@@ -179,11 +179,14 @@ namespace NavisWorksInfoTools
         /// <summary>
         /// Добавить служебные свойства S1NF0 если их еще нет
         /// Не меняет свойства если они уже есть если не передан параметр overwrite = true
+        /// В любом случае может переписать только те свойства, которые переданы в словаре propsToWrite
         /// Возвращает true если свойства объекта отредактированы
         /// </summary>
         /// <param name="oState"></param>
         /// <param name="item"></param>
         /// <param name="propsToWrite"></param>
+        /// <param name="overwrite">перезаписывать свойства если они уже есть</param>
+        /// <returns></returns>
         public static bool SetS1NF0PropsToItem
             (ComApi.InwOpState3 oState, ModelItem item, Dictionary<string, object> propsToWrite,
             bool overwrite = false)

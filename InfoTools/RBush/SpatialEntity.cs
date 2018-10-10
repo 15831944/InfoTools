@@ -12,7 +12,8 @@ namespace Civil3DInfoTools.RBush
     {
         public ObjectId ObjectId { get; set; }
 
-        public Envelope Envelope { get; set; }
+        private Envelope _envelope;
+        public ref readonly Envelope Envelope => ref _envelope;
 
         public SpatialEntity(ObjectId objectId)
         {
@@ -36,18 +37,18 @@ namespace Civil3DInfoTools.RBush
             }
 
             ObjectId = objectId;
-            Envelope = GetEnvelope(ext.Value);
+            _envelope = GetEnvelope(ext.Value);
         }
 
         public static Envelope GetEnvelope(Extents3d extents3D)
         {
-            return new Envelope()
-            {
-                MinX = extents3D.MinPoint.X,
-                MinY = extents3D.MinPoint.Y,
-                MaxX = extents3D.MaxPoint.X,
-                MaxY = extents3D.MaxPoint.Y
-            };
+            return new Envelope
+            (
+                minX: extents3D.MinPoint.X,
+                minY: extents3D.MinPoint.Y,
+                maxX: extents3D.MaxPoint.X,
+                maxY: extents3D.MaxPoint.Y
+            );
         }
     }
 }
