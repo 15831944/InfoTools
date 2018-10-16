@@ -4,13 +4,16 @@
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
              xmlns:local="clr-namespace:Common"
-             mc:Ignorable="d" Height="30" Width="84">
-    <Grid Margin="0,0,0,0
-          ">
-        <StackPanel Orientation="Horizontal">
-            <TextBox x:Name="txtNum" x:FieldModifier="private" Margin="0,0,0,0" Width="44" Text="0" TextChanged="txtNum_TextChanged" />
-            <Button x:Name="cmdUp" x:FieldModifier="private" Margin="0,0,0,0" Content="˄" Width="20" Click="cmdUp_Click" />
-            <Button x:Name="cmdDown" x:FieldModifier="private"  Content="˅" Width="20" Click="cmdDown_Click" />
-        </StackPanel>
+             mc:Ignorable="d" d:DesignHeight="30" d:DesignWidth="100">
+    <Grid Margin="0,0,0,0">
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="*"/>
+            <ColumnDefinition Width="20"/>
+            <ColumnDefinition Width="20"/>
+        </Grid.ColumnDefinitions>
+
+        <TextBox x:Name="txtNum" x:FieldModifier="private" Margin="0,0,0,0" Text="0" TextChanged="txtNum_TextChanged" Grid.Column="0" />
+        <Button x:Name="cmdUp" x:FieldModifier="private" Margin="0,0,0,0" Content="˄"  Click="cmdUp_Click" Grid.Column="1"/>
+        <Button x:Name="cmdDown" x:FieldModifier="private" Margin="0,0,0,0" Content="˅"  Click="cmdDown_Click" Grid.Column="2"/>
     </Grid>
 </UserControl>

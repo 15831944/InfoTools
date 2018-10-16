@@ -40,23 +40,25 @@
 
         <!--<civilControls:SelectLayerUserControl x:Name="layerInput" Grid.Column="1" Margin="0,0,0,0" Grid.Row="0"/>-->
 
-        <ComboBox Name="partListsComboBox" DisplayMemberPath="Name" Grid.Column="1" Grid.Row="3" Margin="0,0,0,0"/>
+        <ComboBox Name="partListsComboBox" DisplayMemberPath="Name" Grid.Column="1" Grid.Row="3" Margin="0,0,0,0" SelectionChanged="partListsComboBox_SelectionChanged"/>
         <StackPanel Orientation="Vertical"  Grid.Row="4" Grid.RowSpan="1" Grid.ColumnSpan="2">
             <!--датагрид должен содержать два столбца - один для выбора блока (combo box), другой для выбора структуры (иерархический компонент) -->
             <!--столбец с комбо боксом -https://www.c-sharpcorner.com/uploadfile/dpatra/combobox-in-datagrid-in-wpf/-->
             <!--лучше чтобы это был специальный компонент для выбора блока - https://stackoverflow.com/questions/23968234/wpf-datagrid-of-usercontrols -->
-            <!--структура - иерархические данные - https://stackoverflow.com/questions/4534333/wpf-combobox-displaying-hierarchical-data -->
+            <!--структура - иерархические данные - https://bengribaudo.com/blog/2011/01/21/675/combobox-displaying-a-drop-down-menu -->
             <DataGrid Name="blockMappingDataGrid" Height="100" VerticalAlignment="Top" AutoGenerateColumns="False">
                 <DataGrid.Columns>
                     <DataGridTemplateColumn Header="Блок" Width="200">
                         <DataGridTemplateColumn.CellTemplate>
                             <DataTemplate>
-                                <civilControls:SelectBlockUserControl
-                                    Owner="{Binding Path=Owner}"
-                                    Doc="{Binding Path=Doc}"/>
+                                <!--<civilControls:SelectBlockUserControl Owner="{Binding Path=Owner}" Doc="{Binding Path=Doc}"/>-->
+                                <!--BlockId="{Binding Path=BlockId}"-->
+                                <!--эта строчка не дает отобразить окно в редакторе, но не мешает компиляции проекта-->
                             </DataTemplate>
                         </DataGridTemplateColumn.CellTemplate>
                     </DataGridTemplateColumn>
+
+
                 </DataGrid.Columns>
             </DataGrid>
             <StackPanel Orientation="Horizontal">
@@ -68,12 +70,24 @@
                 </Button>
             </StackPanel>
 
-
-
-
         </StackPanel>
+
+        <!--<ComboBox Name="testComboBox" Grid.Row="7" DisplayMemberPath="Name"/>-->
+
+
+
+
         <Button Content="Button" Grid.Column="1" HorizontalAlignment="Left" Margin="113,30,0,0" Grid.Row="8" VerticalAlignment="Top" Width="75" Click="Button_Click"/>
-        <!--<civilControls:SelectBlockUserControl Grid.Row="5" Grid.Column="1"/>-->
+        <Menu Name="testMenu" Grid.RowSpan="1" Grid.Row="6" Margin="0,0,0,0">
+            <Menu.ItemTemplate>
+                <HierarchicalDataTemplate >
+                    <TextBlock Text="{Binding Name}"/>
+                </HierarchicalDataTemplate>
+            </Menu.ItemTemplate>
+        </Menu>
+
+        
+
 
 
 

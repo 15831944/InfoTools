@@ -6,7 +6,8 @@
         xmlns:sys="clr-namespace:System;assembly=mscorlib" 
         xmlns:local="clr-namespace:NavisWorksInfoTools"
         mc:Ignorable="d"
-        Title="Добавить атрибуты" Height="734" Width="677.5" Loaded="Window_Loaded"
+        Title="Добавить атрибуты" Height="396" Width="370" Loaded="Window_Loaded"
+        MinHeight="620" MinWidth="600"
         WindowStartupLocation="CenterScreen">
     <Grid>
         <DataGrid Name="tabsDataGrid"
@@ -48,8 +49,11 @@
         <CheckBox Name ="overwriteLinksCheckBox"  Content="Редактировать ссылки" HorizontalAlignment="Left" Margin="11,0,0,294" Checked="overwriteLinksCheckBox_CheckedChanged" Unchecked="overwriteLinksCheckBox_CheckedChanged" Height="15" VerticalAlignment="Bottom"/>
 
         <Label Content="Пользовательские панели:" HorizontalAlignment="Left" Margin="11,147,0,0" VerticalAlignment="Top"/>
-        <CheckBox Name="dontDeleteAnyPropertyCheckBox" Content="Не удалять свойства, уже существующие в модели,&#x0a;а только изменять значение существующих и добавлять новые" Margin="10,84,47,576"
+        <CheckBox Name="dontDeleteAnyPropertyCheckBox" Content="Не удалять свойства, уже существующие в модели,&#x0a;а только изменять значение существующих и добавлять новые" Margin="11,91,0,0"
                   ToolTip="То есть если у каких-либо объектов есть свойства, которые не были указаны в данном окне, то они не будут удалены при нажатии ОК.&#x0a;При этом если будет изменено имя свойства, то такое свойство будет рассматриваться как новое добавленное свойство.&#x0a;Это касается как пользовательских атрибутов, так и ссылок" 
-                  ToolTipService.ShowDuration="10000"/>
+                  ToolTipService.ShowDuration="10000" HorizontalAlignment="Left" Width="378" Height="38" VerticalAlignment="Top"/>
+        <CheckBox Name="logFormToXMLCheckBox" Content="Записывать действия в XML"
+                  ToolTip="При нажатии кнопки OK, данные занесенные в окно будут сохранены в XML. Обратите внимание, что выбранные объекты пердаются в XML в виде набора id.&#x0a;Если у каких-либо выбранных объектов нет id, то они не будут переданы в XML" 
+                  ToolTipService.ShowDuration="10000" Margin="11,67,0,0" VerticalAlignment="Top" Height="23" HorizontalAlignment="Left" Width="189"/>
     </Grid>
 </Window>

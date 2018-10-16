@@ -4,6 +4,7 @@ using Autodesk.AutoCAD.EditorInput;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Reflection;
 using System.Text;
 using System.Threading.Tasks;
 using System.Windows;
@@ -46,7 +47,9 @@ namespace Civil3DInfoTools.Controls
         {
             get
             {
-                return ((BlockTableRecord)blockComboBox.SelectedItem).Id;
+                BlockTableRecord selectedBtr = blockComboBox.SelectedItem as BlockTableRecord;
+                ObjectId retVal = selectedBtr != null ? selectedBtr.Id : ObjectId.Null;
+                return retVal;
             }
         }
 
@@ -230,6 +233,23 @@ namespace Civil3DInfoTools.Controls
                     }
                 } while (!selectedBlockIsAllowed);//если выбрана внешняя ссылка или анонимный блок, то повторить попытку
                 Owner.Show();
+            }
+        }
+
+        /// <summary>
+        /// При выборе объекта в комбо боксе с помощью рефлексии значение Id передается в DataContext в свойство BlockId если оно есть
+        /// Ничего лучше я не придумал
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="e"></param>
+        private void blockComboBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        {
+            object o = DataContext;
+
+            PropertyInfo prop = o.GetType().GetProperty("BlockId", BindingFlags.Public | BindingFlags.Instance);
+            if (null != prop && prop.CanWrite)
+            {
+                prop.SetValue(o, BlockId, null);
             }
         }
     }

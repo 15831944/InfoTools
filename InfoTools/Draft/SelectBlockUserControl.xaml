@@ -9,7 +9,7 @@
     <!--Height="30" Width="400"-->
     <Grid>
         
-        <ComboBox Name="blockComboBox" DisplayMemberPath="Name" Margin="0,0,40,0"/>
+        <ComboBox Name="blockComboBox" DisplayMemberPath="Name" Margin="0,0,40,0" SelectionChanged="blockComboBox_SelectionChanged" />
         <Button Content="^" HorizontalAlignment="Right" Width="40" ToolTip="Нажмите для выбора блока на чертеже" Click="Button_Click"/>
     </Grid>
 </UserControl>

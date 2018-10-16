@@ -36,7 +36,7 @@ namespace NavisWorksInfoTools.AuxiliaryCommands
 
                 Document doc = Application.ActiveDocument;
 
-                ModelItemCollection currSelectionColl = doc.CurrentSelection.SelectedItems;
+                //ModelItemCollection currSelectionColl = doc.CurrentSelection.SelectedItems;
 
                 string initialPath = Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments);
                 string initialFileName = Environment.UserName + "_" + DateTime.Now.ToString("yyyyMMddHHmmss");
@@ -48,82 +48,82 @@ namespace NavisWorksInfoTools.AuxiliaryCommands
                 }
 
 
-                if (currSelectionColl.Count > 0)
-                {
-                    //Если выбран какой-либо объект в дереве (или несколько), то открывается такое же окно как в команде SetProps 
-                    //(но при этом у каждого объекта обязательно должен быть настроенный id)
-                    //Объекты DisplayDataTab, DisplayProperty, DisplayURL должны быть serializable
-                    List<string> ids = new List<string>();
-                    List<ModelItem> itemsToSetProps = new List<ModelItem>();
-                    foreach (ModelItem item in currSelectionColl)
-                    {
-                        DataProperty idProp = item.PropertyCategories
-                                    .FindPropertyByDisplayName(S1NF0_DATA_TAB_DISPLAY_NAME,
-                                    ID_PROP_DISPLAY_NAME);
-                        if (idProp != null)
-                        {
-                            ids.Add(Utils.GetDisplayValue(idProp.Value));
-                            itemsToSetProps.Add(item);
-                        }
-                    }
+                //if (currSelectionColl.Count > 0)
+                //{
+                //    //Если выбран какой-либо объект в дереве (или несколько), то открывается такое же окно как в команде SetProps 
+                //    //(но при этом у каждого объекта обязательно должен быть настроенный id)
+                //    //Объекты DisplayDataTab, DisplayProperty, DisplayURL должны быть serializable
+                //    List<string> ids = new List<string>();
+                //    List<ModelItem> itemsToSetProps = new List<ModelItem>();
+                //    foreach (ModelItem item in currSelectionColl)
+                //    {
+                //        DataProperty idProp = item.PropertyCategories
+                //                    .FindPropertyByDisplayName(S1NF0_DATA_TAB_DISPLAY_NAME,
+                //                    ID_PROP_DISPLAY_NAME);
+                //        if (idProp != null)
+                //        {
+                //            ids.Add(Utils.GetDisplayValue(idProp.Value));
+                //            itemsToSetProps.Add(item);
+                //        }
+                //    }
 
-                    if (ids.Count == 0)
-                    {
-                        Win.MessageBox.Show("Ни у одного из выбранных элементов нет id");
-                        return 0;
-                    }
+                //    if (ids.Count == 0)
+                //    {
+                //        Win.MessageBox.Show("Ни у одного из выбранных элементов нет id");
+                //        return 0;
+                //    }
 
-                    //Инициализация окна SetProps
-                    SetPropsWindow setPropsWindow = SetProps.ConfigureAndOppenSetPropsWindow(doc, itemsToSetProps);
-                    setPropsWindow.Loaded += (a, b) =>
-                    {
-                        setPropsWindow.PreserveExistingProperties = true;
-                    };
-                    bool? result = setPropsWindow.ShowDialog();
-                    if (result != null && result.Value)
-                    {
-                        //После подтверждения объекты DisplayDataTab и DisplayURL сохраняются в объект ObjectData
-                        //Объект ObjectsData сразу же сериализуется. Открывается окно сохранения файла
-                        //Имя XML по умолчанию - дата и время до минут + имя пользователя + имя файла
-                        ObjectsData objectsData = new ObjectsData()
-                        {
-                            PreserveExistingProperties = setPropsWindow.PreserveExistingProperties,
-                            OverwriteLinks = setPropsWindow.OverwriteLinks,
-                            OverwriteUserAttr = setPropsWindow.OverwriteUserAttr,
-                            Ids = ids,
-                            DataTabs = setPropsWindow.OverwriteUserAttr ? setPropsWindow.DataTabs : null,
-                            URLs = setPropsWindow.OverwriteLinks ? setPropsWindow.URLs : null
+                //    //Инициализация окна SetProps
+                //    SetPropsWindow setPropsWindow = SetProps.ConfigureAndOppenSetPropsWindow(doc, itemsToSetProps);
+                //    setPropsWindow.Loaded += (a, b) =>
+                //    {
+                //        setPropsWindow.PreserveExistingProperties = true;
+                //    };
+                //    bool? result = setPropsWindow.ShowDialog();
+                //    if (result != null && result.Value)
+                //    {
+                //        //После подтверждения объекты DisplayDataTab и DisplayURL сохраняются в объект ObjectData
+                //        //Объект ObjectsData сразу же сериализуется. Открывается окно сохранения файла
+                //        //Имя XML по умолчанию - дата и время до минут + имя пользователя + имя файла
+                //        ObjectsData objectsData = new ObjectsData()
+                //        {
+                //            PreserveExistingProperties = setPropsWindow.PreserveExistingProperties,
+                //            OverwriteLinks = setPropsWindow.OverwriteLinks,
+                //            OverwriteUserAttr = setPropsWindow.OverwriteUserAttr,
+                //            Ids = ids,
+                //            DataTabs = setPropsWindow.OverwriteUserAttr ? setPropsWindow.DataTabs : null,
+                //            URLs = setPropsWindow.OverwriteLinks ? setPropsWindow.URLs : null
 
-                        };
-
-
+                //        };
 
 
-                        WinForms.SaveFileDialog saveFileDialog = new WinForms.SaveFileDialog();
-                        saveFileDialog.InitialDirectory = initialPath;
-                        saveFileDialog.Filter = "xml files (*.xml)|*.xml";
-                        saveFileDialog.FilterIndex = 1;
-                        saveFileDialog.RestoreDirectory = true;
-                        if (!String.IsNullOrWhiteSpace(initialFileName))
-                            saveFileDialog.FileName = initialFileName;
-                        saveFileDialog.Title = "Укажите файл для записи свойств";
 
-                        if (saveFileDialog.ShowDialog() == WinForms.DialogResult.OK)
-                        {
-                            XmlSerializer xmlSerializer = new XmlSerializer(typeof(ObjectsData));
-                            using (StreamWriter sw = new StreamWriter(saveFileDialog.FileName))
-                            {
-                                xmlSerializer.Serialize(sw, objectsData);
-                            }
-                        }
 
-                        //выбранные объекты скрываются, чтобы пользователь не выбирал их по второму разу
-                        doc.Models.SetHidden(itemsToSetProps, true);
+                //        WinForms.SaveFileDialog saveFileDialog = new WinForms.SaveFileDialog();
+                //        saveFileDialog.InitialDirectory = initialPath;
+                //        saveFileDialog.Filter = "xml files (*.xml)|*.xml";
+                //        saveFileDialog.FilterIndex = 1;
+                //        saveFileDialog.RestoreDirectory = true;
+                //        if (!String.IsNullOrWhiteSpace(initialFileName))
+                //            saveFileDialog.FileName = initialFileName;
+                //        saveFileDialog.Title = "Укажите файл для записи свойств";
 
-                    }
-                }
-                else
-                {
+                //        if (saveFileDialog.ShowDialog() == WinForms.DialogResult.OK)
+                //        {
+                //            XmlSerializer xmlSerializer = new XmlSerializer(typeof(ObjectsData));
+                //            using (StreamWriter sw = new StreamWriter(saveFileDialog.FileName))
+                //            {
+                //                xmlSerializer.Serialize(sw, objectsData);
+                //            }
+                //        }
+
+                //        //выбранные объекты скрываются, чтобы пользователь не выбирал их по второму разу
+                //        doc.Models.SetHidden(itemsToSetProps, true);
+
+                //    }
+                //}
+                //else
+                //{
                     //get state object of COM API
                     ComApi.InwOpState3 oState = ComApiBridge.ComApiBridge.State;
 
@@ -195,7 +195,7 @@ namespace NavisWorksInfoTools.AuxiliaryCommands
                     }
 
 
-                }
+                //}
 
 
             }

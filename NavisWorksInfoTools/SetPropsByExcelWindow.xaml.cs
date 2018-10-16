@@ -326,7 +326,8 @@ namespace NavisWorksInfoTools
             if (excelSheetComboBox.SelectedItem != null)
             {
                 Excel._Worksheet sheet = (Excel._Worksheet)excelSheetComboBox.SelectedItem;
-                TabelHeader = Common.ExcelInterop.Utils.GetRowValues(sheet, excelRowNumericUpDown.NumValue);
+                int rowNum = Convert.ToInt32( excelRowNumericUpDown.NumValue);
+                TabelHeader = Common.ExcelInterop.Utils.GetRowValues(sheet, rowNum);
 
             }
             excelColComboBox.ItemsSource = TabelHeader.Values;
@@ -414,7 +415,7 @@ namespace NavisWorksInfoTools
         {
             //Задание значений по умолчанию
             defaultPath = ExcelPath;
-            defaultRowNum = excelRowNumericUpDown.NumValue;
+            defaultRowNum = Convert.ToInt32(excelRowNumericUpDown.NumValue);
             defaultCategoryName = SelectedPropertyCategory.DisplayName;
             defaultPropertyName = SelectedDataProperty.DisplayName;
             defaultTabName = TabName;

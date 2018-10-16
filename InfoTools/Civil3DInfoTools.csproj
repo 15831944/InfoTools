@@ -12,6 +12,7 @@
     <!--<ProjectTypeGuids>{60dc8134-eba5-43b8-bcc9-bb4bc16c2548};{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}</ProjectTypeGuids>-->
     <TargetFrameworkVersion>v4.6</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
+    <TargetFrameworkProfile />
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
     <DebugSymbols>true</DebugSymbols>
@@ -165,6 +166,9 @@
       <HintPath>C:\Program Files\Autodesk\AutoCAD 2018\Map\ManagedMapApi.dll</HintPath>
       <Private>False</Private>
     </Reference>
+    <Reference Include="Microsoft.Expression.Interactions, Version=4.0.0.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL">
+      <HintPath>..\packages\System.Windows.Interactivity.WPF.2.0.20525\lib\net40\Microsoft.Expression.Interactions.dll</HintPath>
+    </Reference>
     <Reference Include="PresentationCore" />
     <Reference Include="PresentationFramework" />
     <Reference Include="RBush, Version=1.0.0.0, Culture=neutral, processorArchitecture=MSIL">
@@ -187,12 +191,29 @@
   <ItemGroup>
     <Compile Include="App.cs" />
     <Compile Include="AuxiliaryCommands\AddPointToSurfaceWithoutDeformCommand.cs" />
-    <Compile Include="Controls\SelectBlockUserControl.xaml.cs">
+    <Compile Include="AuxiliaryCommands\TestWindow.xaml.cs">
+      <DependentUpon>TestWindow.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="Controls\SelectPartSizeUserControl\SelectPartSizeModel.cs" />
+    <Compile Include="Controls\SelectPartSizeUserControl\SelectPartSizeView.xaml.cs">
+      <DependentUpon>SelectPartSizeView.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="Controls\SelectPartSizeUserControl\SelectPartSizeViewModel.cs" />
+    <Compile Include="Draft\SelectBlockUserControl.xaml.cs">
       <DependentUpon>SelectBlockUserControl.xaml</DependentUpon>
     </Compile>
-    <Compile Include="Controls\SelectLayerUserControl.xaml.cs">
+    <Compile Include="Controls\SelectBlockUserControl3\View.xaml.cs">
+      <DependentUpon>View.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="Controls\SelectBlockUserControl3\ViewModel.cs" />
+    <Compile Include="Draft\SelectLayerUserControl.xaml.cs">
       <DependentUpon>SelectLayerUserControl.xaml</DependentUpon>
     </Compile>
+    <Compile Include="Controls\SelectLayerUserControl2\Model.cs" />
+    <Compile Include="Controls\SelectLayerUserControl2\View.xaml.cs">
+      <DependentUpon>View.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="Controls\SelectLayerUserControl2\ViewModel.cs" />
     <Compile Include="Draft\GeologColumnsToExcelCommand.cs" />
     <Compile Include="Draft\GeologColumnsToExcelCommand2.cs" />
     <Compile Include="AuxiliaryCommands\ColumnsToExcelCommand.cs" />
@@ -204,6 +225,11 @@
     <Compile Include="PipeNetworkCreating\ConfigureNetworkCreationWindow.xaml.cs">
       <DependentUpon>ConfigureNetworkCreationWindow.xaml</DependentUpon>
     </Compile>
+    <Compile Include="PipeNetworkCreating\ConfigureNetworkCreationWindow2\BlockStructureMappingPairModel.cs" />
+    <Compile Include="PipeNetworkCreating\ConfigureNetworkCreationWindow2\ConfigureNetworkCreationView.xaml.cs">
+      <DependentUpon>ConfigureNetworkCreationView.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="PipeNetworkCreating\ConfigureNetworkCreationWindow2\ConfigureNetworkCreationViewModel.cs" />
     <Compile Include="PipeNetworkCreating\RaiseNetworkTo3dCommand.cs" />
     <Compile Include="ObjectInsertion\InsertByCoordinatesCommand.cs" />
     <Compile Include="PolylineCaptionOverrule.cs" />
@@ -228,6 +254,7 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="InfoTools.cuix" />
+    <None Include="packages.config" />
     <None Include="PipeNetworkCreating\Кодификатор_М1-500_по_городу_СПб.doc" />
   </ItemGroup>
   <ItemGroup>
@@ -266,11 +293,27 @@
     </COMReference>
   </ItemGroup>
   <ItemGroup>
-    <Page Include="Controls\SelectBlockUserControl.xaml">
+    <Page Include="AuxiliaryCommands\TestWindow.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>
-    <Page Include="Controls\SelectLayerUserControl.xaml">
+    <Page Include="Controls\SelectPartSizeUserControl\SelectPartSizeView.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="Draft\SelectBlockUserControl.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="Controls\SelectBlockUserControl3\View.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="Draft\SelectLayerUserControl.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="Controls\SelectLayerUserControl2\View.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>
@@ -278,7 +321,12 @@
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>
+    <Page Include="PipeNetworkCreating\ConfigureNetworkCreationWindow2\ConfigureNetworkCreationView.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
   </ItemGroup>
+  <ItemGroup />
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <PropertyGroup>
     <PostBuildEvent>copy "$(ProjectDir)\PackageContents.xml" "$(TargetDir)"

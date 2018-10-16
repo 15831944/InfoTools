@@ -97,6 +97,7 @@ namespace RevitInfoTools
 
 
         /// <summary>
+        /// СОДЕРЖИТ ТРАНЗАКЦИЮ!
         /// Получить семейство. Если нет в проекте, то из библиотеки
         /// </summary>
         /// <param name="doc"></param>

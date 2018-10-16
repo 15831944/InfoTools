@@ -17,14 +17,15 @@ namespace Common
 {
     /// <summary>
     /// Логика взаимодействия для NumericUpDownControl.xaml
+    /// Данный контрол сделан без MVVM
     /// </summary>
     public partial class NumericUpDownControl : UserControl
     {
         public event EventHandler NumChanged;
 
-        private int _numValue = 0;
+        private double _numValue = 0;
 
-        public int NumValue
+        public double NumValue
         {
             get { return _numValue; }
             set
@@ -35,7 +36,7 @@ namespace Common
                     value = MaxValue;
                 _numValue = value;
                 txtNum.TextChanged -= txtNum_TextChanged;//Этот обработчик нужен только при ручном вводе в текстбокс
-                txtNum.Text = value.ToString();
+                txtNum.Text = value.ToString(Formatting);
                 txtNum.TextChanged += txtNum_TextChanged;
                 if (NumChanged != null)
                 {
@@ -44,24 +45,41 @@ namespace Common
             }
         }
 
-        public int MaxValue { get; set; } = int.MaxValue;
+        public double MaxValue { get; set; } = double.MaxValue;
 
-        public int MinValue { get; set; } = int.MinValue;
+        public double MinValue { get; set; } = double.MinValue;
+
+
+
+
+        private string formatting = "f2";
+        public string Formatting
+        {
+            get { return formatting; }
+            set
+            {
+                formatting = value;
+                NumValue = NumValue;
+            }
+        }
+
+
+        public double Step { get; set; } = 1;
 
         public NumericUpDownControl()
         {
             InitializeComponent();
-            txtNum.Text = NumValue.ToString();
+            txtNum.Text = NumValue.ToString(Formatting);
         }
 
         private void cmdUp_Click(object sender, RoutedEventArgs e)
         {
-            NumValue++;
+            NumValue += Step;
         }
 
         private void cmdDown_Click(object sender, RoutedEventArgs e)
         {
-            NumValue--;
+            NumValue -= Step;
         }
 
         /// <summary>
@@ -76,17 +94,28 @@ namespace Common
                 return;
             }
 
-            int typedInteger = 0;
+            double typedInteger = 0;
 
-            if (!int.TryParse(txtNum.Text, out typedInteger))
+            int initialCursorPos = txtNum.CaretIndex;
+            if (double.TryParse(txtNum.Text, out typedInteger) || String.IsNullOrEmpty(txtNum.Text))
             {
                 NumValue = typedInteger;
             }
             else
             {
-                txtNum.Text = NumValue.ToString();//Вернуть прежнюю строку
+                txtNum.Text = NumValue.ToString(Formatting);//Вернуть прежнюю строку
             }
-                
+
+            //при этом нужно сохранить положение курсора если оно по какой-то причине сбросилось
+            if (txtNum.CaretIndex < initialCursorPos)
+            {
+                txtNum.CaretIndex = initialCursorPos;
+            }
+
+
         }
+
+
+
     }
 }

@@ -27,7 +27,9 @@ namespace Civil3DInfoTools.Controls
         {
             get
             {
-                return ((DisplayLayer)layerComboBox.SelectedItem).LayerId;
+                DisplayLayer selectedLayer = layerComboBox.SelectedItem as DisplayLayer;
+                ObjectId retVal = selectedLayer != null ? selectedLayer.LayerId : ObjectId.Null;
+                return retVal;
             }
         }
 

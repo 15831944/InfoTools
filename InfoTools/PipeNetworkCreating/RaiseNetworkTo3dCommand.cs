@@ -11,6 +11,7 @@ using Autodesk.AutoCAD.DatabaseServices;
 using Autodesk.AutoCAD.EditorInput;
 using Autodesk.Civil.ApplicationServices;
 using static Common.ExceptionHandling.ExeptionHandlingProcedures;
+using Civil3DInfoTools.PipeNetworkCreating.ConfigureNetworkCreationWindow2;
 
 [assembly: CommandClass(typeof(Civil3DInfoTools.PipeNetworkCreating.RaiseNetworkTo3dCommand))]
 
@@ -25,6 +26,7 @@ namespace Civil3DInfoTools.PipeNetworkCreating
     /// </summary>
     public class RaiseNetworkTo3dCommand
     {
+
         [CommandMethod("S1NF0_RaiseNetworkTo3d", CommandFlags.Modal)]
         public void RaiseNetworkTo3d()
         {
@@ -37,9 +39,12 @@ namespace Civil3DInfoTools.PipeNetworkCreating
 
             CivilDocument cdok = CivilDocument.GetCivilDocument(doc.Database);
 
+
             try
             {
-                ConfigureNetworkCreationWindow test = new ConfigureNetworkCreationWindow(doc, cdok);
+                //ConfigureNetworkCreationWindow test = new ConfigureNetworkCreationWindow(doc, cdok);
+                ConfigureNetworkCreationView test = new ConfigureNetworkCreationView();
+                test.DataContext = new ConfigureNetworkCreationViewModel(doc, cdok, test);
                 Application.ShowModalWindow(test);
 
                 //Вывести окно со следующими опциями:
@@ -48,25 +53,20 @@ namespace Civil3DInfoTools.PipeNetworkCreating
                 //2. Указать слой крышки колодцев - по умолчанию по кодификатору
                 //3. Указать слой подписи колодцев - по умолчанию по кодификатору
                 //4. Указать возможные блоки колодцев - по умолчанию M5_075(самый обычный), M5_505(связи), M5_233_A(коверы)
-                //В будущем - для каждого типа блока задать тип колодца Civil.
-                //На данный момент в точках вставки блоков будут создаваться одинаковые колодцы (не нулевые)
+                //Для каждого типа блока задать тип колодца Civil.
                 //5. Указать поверхность земли.
 
                 //6. Указать путь, где хранятся файлы excel с данными о колодцах.
-                //Прочитать все Excelи и закешировать данные из них (использовать ExcelDataReader - https://www.youtube.com/watch?v=7X3fTnuII7c?)
+                //Прочитать все Excelи и закешировать данные из них (использовать ExcelDataReader 
+                //- https://www.youtube.com/watch?v=7X3fTnuII7c?)
                 //Лучше чтобы это было в параллельном потоке!
 
                 //7. Заложение инженерной сети по умолчанию - для тех случаев, когда в таблицах excel нет данных о глубине заложения
-                //8. Диаметр инженерной сети по умолчанию
                 //9. Провести сеть параллельно земле
 
                 //10. Выбрать Part List
 
-                //11. Выбрать типоразмер колодца Civil 3d
-
-                //12. Выбрать типоразмер трубы Civil 3d
-
-                //13. Принять настройки
+                //11. Принять настройки
                 //- Сформировать структуру для хранения данных о сетке (тоже RTree?)
                 //- записать положения блоков колодцев в RTree
                 //- записать положения подписей колодцев в структуру данных с возможным поиском k nearest neighbors
@@ -74,7 +74,7 @@ namespace Civil3DInfoTools.PipeNetworkCreating
                 //Продолжать использовать при последующих вызовах команды если текущий документ соответствует.
                 //Удалять если соответствующий документ закрывается
 
-                //14. Если все настройки заданы и приняты, доступна опция - выбрать слой инженерной сети
+                //12. Если все настройки заданы и приняты, доступна опция - выбрать слой инженерной сети
                 //Выбор слоя
                 //Подсветка всех полилиний выбранного слоя. Дать возможность убрать из выделейия часть объектов
 

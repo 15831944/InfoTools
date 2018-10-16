@@ -8,6 +8,7 @@
         mc:Ignorable="d"
         Title="Задание свойств по таблице Excel" Height="479" Width="844" ResizeMode="NoResize" Loaded="Window_Loaded" Closed="Window_Closed">
     <Grid>
+
         <Grid Margin="10,10,10,0" Height="288" VerticalAlignment="Top">
             <Grid.RowDefinitions>
                 <RowDefinition Height="50"/>
@@ -39,9 +40,17 @@
                                          Width="544" Margin="0,0,0,0"
                                          FileNameChanged ="FileNameChanged" Grid.Column="1" Height="Auto"/>
             <ComboBox Name="excelSheetComboBox" DisplayMemberPath="Name" Grid.Column="1" Margin="0,0,0,0" Grid.Row="1" IsEnabled="False" SelectionChanged="excelSheetComboBox_SelectionChanged"/>
-            <custom:NumericUpDownControl Name="excelRowNumericUpDown" NumValue="1" MinValue="1" Grid.Column="1" Grid.Row="2" HorizontalAlignment="Left" IsEnabled="False"
-                                         NumChanged ="ExcelRowNumChanged" Height="Auto"/>
-            <ComboBox Name="excelColComboBox" DisplayMemberPath="DisplayString" Grid.Column="1" Margin="0,0,0,0" Grid.Row="3" IsEnabled="False" SelectionChanged="excelColComboBox_SelectionChanged"/>
+
+            <Grid Grid.Column="1" Grid.Row="2">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="*" />
+                </Grid.ColumnDefinitions>
+                <custom:NumericUpDownControl Name="excelRowNumericUpDown" NumValue="1" MinValue="1" Formatting="f0"   IsEnabled="False"
+                                         NumChanged ="ExcelRowNumChanged" Margin="0,0,0,0"/>
+            </Grid>
+            
+            <ComboBox Name="excelColComboBox" DisplayMemberPath="DisplayString" Grid.Column="1" Margin="0,0,0,0" Grid.Row="3" IsEnabled="False" SelectionChanged="excelColComboBox_SelectionChanged" Height="30" VerticalAlignment="Bottom"/>
             <ComboBox Name="navisDataTabComboBox" DisplayMemberPath="DisplayName" Grid.Column="1" Margin="0,0,0,0" Grid.Row="4" SelectionChanged="navisDataTabComboBox_SelectionChanged"/>
             <ComboBox Name="navisPropertyComboBox" DisplayMemberPath="DisplayName" Grid.Column="1" Margin="0,0,0,0" Grid.Row="5" SelectionChanged="navisPropertyComboBox_SelectionChanged"/>
             <TextBox Name="tabNameTextBox"  Grid.Column="1" Margin="0,0,0,0" Grid.Row="6" TextWrapping="Wrap" Text="АТРИБУТЫ" TextChanged="tabNameTextBox_TextChanged"/>

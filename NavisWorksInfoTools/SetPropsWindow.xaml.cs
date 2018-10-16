@@ -23,9 +23,25 @@ namespace NavisWorksInfoTools
     public partial class SetPropsWindow : Window
     {
         //Значение по умолчанию для чекбоксов
+        private static bool defaultLogFormToXML = false;
+        private static bool defaultPreserveExistingProperties = false;
         private static bool defaultStateOverwriteUserAttr = false;
         private static bool defaultStateOverwriteLinks = false;
-        private static bool defaultPreserveExistingProperties = false;
+       
+
+        public bool LogFormToXML
+        {
+            get
+            {
+                bool? checkBoxState = logFormToXMLCheckBox.IsChecked;
+                return checkBoxState != null ? checkBoxState.Value : false;
+            }
+            set
+            {
+                logFormToXMLCheckBox.IsChecked = value;
+            }
+        }
+
 
         public bool PreserveExistingProperties
         {
@@ -90,6 +106,7 @@ namespace NavisWorksInfoTools
             overwriteUserAttrCheckBox.IsChecked = defaultStateOverwriteUserAttr;
             overwriteLinksCheckBox.IsChecked = defaultStateOverwriteLinks;
             dontDeleteAnyPropertyCheckBox.IsChecked = defaultPreserveExistingProperties;
+            logFormToXMLCheckBox.IsChecked = defaultLogFormToXML;
             //вызвать обработчики событий для переключения чекбоксов
             overwriteUserAttrCheckBox_CheckedChanged(null, null);
             overwriteLinksCheckBox_CheckedChanged(null, null);
@@ -104,6 +121,7 @@ namespace NavisWorksInfoTools
             defaultStateOverwriteUserAttr = overwriteUserAttrCheckBox.IsChecked.Value;
             defaultStateOverwriteLinks = overwriteLinksCheckBox.IsChecked.Value;
             defaultPreserveExistingProperties = dontDeleteAnyPropertyCheckBox.IsChecked.Value;
+            defaultLogFormToXML = logFormToXMLCheckBox.IsChecked.Value;
             this.DialogResult = true;
             this.Close();
         }
@@ -148,7 +166,7 @@ namespace NavisWorksInfoTools
         }
 
         /// <summary>
-        /// ОТМЕНЕНО
+        /// TODO:
         /// Если в таблице изменяется DisplayName то проверить его уникальность
         /// </summary>
         /// <param name="sender"></param>
@@ -156,11 +174,11 @@ namespace NavisWorksInfoTools
         private void dataGrid_CellEditEnding(object sender, DataGridCellEditEndingEventArgs e)
         {
             DataGrid dataGrid = sender as DataGrid;
-            if (dataGrid!=null)
+            if (dataGrid != null)
             {
                 DataGridBoundColumn boundColumn = e.Column as DataGridBoundColumn;
                 Binding binding = boundColumn.Binding as Binding;
-                if (binding!=null && binding.Path.Path.Equals("DisplayName"))
+                if (binding != null && binding.Path.Path.Equals("DisplayName"))
                 {
                     //...
                 }

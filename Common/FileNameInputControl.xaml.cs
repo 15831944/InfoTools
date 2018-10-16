@@ -19,6 +19,7 @@ namespace Common
 {
     /// <summary>
     /// Логика взаимодействия для FileNameInputControl.xaml
+    /// Данный контрол сделан без MVVM
     /// </summary>
     public partial class FileNameInputControl : UserControl
     {

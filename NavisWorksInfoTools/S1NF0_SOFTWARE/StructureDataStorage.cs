@@ -553,9 +553,10 @@ namespace NavisWorksInfoTools.S1NF0_SOFTWARE
             {
                 XML.St.Object @object = new XML.St.Object()
                 {
-                    Name = baseName,//replacementName, //раньше был баг в мякише, из-за которого имя и id должны были совпадать
+                    Name = replacementName,//baseName,// //раньше был баг в мякише, из-за которого имя и id должны были совпадать. update: оказалось что баг не исправили до конца, если имя без guidа то объект не скрыть
                     SceneObjectId = replacementName,
                     NavisItem = item,
+
                 };
 
                 //Настрока ссылки на класс и заполнение списка свойств в соответствии со свойствами Navis

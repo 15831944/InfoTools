@@ -64,17 +64,18 @@ namespace RevitInfoTools
                         Family line3dFamily = Utils.GetFamily(doc, "3d line");
                         ElementId symId = line3dFamily.GetFamilySymbolIds().First();
                         FamilySymbol familySymbol = (FamilySymbol)doc.GetElement(symId);
-                        //активировать типоразмер
-                        if (!familySymbol.IsActive)
-                        {
-                            familySymbol.Activate();
-                            doc.Regenerate();
-                        }
 
                         //Расставить линии по координатам
                         using (Transaction tr = new Transaction(doc))
                         {
                             tr.Start("Draw 3D line");
+                            //активировать типоразмер
+                            if (!familySymbol.IsActive)
+                            {
+                                familySymbol.Activate();
+                                doc.Regenerate();
+                            }
+                            
 
                             foreach (List<XYZ> ptList in lines3d)
                             {
