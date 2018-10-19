@@ -5,7 +5,7 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:local="clr-namespace:NavisWorksInfoTools.S1NF0_SOFTWARE"
         mc:Ignorable="d"
-        Title="Выберите корневую папку для создания структуры" Height="248.611" Width="387.5" Loaded="Window_Loaded" WindowStartupLocation="CenterScreen">
+        Title="Выберите корневую папку структуры модели" Height="248.611" Width="387.5" Loaded="Window_Loaded" WindowStartupLocation="CenterScreen">
     <Grid>
         <DataGrid Name="foldersDataGrid" Margin="10,10,10,35"
                   AutoGenerateColumns="False"

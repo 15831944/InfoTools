@@ -23,6 +23,15 @@ namespace NavisWorksInfoTools
         DisplayName = S1NF0_APP_NAME + ". 2. Экспорт в FBX")]
     public class FBXExport : AddInPlugin
     {
+        //путь для сохранения FBX
+        public static string FBXSavePath { get; set; }
+
+        //имя для файла FBX
+        public static string FBXFileName { get; set; }
+
+        //выводить окна
+        public static bool ManualUse { get; set; } = true;
+
         private static HashSet<string> notReliableClassDisplayNames =
             new HashSet<string>()
         {
@@ -32,10 +41,16 @@ namespace NavisWorksInfoTools
 
         public override int Execute(params string[] parameters)
         {
-            Win.MessageBoxResult result = Win.MessageBox.Show("Перед экспортом FBX, нужно скрыть те элементы модели, которые не нужно экспортировать. "
+            Win.MessageBoxResult result = Win.MessageBoxResult.Yes;
+            if (ManualUse)
+            {
+                result = Win.MessageBox.Show("Перед экспортом FBX, нужно скрыть те элементы модели, которые не нужно экспортировать. "
                 + "А так же нужно настроить параметры экспорта в FBX на экспорт ЛИБО В ФОРМАТЕ ASCII, ЛИБО В ДВОИЧНОМ ФОРМАТЕ ВЕРСИИ НЕ НОВЕЕ 2018. "
                 + "Рекомендуется так же отключить экспорт источников света и камер. "
                 + "\n\nНачать выгрузку FBX?", "Выгрузка FBX", Win.MessageBoxButton.YesNo);
+            }
+
+
 
             if (result == Win.MessageBoxResult.Yes)
             {
@@ -64,21 +79,45 @@ namespace NavisWorksInfoTools
                         }
 
                         //Указание пользователем имени файла для fbx
-                        WinForms.SaveFileDialog sFD = new WinForms.SaveFileDialog();
-                        sFD.InitialDirectory = fbxPath;
-                        sFD.Filter = "fbx files (*.fbx)|*.fbx";
-                        sFD.FilterIndex = 1;
-                        sFD.RestoreDirectory = true;
-                        if (!String.IsNullOrWhiteSpace(defFBXFileName))
-                            sFD.FileName = defFBXFileName;
-                        sFD.Title = "Укажите файл для записи fbx";
-
-                        if (sFD.ShowDialog() == WinForms.DialogResult.OK)
+                        string fbxFullFileName = null;
+                        if (ManualUse)
                         {
-                            if (FBXplugin.Execute(sFD.FileName) == 0)//Выполнить экспорт в FBX
+                            WinForms.SaveFileDialog sFD = new WinForms.SaveFileDialog();
+                            sFD.InitialDirectory = fbxPath;
+                            sFD.Filter = "fbx files (*.fbx)|*.fbx";
+                            sFD.FilterIndex = 1;
+                            sFD.RestoreDirectory = true;
+                            if (!String.IsNullOrWhiteSpace(defFBXFileName))
+                                sFD.FileName = defFBXFileName;
+                            sFD.Title = "Укажите файл для записи fbx";
+                            if (sFD.ShowDialog() == WinForms.DialogResult.OK)
+                                fbxFullFileName = sFD.FileName;
+                        }
+                        else
+                        {
+                            fbxFullFileName = FBXSavePath;
+                            FileAttributes attr = File.GetAttributes(fbxFullFileName);
+                            if (attr.HasFlag(FileAttributes.Directory))
                             {
-                                bool isASCII = IsASCIIFBXFile(sFD.FileName);
-                                if (isASCII || GetBinaryVersionNum(sFD.FileName) <= 7500)
+                                //добавить имя файла
+                                fbxFullFileName = Path.Combine(fbxFullFileName, FBXFileName);
+                            }
+                        }
+
+
+                        if (!String.IsNullOrEmpty(fbxFullFileName))
+                        {
+                            string notEditedDirectory = Path.Combine(Path.GetDirectoryName(fbxFullFileName), "NotEdited");
+                            if (!Directory.Exists(notEditedDirectory))
+                            {
+                                Directory.CreateDirectory(notEditedDirectory);
+                            }
+                            string notEditedFileName = Path.Combine(notEditedDirectory,
+                                Path.GetFileName(fbxFullFileName));
+                            if (FBXplugin.Execute(fbxFullFileName) == 0)//Выполнить экспорт в FBX
+                            {
+                                bool isASCII = IsASCIIFBXFile(fbxFullFileName);
+                                if (isASCII || GetBinaryVersionNum(fbxFullFileName) <= 7500)
                                 {
                                     //Прочитать модель, составить очередь имен для подстановки в FBX
                                     Queue<FBX.NameReplacement> replacements = new Queue<FBX.NameReplacement>();
@@ -113,17 +152,18 @@ namespace NavisWorksInfoTools
 
                                     //Отредактировать FBX
                                     FBX.ModelNamesEditor fbxEditor = null;
-                                    if (IsASCIIFBXFile(sFD.FileName))
+                                    if (IsASCIIFBXFile(fbxFullFileName))
                                     {
-                                        fbxEditor = new FBX.ASCIIModelNamesEditor(sFD.FileName, replacements);
+                                        fbxEditor = new FBX.ASCIIModelNamesEditor(fbxFullFileName, replacements);
                                     }
                                     else /*if (GetBinaryVersionNum(sFD.FileName) <= 7500)*/
                                     {
-                                        fbxEditor = new FBX.BinaryModelNamesEditor(sFD.FileName, replacements);
+                                        fbxEditor = new FBX.BinaryModelNamesEditor(fbxFullFileName, replacements);
                                     }
                                     fbxEditor.EditModelNames();
 
-                                    Win.MessageBox.Show("Файл FBX с отредактированными именами моделей - " + fbxEditor.FbxFileNameEdited,
+                                    if (ManualUse)
+                                        Win.MessageBox.Show("Файл FBX с отредактированными именами моделей - " + fbxEditor.FbxFileNameEdited,
                                         "Готово", Win.MessageBoxButton.OK, Win.MessageBoxImage.Information);
                                 }
                                 else
@@ -221,7 +261,7 @@ namespace NavisWorksInfoTools
                     baseName = null;
                     return;
                 }
-                
+
             }
 
 

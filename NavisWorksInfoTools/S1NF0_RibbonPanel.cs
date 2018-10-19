@@ -59,7 +59,7 @@ namespace NavisWorksInfoTools
             return 0;
         }
 
-        private static void ExecuteAddInPlugin(string name)
+        public static void ExecuteAddInPlugin(string name)
         {
             if (!Autodesk.Navisworks.Api.Application.IsAutomated)
             {

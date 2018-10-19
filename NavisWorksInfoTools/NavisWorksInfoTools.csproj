@@ -81,6 +81,7 @@
     <Compile Include="FBX\ModelNamesEditor.cs" />
     <Compile Include="Draft\FBXExport.cs" />
     <Compile Include="Draft\FBXExport2.cs" />
+    <Compile Include="S1NF0_SOFTWARE\FBXExportBySelSets.cs" />
     <Compile Include="S1NF0_SOFTWARE\SelectRootFolderWindow.xaml.cs">
       <DependentUpon>SelectRootFolderWindow.xaml</DependentUpon>
     </Compile>

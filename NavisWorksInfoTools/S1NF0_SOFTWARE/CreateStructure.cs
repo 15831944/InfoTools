@@ -11,6 +11,7 @@ using NavisWorksInfoTools.S1NF0_SOFTWARE.XML.St;
 using NavisWorksInfoTools.S1NF0_SOFTWARE.XML.Cl;
 using System.IO;
 using static NavisWorksInfoTools.Constants;
+using static Common.ExceptionHandling.ExeptionHandlingProcedures;
 
 namespace NavisWorksInfoTools.S1NF0_SOFTWARE
 {
@@ -22,83 +23,90 @@ namespace NavisWorksInfoTools.S1NF0_SOFTWARE
     {
         public override int Execute(params string[] parameters)
         {
-            Document doc = Application.ActiveDocument;
-            DocumentSelectionSets selectionSets = doc.SelectionSets;
-            FolderItem rootFolderItem = selectionSets.RootItem;
-            List<FolderItem> folders = new List<FolderItem>();
-            foreach (SavedItem item in rootFolderItem.Children)
+            try
             {
-                if (item is FolderItem)
+                Document doc = Application.ActiveDocument;
+                DocumentSelectionSets selectionSets = doc.SelectionSets;
+                FolderItem rootFolderItem = selectionSets.RootItem;
+                List<FolderItem> folders = new List<FolderItem>();
+                foreach (SavedItem item in rootFolderItem.Children)
                 {
-                    folders.Add(item as FolderItem);
+                    if (item is FolderItem)
+                    {
+                        folders.Add(item as FolderItem);
+                    }
+                }
+
+                if (folders.Count == 0)
+                {
+                    WinForms.MessageBox.Show("Для работы этой команды необходимо наличие папок с сохраненными наборами выбора",
+                        "Отменено", WinForms.MessageBoxButtons.OK);
+                    return 0;
+                }
+
+                //Вывести окно для выбора корневой папки для формирования структуры
+                SelectRootFolderWindow selectRootFolderWindow = new SelectRootFolderWindow(folders);
+                bool? result = selectRootFolderWindow.ShowDialog();
+                if (result != null && result.Value)
+                {
+                    FolderItem rootFolder = selectRootFolderWindow.RootFolder;
+
+                    //Запросить имя и путь создаваемого файла структуры
+                    string initialPath = Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments);
+                    string initialFileName = "Проект";
+                    string docFileName = doc.FileName;
+                    if (!String.IsNullOrEmpty(docFileName))
+                    {
+                        initialPath = Path.GetDirectoryName(docFileName);
+                        initialFileName = Path.GetFileNameWithoutExtension(docFileName);
+                    }
+
+                    WinForms.SaveFileDialog saveFileDialog = new WinForms.SaveFileDialog();
+                    saveFileDialog.InitialDirectory = initialPath;
+                    saveFileDialog.Filter = "st.xml files (*.st.xml)|*.st.xml";
+                    saveFileDialog.FilterIndex = 1;
+                    saveFileDialog.RestoreDirectory = true;
+                    if (!String.IsNullOrWhiteSpace(initialFileName))
+                        saveFileDialog.FileName = initialFileName;
+                    saveFileDialog.Title = "Укажите файл для создания структуры";
+
+                    if (saveFileDialog.ShowDialog() == WinForms.DialogResult.OK)
+                    {
+                        string stFilename = saveFileDialog.FileName;
+                        string name = Path.GetFileName(stFilename);
+                        string clFilename = Path.Combine(Path.GetDirectoryName(stFilename),
+                            name.Substring(0, name.Length - 6) + "cl.xml");
+
+                        //Создать пустую структуру и пустой классификатор
+                        Classifier classifier = new Classifier()
+                        {
+                            Name = rootFolder.DisplayName,
+                            IsPrimary = true,
+                            DetailLevels = new List<string>() { "leve1" }
+                        };
+                        Structure structure = new Structure()
+                        {
+                            Name = rootFolder.DisplayName,
+                            Classifier = classifier.Name,
+                            IsPrimary = true,
+                        };
+                        //Создать StructureDataStorage
+                        StructureDataStorage dataStorage = new StructureDataStorage(doc, stFilename, clFilename, structure, classifier);
+
+                        //Сформировать XML по структуре папок
+                        //Каждая папка - объект без свойств
+                        StructureFilling(null, rootFolder, dataStorage, doc);
+
+                        dataStorage.SerializeStruture();
+                        WinForms.MessageBox.Show("Данные сохранены", "Готово", WinForms.MessageBoxButtons.OK);
+                    }
+
+
                 }
             }
-
-            if (folders.Count==0)
+            catch (Exception ex)
             {
-                WinForms.MessageBox.Show("Для создания структуры необходимо наличие папок с сохраненными наборами выбора",
-                    "Отменено", WinForms.MessageBoxButtons.OK);
-                return 0;
-            }
-
-            //Вывести окно для выбора корневой папки для формирования структуры
-            SelectRootFolderWindow selectRootFolderWindow = new SelectRootFolderWindow(folders);
-            bool? result = selectRootFolderWindow.ShowDialog();
-            if (result != null && result.Value)
-            {
-                FolderItem rootFolder = selectRootFolderWindow.RootFolder;
-
-                //Запросить имя и путь создаваемого файла структуры
-                string initialPath = Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments);
-                string initialFileName = "Проект";
-                string docFileName = doc.FileName;
-                if (!String.IsNullOrEmpty(docFileName))
-                {
-                    initialPath = Path.GetDirectoryName(docFileName);
-                    initialFileName = Path.GetFileNameWithoutExtension(docFileName);
-                }
-
-                WinForms.SaveFileDialog saveFileDialog = new WinForms.SaveFileDialog();
-                saveFileDialog.InitialDirectory = initialPath;
-                saveFileDialog.Filter = "st.xml files (*.st.xml)|*.st.xml";
-                saveFileDialog.FilterIndex = 1;
-                saveFileDialog.RestoreDirectory = true;
-                if (!String.IsNullOrWhiteSpace(initialFileName))
-                    saveFileDialog.FileName = initialFileName;
-                saveFileDialog.Title = "Укажите файл для создания структуры";
-
-                if (saveFileDialog.ShowDialog() == WinForms.DialogResult.OK)
-                {
-                    string stFilename = saveFileDialog.FileName;
-                    string name = Path.GetFileName(stFilename);
-                    string clFilename = Path.Combine(Path.GetDirectoryName(stFilename),
-                        name.Substring(0, name.Length - 6) + "cl.xml");
-
-                    //Создать пустую структуру и пустой классификатор
-                    Classifier classifier = new Classifier()
-                    {
-                        Name = rootFolder.DisplayName,
-                        IsPrimary = true,
-                        DetailLevels = new List<string>() { "leve1" }
-                    };
-                    Structure structure = new Structure()
-                    {
-                        Name = rootFolder.DisplayName,
-                        Classifier = classifier.Name,
-                        IsPrimary = true,
-                    };
-                    //Создать StructureDataStorage
-                    StructureDataStorage dataStorage = new StructureDataStorage(doc, stFilename, clFilename, structure, classifier);
-
-                    //Сформировать XML по структуре папок
-                    //Каждая папка - объект без свойств
-                    StructureFilling(null, rootFolder, dataStorage, doc);
-
-                    dataStorage.SerializeStruture();
-                    WinForms.MessageBox.Show("Данные сохранены", "Готово", WinForms.MessageBoxButtons.OK);
-                }
-
-
+                CommonException(ex, "Ошибка при создании файлов структуры из наборов выбора");
             }
 
 

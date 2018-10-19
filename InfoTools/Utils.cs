@@ -881,5 +881,18 @@ namespace Civil3DInfoTools
             return (polygonIsClockwise && isLeft > 0) || (!polygonIsClockwise && isLeft < 0);
         }
 
+        private static double lengthDelta = Tolerance.Global.EqualPoint;
+
+        /// <summary>
+        /// Длины равны с учетом стандартного допуска AutoCAD
+        /// </summary>
+        /// <param name="len1"></param>
+        /// <param name="len2"></param>
+        /// <returns></returns>
+        public static bool LengthIsEquals(double len1, double len2)
+        {
+            return Math.Abs(len1 - len2) <= lengthDelta;
+        }
+
     }
 }

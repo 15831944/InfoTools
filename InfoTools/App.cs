@@ -7,11 +7,17 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using System.Reflection;
 
 namespace Civil3DInfoTools
 {
     public class App : IExtensionApplication
     {
+        /// <summary>
+        /// Расположение загруженной сборки
+        /// </summary>
+        public static string AssemblyLocation { get; } = Assembly.GetExecutingAssembly().Location;
+
         private static PolylineCaptionOverrule polylineCaptionOverrule = null;
 
         void IExtensionApplication.Initialize()

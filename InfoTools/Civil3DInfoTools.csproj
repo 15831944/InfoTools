@@ -159,6 +159,12 @@
       <HintPath>C:\Program Files\Autodesk\AutoCAD 2018\C3D\AeccDbMgd.dll</HintPath>
       <Private>False</Private>
     </Reference>
+    <Reference Include="ExcelDataReader, Version=3.4.2.0, Culture=neutral, PublicKeyToken=93517dbe6a4012fa, processorArchitecture=MSIL">
+      <HintPath>..\packages\ExcelDataReader.3.4.2\lib\net45\ExcelDataReader.dll</HintPath>
+    </Reference>
+    <Reference Include="ExcelDataReader.DataSet, Version=3.4.2.0, Culture=neutral, PublicKeyToken=93517dbe6a4012fa, processorArchitecture=MSIL">
+      <HintPath>..\packages\ExcelDataReader.DataSet.3.4.2\lib\net35\ExcelDataReader.DataSet.dll</HintPath>
+    </Reference>
     <Reference Include="KnnUtility">
       <HintPath>C:\Users\kzaharov\Source\Repos\RBush\KnnUtility\bin\Debug\KnnUtility.dll</HintPath>
     </Reference>
@@ -178,6 +184,7 @@
     <Reference Include="System" />
     <Reference Include="System.Core" />
     <Reference Include="System.Drawing" />
+    <Reference Include="System.IO.Compression" />
     <Reference Include="System.Windows.Forms" />
     <Reference Include="System.Xaml" />
     <Reference Include="System.Xml.Linq" />
@@ -222,14 +229,13 @@
     <Compile Include="DisplayUtils.cs" />
     <Compile Include="AuxiliaryCommands\CreateLandSiteBlockCommand.cs" />
     <Compile Include="AuxiliaryCommands\LayersByColorsCommand.cs" />
-    <Compile Include="PipeNetworkCreating\ConfigureNetworkCreationWindow.xaml.cs">
-      <DependentUpon>ConfigureNetworkCreationWindow.xaml</DependentUpon>
-    </Compile>
     <Compile Include="PipeNetworkCreating\ConfigureNetworkCreationWindow2\BlockStructureMappingPairModel.cs" />
     <Compile Include="PipeNetworkCreating\ConfigureNetworkCreationWindow2\ConfigureNetworkCreationView.xaml.cs">
       <DependentUpon>ConfigureNetworkCreationView.xaml</DependentUpon>
     </Compile>
     <Compile Include="PipeNetworkCreating\ConfigureNetworkCreationWindow2\ConfigureNetworkCreationViewModel.cs" />
+    <Compile Include="PipeNetworkCreating\PipeNetworkGraph.cs" />
+    <Compile Include="PipeNetworkCreating\PipeStructureExcelReader.cs" />
     <Compile Include="PipeNetworkCreating\RaiseNetworkTo3dCommand.cs" />
     <Compile Include="ObjectInsertion\InsertByCoordinatesCommand.cs" />
     <Compile Include="PolylineCaptionOverrule.cs" />
@@ -255,6 +261,7 @@
   <ItemGroup>
     <None Include="InfoTools.cuix" />
     <None Include="packages.config" />
+    <None Include="PipeNetworkCreating\23291108.xls" />
     <None Include="PipeNetworkCreating\Кодификатор_М1-500_по_городу_СПб.doc" />
   </ItemGroup>
   <ItemGroup>
@@ -317,10 +324,6 @@
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>
-    <Page Include="PipeNetworkCreating\ConfigureNetworkCreationWindow.xaml">
-      <SubType>Designer</SubType>
-      <Generator>MSBuild:Compile</Generator>
-    </Page>
     <Page Include="PipeNetworkCreating\ConfigureNetworkCreationWindow2\ConfigureNetworkCreationView.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
@@ -331,11 +334,14 @@
   <PropertyGroup>
     <PostBuildEvent>copy "$(ProjectDir)\PackageContents.xml" "$(TargetDir)"
 copy "$(ProjectDir)\InfoTools.cuix" "$(TargetDir)"
-
+copy "$(ProjectDir)\PipeNetworkCreating\Кодификатор_М1-500_по_городу_СПб.doc" "$(TargetDir)"
+copy "$(ProjectDir)\PipeNetworkCreating\23291108.xls" "$(TargetDir)"
 
 copy "$(TargetDir)\PackageContents.xml" "$(AppData)\Autodesk\ApplicationPlugins\Civil3DInfoTools.bundle"
 copy "$(TargetDir)\InfoTools.cuix" "$(AppData)\Autodesk\ApplicationPlugins\Civil3DInfoTools.bundle"
 copy "$(TargetDir)*.dll" "$(AppData)\Autodesk\ApplicationPlugins\Civil3DInfoTools.bundle"
-copy "$(TargetDir)*.pdb" "$(AppData)\Autodesk\ApplicationPlugins\Civil3DInfoTools.bundle"</PostBuildEvent>
+copy "$(TargetDir)*.pdb" "$(AppData)\Autodesk\ApplicationPlugins\Civil3DInfoTools.bundle"
+copy "$(TargetDir)\Кодификатор_М1-500_по_городу_СПб.doc" "$(AppData)\Autodesk\ApplicationPlugins\Civil3DInfoTools.bundle"
+copy "$(TargetDir)\23291108.xls" "$(AppData)\Autodesk\ApplicationPlugins\Civil3DInfoTools.bundle"</PostBuildEvent>
   </PropertyGroup>
 </Project>

@@ -20,9 +20,8 @@ namespace Common.ExceptionHandling
 
         public static void AccessException(IOException ex)
         {
-            string fileName = ex.Message.Split('\'')[1];
-            MessageBox.Show("Заблокирован доступ к файлу " + fileName
-                + ". Убедитесь, что данный файл не открыт у вас или другого пользователя.",
+            MessageBox.Show(ex.Message
+                + " Убедитесь, что данный файл не открыт у вас или другого пользователя.",
                 "Файл заблокирован");
         }
     }

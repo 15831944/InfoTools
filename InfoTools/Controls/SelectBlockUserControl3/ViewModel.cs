@@ -236,7 +236,8 @@ namespace Civil3DInfoTools.Controls.SelectBlockUserControl3
                         }
                     }
                 } while (!selectedBlockIsAllowed);//если выбрана внешняя ссылка или анонимный блок, то повторить попытку
-                mainWindow.Show();
+                //mainWindow.Show();
+                Autodesk.AutoCAD.ApplicationServices.Application.ShowModalWindow(mainWindow);
             }
         }
     }

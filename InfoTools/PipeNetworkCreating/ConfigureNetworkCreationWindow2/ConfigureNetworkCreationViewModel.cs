@@ -24,6 +24,8 @@ using System.IO;
 namespace Civil3DInfoTools.PipeNetworkCreating.ConfigureNetworkCreationWindow2
 {
     //TODO: Как обеспечить уникальность блоков в строках DataGrid при вводе?
+    //для этого лучше всего будет выделить датагрид соответствия в единый UserControl
+    //и уже в нем поддерживать колекцию блоков, которые должны отображаться при выборе в ячейке
 
     public class ConfigureNetworkCreationViewModel : INotifyPropertyChanged
     {
@@ -35,9 +37,19 @@ namespace Civil3DInfoTools.PipeNetworkCreating.ConfigureNetworkCreationWindow2
 
         private const string DEFAULT_COMMUVICATION_LAYER = "30_Канализация";
 
+        private const string REFERENCE_DOC_NAME = "Кодификатор_М1-500_по_городу_СПб.doc";
+
+        private const string EXCEL_SAMPLE_NAME = "23291108.xls";
+
         Document doc = null;
         Window thisWindow = null;
         ObservableCollection<BlockTableRecord> blocks = null;
+
+
+        public bool ConfigurationsAccepted { get; private set; } = false;
+
+        public PipeStructureExcelReader ExcelReader { get; private set; }
+
 
         //НЕ ЗАБЫВАТЬ, ЧТО СВОЙСТВА СЯЗАННЫЕ С VIEW ДОЛЖНЫ БЫТЬ ПУБЛИЧНЫМИ!!
         private SelectLayerUserControl.ViewModel gridLayerVM;
@@ -143,7 +155,7 @@ namespace Civil3DInfoTools.PipeNetworkCreating.ConfigureNetworkCreationWindow2
                     PartFamily pf = bsModel.StructureVM.SelectedPartFamily?.PartFamily;
                     PartSize ps = bsModel.StructureVM.SelectedPartSize;
 
-                    if (btr != null && pf != null && ps != null)
+                    if (btr != null && pf != null && ps != null && !mapping.ContainsKey(btr.Id))
                     {
                         mapping.Add(btr.Id, new SelectedPartTypeId(pf.Id, ps.Id));
                     }
@@ -238,6 +250,18 @@ namespace Civil3DInfoTools.PipeNetworkCreating.ConfigureNetworkCreationWindow2
             }
         }
 
+        private NumericUpDownViewModel wellDepthVM = null;
+
+        public NumericUpDownViewModel WellDepthVM
+        {
+            get { return wellDepthVM; }
+            set
+            {
+                wellDepthVM = value;
+                OnPropertyChanged("WellDepthVM");
+            }
+        }
+
         private bool sameDepth = false;
         public bool SameDepth
         {
@@ -301,8 +325,8 @@ namespace Civil3DInfoTools.PipeNetworkCreating.ConfigureNetworkCreationWindow2
             {
                 return GridLayerId != null && StructuresLayerId != null && StructureLabelsLayerId != null
                     && PartsListSelected && BlockStructureMapping.Count > 0 && PipeType != null
-                    && TinSurfaceId != null && !String.IsNullOrEmpty(ExcelPath) 
-                    && CommunicationLayerId!=null;
+                    && TinSurfaceId != null && !String.IsNullOrEmpty(ExcelPath)
+                    && CommunicationLayerId != null;
             }
         }
 
@@ -324,12 +348,25 @@ namespace Civil3DInfoTools.PipeNetworkCreating.ConfigureNetworkCreationWindow2
         { get { return acceptConfigsCommand; } }
 
 
+        private readonly RelayCommand openReferenceDocCommand = null;
+        public RelayCommand OpenReferenceDocCommand
+        { get { return openReferenceDocCommand; } }
+
+        //OpenExcelSampleCommand
+        private readonly RelayCommand openExcelSampleCommand = null;
+        public RelayCommand OpenExcelSampleCommand
+        { get { return openExcelSampleCommand; } }
+
         public ConfigureNetworkCreationViewModel(Document doc, CivilDocument cdok, Window thisWindow)
         {
             addBlockStructureMappingPairCommand
                 = new RelayCommand(new Action<object>(AddBlockStructureMappingPair));
             selectSurfaceCommand = new RelayCommand(new Action<object>(SelectSurface));
             acceptConfigsCommand = new RelayCommand(new Action<object>(AcceptConfigs));
+
+            openReferenceDocCommand = new RelayCommand(new Action<object>(OpenReferenceDoc));
+            openExcelSampleCommand = new RelayCommand(new Action<object>(OpenExcelSample));
+
 
             this.doc = doc;
             this.thisWindow = thisWindow;
@@ -370,7 +407,9 @@ namespace Civil3DInfoTools.PipeNetworkCreating.ConfigureNetworkCreationWindow2
                 | PartType.Channel | PartType.Conduit | PartType.UndefinedPartType);
 
 
-            communicationDepthVM = new NumericUpDownViewModel(1, 1, 0, 100);
+            communicationDepthVM = new NumericUpDownViewModel(1, 0.5, 0, 100);
+
+            wellDepthVM = new NumericUpDownViewModel(2, 0.5, 0, 100);
 
             string initialPath = Path.GetDirectoryName(doc.Name);
             excelPathVM = new FileNameInputViewModel("Excel Files|*.xls;*.xlsx;", "Укажите путь к файлу Excel")
@@ -396,7 +435,7 @@ namespace Civil3DInfoTools.PipeNetworkCreating.ConfigureNetworkCreationWindow2
 
         private void AddBlockStructureMappingPair(object obj)
         {
-            BlockStructureMappingPairModel newItem 
+            BlockStructureMappingPairModel newItem
                 = new BlockStructureMappingPairModel(doc, thisWindow, blocks, SelectedPartsList);
             newItem.SelectionChanged += SomethingDifferent;
 
@@ -427,7 +466,8 @@ namespace Civil3DInfoTools.PipeNetworkCreating.ConfigureNetworkCreationWindow2
                     }
                 }
 
-                thisWindow.Show();
+                //thisWindow.Show();
+                Autodesk.AutoCAD.ApplicationServices.Application.ShowModalWindow(thisWindow);
             }
         }
 
@@ -436,12 +476,46 @@ namespace Civil3DInfoTools.PipeNetworkCreating.ConfigureNetworkCreationWindow2
 
         private void AcceptConfigs(object obj)
         {
-            //Считать данные из Excel, убедиться, что формат Excel правильный
-            //иначе выкинуть сообщение с ошибкой и не закрывать окно
+            //Попытаться считать данные из Excel
+            ExcelReader = new PipeStructureExcelReader(ExcelPath);
+            if (ExcelReader.WellDataFiles.Count == 0)
+            {
+                MessageBox.Show("В указанной директории не найдено ни одного файла Excel с подходящими именами. "
+                    + "Для каждого квадрата должен быть отдельный файл с данными по колодцам. Файлы должны называться в соответствии с номером квадрата. "
+                    + "Например, \"11111111\" или \"1111-11-11\" или \"1111_11_11\". Расширение \".xlsx\" или \".xls\"", "Отмена");
+                return;
+            }
+            if (ExcelReader.ReadDataFromExcel())
+            {
+                if (ExcelReader.WellsData.Count == 0 || ExcelReader.WellsData.All(kvp => kvp.Value == null || kvp.Value.Count == 0))
+                {
+                    MessageBox.Show("В указанных файлах Excel не удалось обнаружить данные о колодцах. Возможно файлы имеют неверный формат "
+                        + "(смотри пример файла данных по гиперссылке в окне настройки)."
+                        , "Отмена");
+                    return;
+                }
 
-            thisWindow.Close();
+                ConfigurationsAccepted = true;
+                thisWindow.Close();
+            }
+
         }
 
+
+        private void OpenReferenceDoc(object obj)
+        {
+            //Файл кодификатора должен лежать рядом с исполняемой сборкой
+            string docFileName = Path.Combine(Path.GetDirectoryName(App.AssemblyLocation), REFERENCE_DOC_NAME);
+            try { System.Diagnostics.Process.Start(docFileName); } catch { }
+        }
+
+
+        private void OpenExcelSample(object obj)
+        {
+            //Файл примера экселя должен лежать рядом с исполняемой сборкой
+            string xlsFileName = Path.Combine(Path.GetDirectoryName(App.AssemblyLocation), EXCEL_SAMPLE_NAME);
+            try { System.Diagnostics.Process.Start(xlsFileName); } catch { }
+        }
 
 
 

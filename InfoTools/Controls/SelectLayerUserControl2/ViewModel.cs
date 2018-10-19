@@ -170,7 +170,8 @@ namespace Civil3DInfoTools.Controls.SelectLayerUserControl2
                         SelectedIndex = i;
                     }
                 }
-                mainWindow.Show();
+                //mainWindow.Show();
+                Autodesk.AutoCAD.ApplicationServices.Application.ShowModalWindow(mainWindow);
             }
         }
 
