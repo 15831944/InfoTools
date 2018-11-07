@@ -2,9 +2,11 @@
 using Autodesk.AutoCAD.DatabaseServices;
 using Autodesk.AutoCAD.EditorInput;
 using Autodesk.AutoCAD.Geometry;
+using RBush;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Reflection;
 
 namespace Civil3DInfoTools
 {
@@ -124,7 +126,7 @@ namespace Civil3DInfoTools
         /// <param name="layerName"></param>
         /// <param name="db"></param>
         /// <param name="tr"></param>
-        /// <param name="layerSample"></param>
+        /// <param name="layerSample">образец для создания слоя если еще нет</param>
         /// <param name="color"></param>
         /// <param name="lineWeight"></param>
         /// <returns></returns>
@@ -166,6 +168,18 @@ namespace Civil3DInfoTools
             }
 
             return layerId;
+        }
+
+
+        public static ObjectId GetStandardTextStyle(Database db, Transaction tr)
+        {
+            TextStyleTable tst = (TextStyleTable)tr.GetObject(db.TextStyleTableId, OpenMode.ForRead);
+            if (tst.Has("Standard"))
+            {
+                return tst["Standard"];
+            }
+
+            return ObjectId.Null;
         }
 
 
@@ -892,6 +906,48 @@ namespace Civil3DInfoTools
         public static bool LengthIsEquals(double len1, double len2)
         {
             return Math.Abs(len1 - len2) <= lengthDelta;
+        }
+
+
+        /// <summary>
+        /// Копирование свойств с помощью рефлексии
+        /// https://spiderinnet1.typepad.com/blog/2012/03/autocad-net-copy-properties-between-different-kind-entity.html
+        /// </summary>
+        /// <param name="source"></param>
+        /// <param name="target"></param>
+        public static void BetweenDifferentKind(DBObject source, DBObject target)
+        {
+            //if (source.GetType() == target.GetType())
+            //    throw new ArgumentException("The same kind!");
+
+            PropertyInfo[] piArr = source.GetType().GetProperties(BindingFlags.Public | BindingFlags.Instance);
+            PropertyInfo[] piArr1 = target.GetType().GetProperties(BindingFlags.Public | BindingFlags.Instance);
+            foreach (PropertyInfo pi in piArr)
+            {
+                PropertyInfo pi1 = piArr1.FirstOrDefault(p => p.Name == pi.Name && p.PropertyType == pi.PropertyType && p.CanRead && p.CanWrite);
+                if (pi.CanRead && pi.CanWrite && pi.PropertyType.Name != "Point3d" && pi1 != null)
+                {
+                    try
+                    {
+                        pi1.SetValue(target, pi.GetValue(source, null), null);
+                    }
+                    catch (System.Reflection.TargetInvocationException tiEx)
+                    {
+                    }
+                }
+            }
+        }
+
+
+        public static Point2d[] GetPointsToDraw(Envelope e)
+        {
+            return new Point2d[]
+            {
+                new Point2d(e.MinX, e.MinY),
+                new Point2d(e.MinX, e.MaxY),
+                new Point2d(e.MaxX, e.MaxY),
+                new Point2d(e.MaxX, e.MinY),
+            };
         }
 
     }

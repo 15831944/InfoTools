@@ -69,7 +69,7 @@ namespace Civil3DInfoTools.AuxiliaryCommands
 
 
                 pldc = new SelectPartSizeViewModel(doc, partsLists.First(), PartType.StructGeneral | /*PartType.StructEquipment |*/
-                PartType.StructJunction | PartType.StructNull /*| PartType.StructInletOutlet*/);
+                PartType.StructJunction | PartType.StructNull /*| PartType.StructInletOutlet*/, ObjectId.Null, ObjectId.Null);
                 mvvmTest3.DataContext = pldc;
             };
 

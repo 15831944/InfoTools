@@ -114,10 +114,10 @@ namespace NavisWorksInfoTools
                             }
                             string notEditedFileName = Path.Combine(notEditedDirectory,
                                 Path.GetFileName(fbxFullFileName));
-                            if (FBXplugin.Execute(fbxFullFileName) == 0)//Выполнить экспорт в FBX
+                            if (FBXplugin.Execute(notEditedFileName) == 0)//Выполнить экспорт в FBX
                             {
-                                bool isASCII = IsASCIIFBXFile(fbxFullFileName);
-                                if (isASCII || GetBinaryVersionNum(fbxFullFileName) <= 7500)
+                                bool isASCII = IsASCIIFBXFile(notEditedFileName);
+                                if (isASCII || GetBinaryVersionNum(notEditedFileName) <= 7500)
                                 {
                                     //Прочитать модель, составить очередь имен для подстановки в FBX
                                     Queue<FBX.NameReplacement> replacements = new Queue<FBX.NameReplacement>();
@@ -152,14 +152,15 @@ namespace NavisWorksInfoTools
 
                                     //Отредактировать FBX
                                     FBX.ModelNamesEditor fbxEditor = null;
-                                    if (IsASCIIFBXFile(fbxFullFileName))
+                                    if (IsASCIIFBXFile(notEditedFileName))
                                     {
-                                        fbxEditor = new FBX.ASCIIModelNamesEditor(fbxFullFileName, replacements);
+                                        fbxEditor = new FBX.ASCIIModelNamesEditor(notEditedFileName, replacements);
                                     }
                                     else /*if (GetBinaryVersionNum(sFD.FileName) <= 7500)*/
                                     {
-                                        fbxEditor = new FBX.BinaryModelNamesEditor(fbxFullFileName, replacements);
+                                        fbxEditor = new FBX.BinaryModelNamesEditor(notEditedFileName, replacements);
                                     }
+                                    fbxEditor.FbxFileNameEdited = fbxFullFileName;
                                     fbxEditor.EditModelNames();
 
                                     if (ManualUse)

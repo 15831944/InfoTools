@@ -10,46 +10,49 @@
         xmlns:numControl="clr-namespace:Common.Controls.NumericUpDownControl;assembly=Common"
         xmlns:fileNameControl="clr-namespace:Common.Controls.FileNameInputControl;assembly=Common" 
         mc:Ignorable="d"
-        Title="Настройка создания модели инженерной сети" Height="650" Width="800" ResizeMode="NoResize">
-    <!---->
-    
+        Title="Настройка создания модели инженерной сети" Height="725" Width="1000" ResizeMode="NoResize"
+        >
+
     <Grid Margin="5,5,5,5">
         <Grid.RowDefinitions>
             <RowDefinition Height="30"/>
             <RowDefinition Height="30"/>
             <RowDefinition Height="30"/>
             <RowDefinition Height="30"/>
-            <RowDefinition Height="190"/>
+            <RowDefinition Height="45"/>
             <RowDefinition Height="30"/>
             <RowDefinition Height="30"/>
             <RowDefinition Height="30"/>
             <RowDefinition Height="30"/>
+            <RowDefinition Height="160"/>
             <RowDefinition Height="30"/>
-            <RowDefinition Height="60"/>
             <RowDefinition Height="30"/>
+            <RowDefinition Height="30"/>
+            <RowDefinition Height="*"/>
 
-            <RowDefinition Height="7*"/>
         </Grid.RowDefinitions>
         <Grid.ColumnDefinitions>
             <ColumnDefinition Width="350"/>
             <ColumnDefinition Width="*"/>
         </Grid.ColumnDefinitions>
 
-        <Label Content="Задайте слой сетки:" Margin="0,0,0,0" Grid.Row="0" Grid.RowSpan="1" VerticalAlignment="Center"/>
-        <Label Content="Задайте слой колодцев:" Margin="0,0,0,0" Grid.Row="1" Grid.RowSpan="1" VerticalAlignment="Center"/>
-        <Label Content="Задайте слой подписей колодцев:" Margin="0,0,0,0" Grid.Row="2" Grid.RowSpan="1" VerticalAlignment="Center"/>
-        <Label Content="Задайте список элементов сети Civil 3d:" Margin="0,0,0,0" Grid.Row="3" Grid.RowSpan="1" VerticalAlignment="Center"/>
-        <Label Content="Задайте типоразмер трубы Civil 3d:" Margin="0,0,0,0" Grid.Row="5" Grid.RowSpan="1" VerticalAlignment="Center"/>
-        <Label Content="Укажите объект существующей поверхности TIN:" Margin="0,0,0,0" Grid.Row="6" Grid.RowSpan="1" VerticalAlignment="Center"/>
+        <Label Content="Задайте слой сетки:" Margin="0,2" Grid.Row="0" Grid.RowSpan="1" VerticalAlignment="Center" Height="26"/>
+        <Label Content="Задайте слой колодцев:" Margin="0,2" Grid.Row="1" Grid.RowSpan="1" VerticalAlignment="Center" Height="26"/>
+        <Label Content="Задайте слой подписей колодцев:" Margin="0,2" Grid.Row="2" Grid.RowSpan="1" VerticalAlignment="Center" Height="26"/>
+        <Label Content="Задайте список элементов сети Civil 3d:" Margin="0,2" Grid.Row="8" Grid.RowSpan="1" VerticalAlignment="Center" Height="26"/>
+        <Label Content="Задайте типоразмер трубы Civil 3d:" Margin="0,2" Grid.Row="10" Grid.RowSpan="1" VerticalAlignment="Center" Height="26"/>
+        <Label Content="Укажите объект существующей поверхности TIN:" Margin="0,2" Grid.Row="11" Grid.RowSpan="1" VerticalAlignment="Center" Height="26"/>
+        <Label Content="Верх колодца НЕ ниже существующей поверхности:" ToolTip="То есть если согласно данным из таблиц Excel отметка верха колодца ниже, чем отметка поверхности TIN в этой точке, то отметка верха колодца принимается по поверхности TIN"
+               ToolTipService.ShowDuration="10000" Margin="0,2" Grid.Row="12" Grid.RowSpan="1" VerticalAlignment="Center" Height="26"/>
 
         <Label Content="Задайте глубину заложения инженерной сети по умолчанию:" ToolTip="Для тех случаев, когда нет данных в таблице Excel" 
-               Margin="0,0,0,0" Grid.Row="7" Grid.RowSpan="1" VerticalAlignment="Center"/>
+               Margin="0,2" Grid.Row="5" Grid.RowSpan="1" VerticalAlignment="Center" Height="26"/>
         <Label Content="Задайте глубину колодца по умолчанию:" ToolTip="Для тех случаев, когда нет данных в таблице Excel" 
-               Margin="0,0,0,0" Grid.Row="8" Grid.RowSpan="1" VerticalAlignment="Center"/>
+               Margin="0,2" Grid.Row="6" Grid.RowSpan="1" VerticalAlignment="Center" Height="26"/>
         <Label Content="Сеть залегает на одной глубине от поверхности земли:" ToolTip="Как, например, кабели" 
-               Margin="0,0,0,0" Grid.Row="9" Grid.RowSpan="1" VerticalAlignment="Center"/>
+               Margin="0,2" Grid.Row="7" Grid.RowSpan="1" VerticalAlignment="Center" Height="26"/>
         <TextBlock  ToolTip="Если файлов несколько (по квадратам), то они должны быть в одной папке с указанным" 
-               Margin="5,5,0,0" Grid.Row="10" Grid.RowSpan="1" 
+               Margin="5,5,0,0" Grid.Row="4" Grid.RowSpan="1" 
                     TextWrapping="Wrap">
             Задайте путь к файлу Excel с данными о колодцах (
             <Hyperlink Command="{Binding OpenExcelSampleCommand}" >
@@ -57,121 +60,162 @@
             </Hyperlink>
             ):
         </TextBlock>
-        
-        <Label Content="Выберите слой инженерной сети:" Margin="0,0,0,0" Grid.Row="11" Grid.RowSpan="1" VerticalAlignment="Center"/>
+
+        <Label Content="Выберите слой инженерной сети:" Margin="0,2" Grid.Row="3" Grid.RowSpan="1" VerticalAlignment="Center" Height="26"/>
 
         <layerControl:View DataContext="{Binding GridLayerVM}" Grid.Row="0" Grid.Column="1" Margin="3,3,3,3"/>
         <layerControl:View DataContext="{Binding StructuresLayerVM}" Grid.Row="1" Grid.Column="1" Margin="3,3,3,3"/>
         <layerControl:View DataContext="{Binding StructureLabelsLayerVM}" Grid.Row="2" Grid.Column="1" Margin="3,3,3,3"/>
-
-        
-    <ComboBox Name="partListsComboBox" ItemsSource="{Binding PartsLists}" SelectedItem="{Binding SelectedPartsListItem}" DisplayMemberPath="Name" Grid.Column="1" Grid.Row="3"
-                  Margin="3,3,3,3"/>
-    <StackPanel Orientation="Vertical"  Grid.Row="4" Grid.RowSpan="1" Grid.ColumnSpan="2">
-        <DataGrid Margin="3,3,3,3" Name="blockMappingDataGrid" Height="150" VerticalAlignment="Top" AutoGenerateColumns="False"
-                      ItemsSource="{Binding BlocksStructuresMappingColl}" IsEnabled="{Binding PartsListSelected}">
-            <DataGrid.Columns>
-                <DataGridTemplateColumn Header="Блок" Width="200">
-                    <DataGridTemplateColumn.CellTemplate>
-                        <DataTemplate>
-                            <blockControl:View DataContext="{Binding BlockVM}"/>
-                        </DataTemplate>
-                    </DataGridTemplateColumn.CellTemplate>
-                </DataGridTemplateColumn>
-                <DataGridTemplateColumn Header="Колодец Civil 3d" Width="400">
-                    <DataGridTemplateColumn.CellTemplate>
-                        <DataTemplate>
-                            <structControl:SelectPartSizeView  DataContext="{Binding StructureVM}" 
-                                PartsList="{Binding DataContext.SelectedPartsList, ElementName=_this}"/>
-                        </DataTemplate>
-                    </DataGridTemplateColumn.CellTemplate>
-                </DataGridTemplateColumn>
+        <layerControl:View Margin="3,3,3,3" DataContext="{Binding CommunicationLayerVM}" Grid.Row="3" Grid.Column="1"/>
 
 
-            </DataGrid.Columns>
-        </DataGrid>
-        <StackPanel Orientation="Horizontal">
-            <Button x:Name="addBlockButton"  Width="100" Height="30" Margin="3,3,3,3" VerticalAlignment="Center"  
+        <ComboBox Name="partListsComboBox" ItemsSource="{Binding PartsLists}" 
+                  SelectedItem="{Binding SelectedPartsListItem}"
+                  DisplayMemberPath="Name" Grid.Column="1" Grid.Row="8" Margin="3,3,3,3"/>
+        <StackPanel Orientation="Vertical"  Grid.Row="9" Grid.RowSpan="1" Grid.ColumnSpan="2">
+            <DataGrid Margin="3,3,3,3" Name="blockMappingDataGrid" Height="115" VerticalAlignment="Top" AutoGenerateColumns="False"
+                      ItemsSource="{Binding BlocksStructuresMappingColl}" >
+                <DataGrid.Columns>
+                    <DataGridTemplateColumn Header="Блок" Width="200">
+                        <DataGridTemplateColumn.CellTemplate>
+                            <DataTemplate>
+                                <blockControl:View DataContext="{Binding BlockVM}"/>
+                            </DataTemplate>
+                        </DataGridTemplateColumn.CellTemplate>
+                    </DataGridTemplateColumn>
+                    <DataGridTemplateColumn Header="Колодец Civil 3d" Width="400">
+                        <DataGridTemplateColumn.CellTemplate>
+                            <DataTemplate>
+                                <structControl:SelectPartSizeView  DataContext="{Binding StructureVM}" 
+                                PartsList="{Binding DataContext.SelectedPartsList, ElementName=_this}"
+                                IsEnabled="{Binding DataContext.PartsListSelected, ElementName=_this}"/>
+                            </DataTemplate>
+                        </DataGridTemplateColumn.CellTemplate>
+                    </DataGridTemplateColumn>
+
+
+                </DataGrid.Columns>
+            </DataGrid>
+            <StackPanel Orientation="Horizontal">
+                <Button x:Name="addBlockButton"  Width="100" Height="30" Margin="3,3,3,3" VerticalAlignment="Center"  
                         HorizontalAlignment="Left" Command="{Binding AddBlockStructureMappingPairCommand}"
-                        IsEnabled="{Binding PartsListSelected}">
-                <TextBlock Margin="0" TextWrapping="Wrap" TextAlignment="Center"><Run Text="Добавить блок"/></TextBlock>
-            </Button>
+                        >
+                    <TextBlock Margin="0" TextWrapping="Wrap" TextAlignment="Center"><Run Text="Добавить блок"/></TextBlock>
+                </Button>
+            </StackPanel>
+
         </StackPanel>
 
-    </StackPanel>
-
-    <structControl:SelectPartSizeView Margin="3,3,3,3"  DataContext="{Binding PipeVM}" 
+        <structControl:SelectPartSizeView Margin="3,3,3,3"  DataContext="{Binding PipeVM}" 
                                 PartsList="{Binding DataContext.SelectedPartsList, ElementName=_this}"
-                                           Grid.Row="5" Grid.Column="1"
+                                           Grid.Row="10" Grid.Column="1"
                                            IsEnabled="{Binding DataContext.PartsListSelected, ElementName=_this}"/>
 
-    <Grid Grid.Column="1" Grid.Row="6" >
-        <Grid.ColumnDefinitions>
-            <ColumnDefinition Width="*"/>
-            <ColumnDefinition Width="130"/>
-        </Grid.ColumnDefinitions>
+        <Grid Grid.Column="1" Grid.Row="11" >
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="130"/>
+            </Grid.ColumnDefinitions>
 
-        <TextBlock Grid.Column="0"  Text="{Binding SelectedSurfaceName}" VerticalAlignment="Center" Margin="3,3,3,3" />
-        <Button Grid.Column="1" Content="Выбрать поверхность" Command="{Binding SelectSurfaceCommand}" Margin="3,3,3,3"/>
-    </Grid>
+            <TextBlock Grid.Column="0"  Text="{Binding SelectedSurfaceName}" VerticalAlignment="Center" Margin="3,3,3,3" />
+            <Button Grid.Column="1" Content="Выбрать поверхность" Command="{Binding SelectSurfaceCommand}" Margin="3,3,3,3"/>
+        </Grid>
 
-    <Grid Grid.Column="1" Grid.Row="7">
-        <Grid.ColumnDefinitions>
-            <ColumnDefinition Width="*"/>
-            <ColumnDefinition Width="*"/>
-        </Grid.ColumnDefinitions>
+        <Grid Grid.Column="1" Grid.Row="5">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="*"/>
+            </Grid.ColumnDefinitions>
 
-        <numControl:NumericUpDownView DataContext="{Binding CommunicationDepthVM}" Margin="3,3,3,3"/>
-    </Grid>
+            <numControl:NumericUpDownView DataContext="{Binding CommunicationDepthVM}" Margin="3,3,3,3"/>
+        </Grid>
 
-    <Grid Grid.Column="1" Grid.Row="8">
-        <Grid.ColumnDefinitions>
-            <ColumnDefinition Width="*"/>
-            <ColumnDefinition Width="*"/>
-        </Grid.ColumnDefinitions>
+        <Grid Grid.Column="1" Grid.Row="6">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="*"/>
+            </Grid.ColumnDefinitions>
 
-        <numControl:NumericUpDownView DataContext="{Binding WellDepthVM}" Margin="3,3,3,3"/>
-    </Grid>
-
-
-
-    <Grid Grid.Column="1" Grid.Row="9" >
-        <Grid.ColumnDefinitions>
-            <ColumnDefinition Width="*"/>
-            <ColumnDefinition Width="*"/>
-        </Grid.ColumnDefinitions>
-
-        <CheckBox Margin="3,3,3,3" IsChecked="{Binding SameDepth}" VerticalAlignment="Center" HorizontalAlignment="Center"/>
-    </Grid>
-
-    <fileNameControl:FileNameInputView Margin="3,3,3,3" DataContext="{Binding ExcelPathVM}" Grid.Column="1" Grid.Row="10"/>
-
-    <layerControl:View Margin="3,3,3,3" DataContext="{Binding CommunicationLayerVM}" Grid.Row="11" Grid.Column="1"/>
+            <numControl:NumericUpDownView DataContext="{Binding WellDepthVM}" Margin="3,3,3,3"/>
+        </Grid>
 
 
-    <Grid Grid.Row="12" Grid.Column="0" Grid.ColumnSpan="2">
-        <Grid.ColumnDefinitions>
-            <ColumnDefinition Width="*" />
-            <ColumnDefinition Width="180" />
-        </Grid.ColumnDefinitions>
 
-        <Border BorderThickness="1" BorderBrush="Black">
-        <TextBlock TextWrapping="Wrap"
+        <Grid Grid.Column="1" Grid.Row="7" >
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="*"/>
+            </Grid.ColumnDefinitions>
+
+            <CheckBox Margin="3,3,3,3" IsChecked="{Binding SameDepth}" VerticalAlignment="Center" HorizontalAlignment="Center"/>
+        </Grid>
+
+        <fileNameControl:FileNameInputView Margin="3,3,3,3" DataContext="{Binding ExcelPathVM}" Grid.Column="1" Grid.Row="4"/>
+
+
+        <Grid Grid.Column="1" Grid.Row="12" >
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="*"/>
+            </Grid.ColumnDefinitions>
+
+            <CheckBox Margin="3,3,3,3" IsChecked="{Binding RimElevationCorrection}" VerticalAlignment="Center" HorizontalAlignment="Center"/>
+        </Grid>
+
+
+
+        <Grid Grid.Row="13" Grid.Column="0" Grid.ColumnSpan="2">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="180" />
+            </Grid.ColumnDefinitions>
+
+            <Border BorderThickness="1" BorderBrush="Black">
+                <TextBlock TextWrapping="Wrap"
                    Margin="3,3,3,3">
             Чертеж съемки должен соответствовать
             <Hyperlink Command="{Binding OpenReferenceDocCommand}">
                 Кодификатору объектов цифровых топографических планов по гор. СПб для AutoCAD
             </Hyperlink>
-        </TextBlock>
-        </Border>
+            <LineBreak/>
+            - подписи присоединений к колодцам должны быть в слое инженерной сети и могут быть только числовые
+            <LineBreak/>
+            - точка вставки блока колодца должна точно совпадать с конечными точками полилиний трубопроводов (начало либо конец полилинии, но не промежуточные точки)
+            <LineBreak/>
+            - блоки колодцев могут быть в слое инженерной сети (помимо заданного слоя колодцев)
+            <LineBreak/>
+            - Не допускается дублирование объектов на чертеже. Для удаления дубликатов используйте команду _OVERKILL
+            <LineBreak/>
+            - Данная команда не учитывает, что к одному колодцу могут быть присоеденены трубы разных сетей (такие присоединения нужно редактировать вручную)
 
-        <Button Content="Принять настройки" Margin="5,5,5,5" Grid.Column="1"
+                </TextBlock>
+            </Border>
+
+
+            <Grid Grid.Column="1">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="*"/>
+                    <RowDefinition Height="*"/>
+                </Grid.RowDefinitions>
+
+
+                <Button Content="Принять настройки" Margin="5,5,5,5"
                 IsEnabled="{Binding AcceptBtnIsEnabled}"
-                Command="{Binding AcceptConfigsCommand}"/>
-    </Grid>
+                Command="{Binding AcceptConfigsCommand}"
+                Background="{Binding AcceptBtnColor}"/>
+
+                <Button Content="Построить сеть Civil 3d" Margin="5,5,5,5" Grid.Row="1"
+                IsEnabled="{Binding CreateNetworkBtnIsEnabled}"
+                Command="{Binding CreatePipeNenworkCommand}"
+                />
+
+            </Grid>
 
 
-        
+        </Grid>
+
+
+
 
     </Grid>
 </Window>

@@ -269,7 +269,7 @@ namespace NavisWorksInfoTools
             }
 
             //УДАЛИТЬ ВСЕ НЕДОПУСТИМЫЕ СИМВОЛЫ В НАЗВАНИЯХ СВОЙСТВ
-            propName = string.Join("_", propName.Split(new char[] { '[', ']', '(', ')', '{', '}', '/', '\\'})).Trim();
+            propName = string.Join("_", propName.Split(new char[] { '[', ']', '(', ')', '{', '}', '/', '\\', '-'})).Trim();
 
             return propName;
         }

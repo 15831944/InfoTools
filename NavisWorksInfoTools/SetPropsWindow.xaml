@@ -9,6 +9,19 @@
         Title="Добавить атрибуты" Height="396" Width="370" Loaded="Window_Loaded"
         MinHeight="620" MinWidth="600"
         WindowStartupLocation="CenterScreen">
+
+    <Window.Resources>
+        <RoutedUICommand x:Key="MyCommand1" Text="Text" />
+    </Window.Resources>
+    <Window.CommandBindings>
+        <CommandBinding Command="{StaticResource MyCommand1}" 
+                    Executed="CommandBinding_Executed" />
+    </Window.CommandBindings>
+
+    <Window.InputBindings>
+        <KeyBinding Key="Return"  Modifiers="Ctrl" Command="{StaticResource MyCommand1}" />
+    </Window.InputBindings>
+
     <Grid>
         <DataGrid Name="tabsDataGrid"
                   AutoGenerateColumns="False"
@@ -17,22 +30,35 @@
                   Margin="11,173,0,319"
                   HorizontalAlignment="Left"
                   Width="279" CellEditEnding="dataGrid_CellEditEnding" SelectionChanged="tabsDataGrid_SelectionChanged">
+            <DataGrid.InputBindings>
+                <KeyBinding Key="Return"  Modifiers="Ctrl" Command="{StaticResource MyCommand1}" />
+            </DataGrid.InputBindings>
+            
             <DataGrid.Columns>
                 <DataGridTextColumn Binding="{Binding DisplayName}" Header="Название"/>
             </DataGrid.Columns>
         </DataGrid>
         <DataGrid Name="propsDataGrid" AutoGenerateColumns="False" Margin="295,173,10,319">
+            <DataGrid.InputBindings>
+                <KeyBinding Key="Return"  Modifiers="Ctrl" Command="{StaticResource MyCommand1}" />
+            </DataGrid.InputBindings>
+            
             <DataGrid.Columns>
                 <DataGridTextColumn Binding="{Binding DisplayName}" Header="Свойство"/>
                 <DataGridTextColumn Binding="{Binding DisplayValue}" Header="Значение"/>
             </DataGrid.Columns>
         </DataGrid>
-        <Button Content="ОК" Margin="0,0,10,10" HorizontalAlignment="Right" Width="75" Height="85" VerticalAlignment="Bottom" Click="Button_Click"/>
+        <Button Content="ОК" Margin="0,0,10,10" HorizontalAlignment="Right" Width="75" Height="85"
+                VerticalAlignment="Bottom" Click="Button_Click" ToolTip="Ctrl+Enter"/>
         <TextBlock Margin="10,0,90,10" TextWrapping="Wrap" Height="85" VerticalAlignment="Bottom"><Run Text="При нажатии кнопки OK атрибуты "/><Run Text="и ссылки"/><Run Text=" перепишутся для всех выбранных объектов и всех вложенных"/><Run Text="."/></TextBlock>
         <Label Content="Пользовательские атрибуты:" HorizontalAlignment="Left" Margin="295,147,0,0" VerticalAlignment="Top"/>
 
         <DataGrid Name="linksDataGrid" AutoGenerateColumns="False"
                   Margin="10,0,10,100" Height="163" VerticalAlignment="Bottom">
+            <DataGrid.InputBindings>
+                <KeyBinding Key="Return"  Modifiers="Ctrl" Command="{StaticResource MyCommand1}" />
+            </DataGrid.InputBindings>
+            
             <DataGrid.RowStyle>
                 <Style TargetType="{x:Type DataGridRow}">
                     <Setter Property="Height" Value="{x:Static sys:Double.NaN}"/>

@@ -26,6 +26,12 @@ namespace NavisWorksInfoTools
         ToolTip = "Указать файлы структуры и классификатора для " + S1NF0_APP_NAME + ". Добавить объекты геометрии в структуру")]
     [Command("ID_CreateStructure_Button", DisplayName = "Создание структуры из наборов выбора", LargeIcon = "CreateStructure.png",
         ToolTip = "Создать структуру для проекта " + S1NF0_APP_NAME + " из сохраненных наборов выбора")]
+
+    [Command("ID_FBXExportBySelSets_Button", DisplayName = "FBX по наборам выбора", LargeIcon = "FBXExportBySelSets.png",
+        ToolTip = "Выполнить выгрузку в FBX по сохраненным наборам выбора")]
+
+    [Command("ID_TransformItems_Button", DisplayName = "FBX по наборам выбора", /*LargeIcon = "FBXExportBySelSets.png",*/
+        ToolTip = "TransformItems")]
     public class S1NF0_RibbonPanel : CommandHandlerPlugin
     {
         public override int ExecuteCommand(string name, params string[] parameters)
@@ -52,6 +58,12 @@ namespace NavisWorksInfoTools
                     break;
                 case "ID_CreateStructure_Button":
                     ExecuteAddInPlugin("CreateStructure." + DEVELOPER_ID);
+                    break;
+                case "ID_FBXExportBySelSets_Button":
+                    ExecuteAddInPlugin("FBXExportBySelSets." + DEVELOPER_ID);
+                    break;
+                case "ID_TransformItems_Button":
+                    TransformItemsOneByOne.Execute();
                     break;
             }
 

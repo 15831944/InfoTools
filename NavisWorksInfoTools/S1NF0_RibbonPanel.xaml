@@ -31,6 +31,11 @@
                             ShowText="True"
                             Text="Заполнить атрибуты по таблице Excel"
                             Orientation="Vertical"/>
+                <local:NWRibbonButton x:Uid="TransformItems_Button" Id="ID_TransformItems_Button"
+                            Size="Large"
+                            ShowText="True"
+                            Text="TransformItems"
+                            Orientation="Vertical"/>
 
             </RibbonPanelSource>
         </RibbonPanel>
@@ -56,6 +61,11 @@
                             Size="Large"
                             ShowText="True"
                             Text="Создание структуры из наборов выбора"
+                            Orientation="Vertical"/>
+                <local:NWRibbonButton x:Uid="FBXExportBySelSets_Button" Id="ID_FBXExportBySelSets_Button"
+                            Size="Large"
+                            ShowText="True"
+                            Text="FBX по наборам выбора"
                             Orientation="Vertical"/>
 
 

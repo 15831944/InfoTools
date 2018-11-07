@@ -23,5 +23,6 @@ namespace Civil3DInfoTools.PipeNetworkCreating.ConfigureNetworkCreationWindow2
         {
             InitializeComponent();
         }
+
     }
 }

@@ -57,7 +57,7 @@ namespace NavisWorksInfoTools.FBX
             //Найти внутри узла Objects следующий подузел Model
             //До тех пор пока не найден, нужно записывать каждую строку в новый файл без изменений
             string fbxLine = null;
-            while ((fbxLine = sr.ReadLine()) != null)
+            while (replacements.Count > 0 && (fbxLine = sr.ReadLine()) != null)
             {
                 bool changes = false;
                 if (regex.IsMatch(fbxLine))

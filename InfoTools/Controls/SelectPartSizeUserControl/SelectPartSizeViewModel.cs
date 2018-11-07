@@ -28,7 +28,7 @@ namespace Civil3DInfoTools.Controls.SelectPartSizeUserControl
             set
             {
                 partsList = value;
-                PartFamilies = GetPartFams(doc, partsList);
+                PartFamilies = GetPartFams(doc, partsList, ObjectId.Null, ObjectId.Null);
                 OnPropertyChanged("PartsList");
                 OnPropertyChanged("PartSizes");
             }
@@ -52,11 +52,11 @@ namespace Civil3DInfoTools.Controls.SelectPartSizeUserControl
             }
         }
 
-        public SelectPartSizeModel SelectedPartFamily
+        public SelectPartFamilyModel SelectedPartFamily
         {
             get
             {
-                return selectedPartFamilyItem as SelectPartSizeModel;
+                return selectedPartFamilyItem as SelectPartFamilyModel;
             }
         }
 
@@ -86,21 +86,22 @@ namespace Civil3DInfoTools.Controls.SelectPartSizeUserControl
             get { return selectedPartSizeItem as PartSize; }
         }
 
-        private ObservableCollection<SelectPartSizeModel> partFamilies
-            = new ObservableCollection<SelectPartSizeModel>();
+        private ObservableCollection<SelectPartFamilyModel> partFamilies
+            = new ObservableCollection<SelectPartFamilyModel>();
         /// <summary>
         /// binding
         /// этот список меняется если изменяется PartsList
         /// </summary>
-        public ObservableCollection<SelectPartSizeModel> PartFamilies
-        { get { return partFamilies; }
+        public ObservableCollection<SelectPartFamilyModel> PartFamilies
+        {
+            get { return partFamilies; }
             set
             {
                 partFamilies = value;
                 OnPropertyChanged("PartFamilies");
             }
         }
-            
+
 
         /// <summary>
         /// binding
@@ -116,31 +117,49 @@ namespace Civil3DInfoTools.Controls.SelectPartSizeUserControl
 
 
 
-        public SelectPartSizeViewModel(Document doc, PartsList partsList, PartType partType/*,
-            ObservableCollection<SelectPartSizeModel> partFams = null*/)
+        public SelectPartSizeViewModel(Document doc, PartsList partsList, PartType partType,
+            ObjectId defPartFamIfExists, ObjectId defPartSizeIfExists)
         {
             this.doc = doc;
             this.partsList = partsList;
             this.partType = partType;
 
-            //if (partFams!=null)
-            //{
-            //    PartFamilies = partFams;
-            //}
-            if (PartFamilies.Count == 0 && partsList!=null)
+            if (PartFamilies.Count == 0 && partsList != null)
             {
-                PartFamilies = GetPartFams(doc, partsList);
+                pfStartSelection = null;
+                psStartSelection = null;
+                PartFamilies = GetPartFams(doc, partsList, defPartFamIfExists, defPartSizeIfExists);
+
+                if (pfStartSelection != null)
+                {
+                    SelectedPartFamilyItem = pfStartSelection;
+                    if (psStartSelection != null)
+                    {
+                        SelectedPartSizeItem = psStartSelection;
+                    }
+                }
+
+                
             }
 
-            //нужна сортировка по алфавиту?
+
 
         }
 
+        //переменные присваиваются только методом GetPartFams
+        private SelectPartFamilyModel pfStartSelection = null;
+        private PartSize psStartSelection = null;
 
-        public ObservableCollection<SelectPartSizeModel> GetPartFams(Document doc, PartsList partsList)
+        private ObservableCollection<SelectPartFamilyModel> GetPartFams(Document doc, PartsList partsList,
+            ObjectId defPartFamIfExists, ObjectId defPartSizeIfExists)
         {
-            ObservableCollection<SelectPartSizeModel> partfams = new ObservableCollection<SelectPartSizeModel>();
+            ObservableCollection<SelectPartFamilyModel> partfams = new ObservableCollection<SelectPartFamilyModel>();
             Database db = doc.Database;
+
+            pfStartSelection = null;
+            psStartSelection = null;
+
+
             using (Transaction tr = db.TransactionManager.StartTransaction())
             {
                 for (int i = 0; i < partsList.PartFamilyCount; i++)
@@ -148,11 +167,36 @@ namespace Civil3DInfoTools.Controls.SelectPartSizeUserControl
                     ObjectId plFamId = partsList[i];
                     PartFamily pf = (PartFamily)tr.GetObject(plFamId, OpenMode.ForRead);
 
+                    
+
+
                     if (partType.HasFlag(pf.PartType))
                     {
-                        partfams.Add(new SelectPartSizeModel(pf));
+                        ObservableCollection<PartSize> partSizes = new ObservableCollection<PartSize>();
+                        PartSize startSelSizeCandidate = null;
+                        for (int j = 0; j < pf.PartSizeCount; j++)
+                        {
+                            ObjectId psId = pf[j];
+                            PartSize ps = (PartSize)psId.GetObject(OpenMode.ForRead);
+                            if (defPartSizeIfExists.Equals(psId))
+                            {
+                                startSelSizeCandidate = ps;
+                            }
+                            partSizes.Add(ps);
+                        }
+
+                        SelectPartFamilyModel spfm = new SelectPartFamilyModel(pf, partSizes);
+                        if (defPartFamIfExists.Equals(plFamId))
+                        {
+                            pfStartSelection = spfm;
+                            if (startSelSizeCandidate!=null)
+                            {
+                                psStartSelection = startSelSizeCandidate;
+                            }
+                        }
+                        partfams.Add(spfm);
                     }
-                    
+
                 }
 
 

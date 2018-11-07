@@ -16,7 +16,8 @@ namespace Civil3DInfoTools.PipeNetworkCreating
     /// </summary>
     public class PipeStructureExcelReader
     {
-        private const int SKIP_ROWS_COUNT = 5;
+        //private const int SKIP_ROWS_COUNT = 5;//МОЖЕТ БЫТЬ РАЗНЫМ!!!
+        //считать, что последняя строка шапки таблицы содержит занчения 1, 2, 3, 4...12 и после этой строки идут данные
         private const int WELL_NUM_COL = 0;
         private const int NETWORK_TYPE_COL = 1;
         private const int SIZE1_COL = 2;
@@ -29,7 +30,9 @@ namespace Civil3DInfoTools.PipeNetworkCreating
         private const int PIPE_SIZE_COL = 9;
         private const int PIPE_JUNCTION_LEVEL_COL = 10;
 
-        public static readonly Regex SQUARE_LBL_REGEX = new Regex("^\\d{4}[_-]?\\d{2}[_-]?\\d{2}$");//(.xlsx)|(.xls)
+        public static readonly Regex SQUARE_LBL_REGEX = new Regex("^\\s*\\d{4}\\s?[_-]?\\s?\\d{2}\\s?[_-]?\\s?\\d{2}\\s*$");//(.xlsx)|(.xls)
+
+        public static readonly Regex CONTAINS_NUMBERS = new Regex("^.*[0-9]+.*$");
 
         public Dictionary<int,//номер квадрата сетки
             Dictionary<string,//номер колодца (может быть не только цифрой)
@@ -55,7 +58,7 @@ namespace Civil3DInfoTools.PipeNetworkCreating
             //в соответствии с номером квадрата (допускается. чтобы в имени были 2 дефиса или 2 подчеркивания)
             DirectoryInfo di = new DirectoryInfo(dir);
             FileInfo[] files = di.GetFiles("*.xls");
-            
+
             WellDataFiles
                 = files.Where(fi => SQUARE_LBL_REGEX.IsMatch(Path.GetFileNameWithoutExtension(fi.FullName)))
                 .ToList();
@@ -112,7 +115,8 @@ namespace Civil3DInfoTools.PipeNetworkCreating
 
                     reader.Close();
 
-                    int key = Convert.ToInt32(Path.GetFileNameWithoutExtension(fi.FullName).Replace("-", "").Replace("_", ""));
+                    int key = Convert.ToInt32(Path.GetFileNameWithoutExtension(fi.FullName)
+                        .Replace("-", "").Replace("_", "").Replace(" ", ""));
 
                     if (!WellsData.ContainsKey(key))
                     {
@@ -127,14 +131,26 @@ namespace Civil3DInfoTools.PipeNetworkCreating
                                 continue;
                             }
 
-                            int skipped = 0;
+                            int colNum = table.Columns.Count;
+                            //int skipped = 0;
+                            bool headerSkipped = false;
                             WellData currentWellData = null;
                             foreach (DataRow row in table.Rows)
                             {
                                 //Пропустить нужное количество строк с начала таблицы
-                                if (skipped < SKIP_ROWS_COUNT)
+                                //if (skipped < SKIP_ROWS_COUNT)
+                                //{
+                                //    skipped++;
+                                //    continue;
+                                //}
+                                //считать, что последняя строка шапки таблицы содержит занчения 1, 2, 3, 4...12
+                                if (!headerSkipped)
                                 {
-                                    skipped++;
+                                    if (DataRowIsHeaderEnd(row, colNum))
+                                    {
+                                        headerSkipped = true;
+                                    }
+
                                     continue;
                                 }
 
@@ -146,14 +162,19 @@ namespace Civil3DInfoTools.PipeNetworkCreating
                                         string sizeStr = row[SIZE1_COL].ToString();
                                         double size1 = -1;
                                         double size2 = -1;
-                                        double topLevel = -1;
-                                        double bottomLevel = -1;
+                                        double topLevel = double.NegativeInfinity;
+                                        double bottomLevel = double.NegativeInfinity;
 
                                         double.TryParse(sizeStr, out size1);
                                         double.TryParse(row[SIZE2_COL].ToString(), out size2);
 
-                                        double.TryParse(row[WELL_TOP_LEVEL_COL].ToString(), out topLevel);
-                                        double.TryParse(row[WELL_BOTTOM_LEVEL_COL].ToString(), out bottomLevel);
+
+                                        string topLevelStr = row[WELL_TOP_LEVEL_COL].ToString();
+                                        if (CONTAINS_NUMBERS.IsMatch(topLevelStr))//текст должен содержать хотябы одну цифру (иногда там пишут прочерки или что-то такое)
+                                            double.TryParse(topLevelStr.Replace(',', '.'), out topLevel);
+                                        string bottomLevelStr = row[WELL_BOTTOM_LEVEL_COL].ToString();
+                                        if (CONTAINS_NUMBERS.IsMatch(bottomLevelStr))
+                                            double.TryParse(bottomLevelStr.Replace(',', '.'), out bottomLevel);
 
                                         currentWellData = new WellData()
                                         {
@@ -191,6 +212,37 @@ namespace Civil3DInfoTools.PipeNetworkCreating
         }
 
         /// <summary>
+        /// строка содержит занчения 1, 2, 3, 4...12 с возможными пустыми ячейками
+        /// </summary>
+        /// <param name="row"></param>
+        /// <param name="collNum"></param>
+        /// <returns></returns>
+        private bool DataRowIsHeaderEnd(DataRow row, int collNum)
+        {
+            int n = 1;
+            for (int i = 0; i < collNum; i++)
+            {
+                string cellVal = row[i].ToString();
+                if (!String.IsNullOrEmpty(cellVal))//допускаются пустые ячейки
+                {
+                    int cellValInt = -1;
+                    if (int.TryParse(cellVal, out cellValInt)
+                        && cellValInt == n)
+                    {
+                        if (n == 12)
+                            return true;
+                        n++;
+                    }
+                    else
+                    {
+                        return false;//в строке должны быть только цифры
+                    }
+                }
+            }
+            return false;
+        }
+
+        /// <summary>
         /// Считать из строки данные о присоединении трубы
         /// </summary>
         /// <param name="row"></param>
@@ -199,13 +251,18 @@ namespace Civil3DInfoTools.PipeNetworkCreating
         {
             //номера присоединения может не быть у некоторых колодцев (напр у газовых коверов)
             //то есть все трубы пересекаются на одной отметке
-            //ориентируемся на налицчие данных хотябы в одном столбце
+            //ориентируемся на наличие данных хотябы в одном столбце
             string num = row[PIPE_JUNCTION_NUM_COL].ToString();
             string material = row[PIPE_MATERIAL_COL].ToString();
             double size = -1;
-            double level = -1;
-            double.TryParse(row[PIPE_SIZE_COL].ToString(), out size);
-            double.TryParse(row[PIPE_JUNCTION_LEVEL_COL].ToString(), out level);
+            double level = double.NegativeInfinity;
+            string sizeStr = row[PIPE_SIZE_COL].ToString();
+            if (CONTAINS_NUMBERS.IsMatch(sizeStr))
+                double.TryParse(sizeStr.Replace(',', '.'), out size);
+
+            string levelStr = row[PIPE_JUNCTION_LEVEL_COL].ToString();
+            if (CONTAINS_NUMBERS.IsMatch(levelStr))
+                double.TryParse(levelStr.Replace(',', '.'), out level);
 
             if (!String.IsNullOrEmpty(num) || !String.IsNullOrEmpty(material)
                 || size >= 0 || level >= 0)
@@ -233,9 +290,9 @@ namespace Civil3DInfoTools.PipeNetworkCreating
 
         public string Material { get; set; }
 
-        public double TopLevel { get; set; }
+        public double TopLevel { get; set; } = double.NegativeInfinity;
 
-        public double BottomLevel { get; set; }
+        public double BottomLevel { get; set; } = double.NegativeInfinity;
 
 
         public Dictionary<string, PipeJunctionData> PipeJunctions { get; set; }
@@ -251,6 +308,6 @@ namespace Civil3DInfoTools.PipeNetworkCreating
 
         public double Size { get; set; }
 
-        public double JunctionLevel { get; set; }
+        public double JunctionLevel { get; set; } = double.NegativeInfinity;
     }
 }

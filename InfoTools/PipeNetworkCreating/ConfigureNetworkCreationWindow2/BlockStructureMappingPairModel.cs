@@ -18,7 +18,9 @@ namespace Civil3DInfoTools.PipeNetworkCreating.ConfigureNetworkCreationWindow2
 {
     public class BlockStructureMappingPairModel : INotifyPropertyChanged
     {
-        public event EventHandler SelectionChanged;
+        public event EventHandler BlockSelectionChanged;
+
+        public event EventHandler PartSizeSelectionChanged;
 
         private Controls.SelectBlockUserControl3.ViewModel blockVM = null;
         public Controls.SelectBlockUserControl3.ViewModel BlockVM
@@ -28,9 +30,11 @@ namespace Civil3DInfoTools.PipeNetworkCreating.ConfigureNetworkCreationWindow2
             set
             {
                 blockVM = value;
+                blockVM.SelectionChanged += FireBlockSelectionChanged;
                 OnPropertyChanged("BlockVM");
             }
         }
+
 
         private SelectPartSizeViewModel structureVM = null;
 
@@ -40,31 +44,47 @@ namespace Civil3DInfoTools.PipeNetworkCreating.ConfigureNetworkCreationWindow2
             set
             {
                 structureVM = value;
+                structureVM.SelectionChanged += FirePartSizeSelectionChanged;
                 OnPropertyChanged("StructureVM");
             }
         }
 
         public BlockStructureMappingPairModel(Document doc, Window mainWindow,
-            ObservableCollection<BlockTableRecord> blocks, PartsList partsList)
+            ObservableCollection<BlockTableRecord> blocks, PartsList partsList,
+            ObjectId defPartFam, ObjectId defPartSize, string defBlock = null)
         {
 
-            blockVM = new Controls.SelectBlockUserControl3.ViewModel(doc, mainWindow, blocks);
-            structureVM = new SelectPartSizeViewModel(doc, partsList,
-                PartType.StructJunction | PartType.StructGeneral | PartType.UndefinedPartType);
+            BlockVM = new Controls.SelectBlockUserControl3.ViewModel(doc, mainWindow, blocks, defBlock);
+            StructureVM = new SelectPartSizeViewModel(doc, partsList, PartType.StructJunction, defPartFam, defPartSize);
 
-            blockVM.SelectionChanged += FireSelectionChanged;//передать информацию о том, что выбор изменен в ViewModel
-            structureVM.SelectionChanged += FireSelectionChanged;
+            //blockVM.SelectionChanged += FireBlockSelectionChanged;//передать информацию о том, что выбор изменен в ViewModel
+            //structureVM.SelectionChanged += FirePartSizeSelectionChanged;
         }
 
-        private void FireSelectionChanged(object sender, EventArgs args)
+
+
+
+
+
+
+
+
+
+        private void FireBlockSelectionChanged(object sender, EventArgs args)
         {
-            if (SelectionChanged!=null)
+            if (BlockSelectionChanged!=null)
             {
-                SelectionChanged(this, new EventArgs());
+                BlockSelectionChanged(this, new EventArgs());
             }
         }
 
-
+        private void FirePartSizeSelectionChanged(object sender, EventArgs args)
+        {
+            if (PartSizeSelectionChanged != null)
+            {
+                PartSizeSelectionChanged(this, new EventArgs());
+            }
+        }
 
         public event PropertyChangedEventHandler PropertyChanged;
         public void OnPropertyChanged([CallerMemberName]string prop = "")

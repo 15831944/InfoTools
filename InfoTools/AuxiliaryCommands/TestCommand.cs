@@ -4,11 +4,13 @@ using Autodesk.AutoCAD.EditorInput;
 using Autodesk.AutoCAD.Geometry;
 using Autodesk.AutoCAD.Runtime;
 using Autodesk.Civil.ApplicationServices;
+using Autodesk.Civil.DatabaseServices;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using Win = System.Windows;
 
 [assembly: CommandClass(typeof(Civil3DInfoTools.AuxiliaryCommands.TestCommand))]
 
@@ -29,9 +31,52 @@ namespace Civil3DInfoTools.AuxiliaryCommands
 
             CivilDocument cdok = CivilDocument.GetCivilDocument(adoc.Database);
 
-            TestWindow testWindow = new TestWindow(adoc, cdok);
-            Application.ShowModalWindow(testWindow);
 
+            /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+            //посмотреть свойства structure: Rotation, BoundingShape, InnerDiameterOrWidth, InnerLength, DiameterOrWidth, Length 
+            PromptEntityOptions peo = new PromptEntityOptions("\nУкажите колодец");
+            peo.SetRejectMessage("\nМожно выбрать только колодец");
+            peo.AddAllowedClass(typeof(Structure), true);
+            PromptEntityResult per1 = ed.GetEntity(peo);
+            if (per1.Status == PromptStatus.OK)
+            {
+                using (Transaction tr = db.TransactionManager.StartTransaction())
+                {
+
+                    Structure str = (Structure)tr.GetObject(per1.ObjectId, OpenMode.ForRead);
+
+                    BoundingShapeType bst = str.BoundingShape;
+                    double rotation = str.Rotation;
+                    double idow = str.InnerDiameterOrWidth;
+                    double dow = str.DiameterOrWidth;
+                    double il = double.NegativeInfinity;
+                    double l = double.NegativeInfinity;
+                    try
+                    {
+                        il = /*bst == BoundingShapeType.Box ?*/ str.InnerLength /*: double.NegativeInfinity*/;
+                    }
+                    catch { }
+                    try
+                    {
+                        l = /*bst == BoundingShapeType.Box ?*/ str.Length /*: double.NegativeInfinity*/;
+                    }
+                    catch { }
+
+                    string message = "Rotation = " + rotation + "\nInnerDiameterOrWidth = " + idow +
+                        "\nDiameterOrWidth = " + dow + "\nInnerLength = " + il + "\nLength = " + l;
+
+                    Win.MessageBox.Show(message);
+                    tr.Commit();
+                }
+            }
+
+            /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+            //Тестовое окно
+            //TestWindow testWindow = new TestWindow(adoc, cdok);
+            //Application.ShowModalWindow(testWindow);
+
+            /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+            //обводка прямоугольника текста
             //PromptEntityOptions peo = new PromptEntityOptions("\nУкажите TEXT,MTEXT");
             //peo.SetRejectMessage("\nМожно выбрать только TEXT или MTEXT");
             //peo.AddAllowedClass(typeof(MText), true);

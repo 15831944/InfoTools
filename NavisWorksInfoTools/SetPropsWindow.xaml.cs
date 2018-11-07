@@ -186,7 +186,10 @@ namespace NavisWorksInfoTools
 
         }
 
-
+        private void CommandBinding_Executed(object sender, ExecutedRoutedEventArgs e)
+        {
+            Button_Click(null, null);
+        }
     }
 
     /// <summary>

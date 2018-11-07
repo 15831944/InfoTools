@@ -9,19 +9,32 @@ using RBush;
 using RBush.KnnUtility;
 using Autodesk.AutoCAD.Geometry;
 using Autodesk.AutoCAD.DatabaseServices;
+using AcadDB = Autodesk.AutoCAD.DatabaseServices;
 using Autodesk.AutoCAD.EditorInput;
 using System.Text.RegularExpressions;
+using CivilDB = Autodesk.Civil.DatabaseServices;
+using Autodesk.Civil.ApplicationServices;
+using Autodesk.Civil.DatabaseServices.Styles;
 
 namespace Civil3DInfoTools.PipeNetworkCreating
 {
     //TODO: Проверить на пустом чертеже
-    public class PipeNetworkGraph
+    public partial class PipeNetworkGraph
     {
+        private Document doc = null;
+        private ConfigureNetworkCreationViewModel configsViewModel = null;
+        private CivilDocument cdoc = null;
+
+        private string communicationLayerName = "сеть";
+
         //квадраты сетки
         private RBush<GridSquare> gridSquares = new RBush<GridSquare>();
 
-        //положения блоков колодцев
+        //положения блоков колодцев (только заданные блоки)
         private RBush<StructurePosition> structurePositions = new RBush<StructurePosition>();
+
+        //положения блоков колодцев (все блоки в слое колодцев)
+        private RBush<StructurePosition> allStructurePositions = new RBush<StructurePosition>();
 
         //положения подписей блоков колодцев
         private RBush<TextPosition> structureLabelPositions = new RBush<TextPosition>();
@@ -38,17 +51,57 @@ namespace Civil3DInfoTools.PipeNetworkCreating
         //ребра графа
         private List<NetworkEdge> networkEdges = new List<NetworkEdge>();
 
+        //маркеры
+        private HashSet<StructurePosition> structuresNearPolylineNotInEndPointToDraw = new HashSet<StructurePosition>();
+
+
+        private List<JunctionLabelingMarkerToDraw> junctionLabelingToDraw = new List<JunctionLabelingMarkerToDraw>();
+
+        private List<WellLabelingMarkerToDraw> wellLabelingToDraw = new List<WellLabelingMarkerToDraw>();
+
+        private List<GridSquare> squaresWithNoDataToDraw = new List<GridSquare>();
+
+        private Dictionary<NetworkNode, NodeWarnings> nodeWarnings = new Dictionary<NetworkNode, NodeWarnings>();
+
+        private void AddNodeWarning(NetworkNode nn, NodeWarnings wToAdd)
+        {
+            NodeWarnings w = NodeWarnings.Null;
+            nodeWarnings.TryGetValue(nn, out w);
+            w = w | wToAdd;
+            if (w != NodeWarnings.Null)
+                nodeWarnings[nn] = w;
+        }
+
+        private HashSet<TextPosition> wellLblMapped = new HashSet<TextPosition>();
+
+        private HashSet<TextPosition> LblDuplicatesToDraw = new HashSet<TextPosition>();
+
+        private HashSet<TextPosition> junctionLblMapped = new HashSet<TextPosition>();
+
+        private HashSet<TextPosition> junctionLblDuplicatesToDraw = new HashSet<TextPosition>();
+
+
+
+
+
+
         /// <summary>
         /// Построение графа инженерной сети
         /// 
         /// </summary>
         /// <param name="doc"></param>
         /// <param name="configsViewModel">обязательно все настройки должны быть назначены</param>
-        public PipeNetworkGraph(Document doc, ConfigureNetworkCreationViewModel configsViewModel)
+        public PipeNetworkGraph(Document doc, CivilDocument cdoc, ConfigureNetworkCreationViewModel configsViewModel)
         {
+            this.doc = doc;
+            this.cdoc = cdoc;
+            this.configsViewModel = configsViewModel;
             Database db = doc.Database;
             Editor ed = doc.Editor;
-            #region Инициализация структур данных
+
+
+            ObjectIdCollection toTop = new ObjectIdCollection();
+
             using (Transaction tr = db.TransactionManager.StartTransaction())
             {
                 //слои
@@ -63,11 +116,13 @@ namespace Civil3DInfoTools.PipeNetworkCreating
                 string structureLabelsLayerName = structureLabelsLtr.Name;
                 LayerTableRecord communicationLtr
                     = (LayerTableRecord)tr.GetObject(configsViewModel.CommunicationLayerId.Value, OpenMode.ForRead);
-                string communicationLayerName = communicationLtr.Name;
+                communicationLayerName = communicationLtr.Name;
 
                 //блоки
-                Dictionary<ObjectId, SelectedPartTypeId> blockStructureMapping
-                    = configsViewModel.BlockStructureMapping;
+                HashSet<ObjectId> blocks = configsViewModel.Blocks;
+
+                //данные о колодцах
+                Dictionary<int, Dictionary<string, WellData>> wellsData = configsViewModel.ExcelReader.WellsData;
 
                 //1. Записать квадраты сетки в RTree
                 //загрузка квадратов в RTree
@@ -102,7 +157,7 @@ namespace Civil3DInfoTools.PipeNetworkCreating
                     }
 
                 }
-                //присвоение квадратам номеров пот текстам, которые попадают в эти квадраты
+                //присвоение квадратам номеров по текстам, которые попадают в эти квадраты
                 {
                     //Выбрать все текстовые объекты в слое сетки
                     TypedValue[] tv = new TypedValue[]
@@ -139,7 +194,7 @@ namespace Civil3DInfoTools.PipeNetworkCreating
                                     {
                                         //текстовая строка переводится в целое число
                                         squares.First().SquareKey
-                                            = Convert.ToInt32(txtContent.Replace("_", "").Replace("-", ""));
+                                            = Convert.ToInt32(txtContent.Replace("_", "").Replace("-", "").Replace(" ", ""));
                                     }
                                 }
                             }
@@ -154,16 +209,16 @@ namespace Civil3DInfoTools.PipeNetworkCreating
                 {
                     //Выбрать все блоки в слое колодцев и слое сети
                     //Имена блоков только те что были указаны
-                    List<string> blockNames = new List<string>();
-                    foreach (ObjectId btrId in blockStructureMapping.Keys)
-                    {
-                        BlockTableRecord btr = (BlockTableRecord)tr.GetObject(btrId, OpenMode.ForRead);
-                        blockNames.Add(btr.Name);
-                    }
+                    //List<string> blockNames = new List<string>();
+                    //foreach (ObjectId btrId in blocks)
+                    //{
+                    //    BlockTableRecord btr = (BlockTableRecord)tr.GetObject(btrId, OpenMode.ForRead);
+                    //    blockNames.Add(btr.Name);
+                    //}
                     TypedValue[] tv = new TypedValue[]
                                 {
                     new TypedValue(0, "INSERT"),
-                    new TypedValue(2, String.Join(",", blockNames)),
+                    //new TypedValue(2, String.Join(",", blockNames)),
                     new TypedValue(8, structureBlocksLayerName + "," + communicationLayerName),
                                 };
                     SelectionFilter flt = new SelectionFilter(tv);
@@ -173,17 +228,30 @@ namespace Civil3DInfoTools.PipeNetworkCreating
                     if (ss != null)
                     {
                         List<StructurePosition> _blockPositions = new List<StructurePosition>();
+                        List<StructurePosition> _allBlockPositions = new List<StructurePosition>();
                         foreach (SelectedObject so in ss)
                         {
                             BlockReference br = (BlockReference)tr.GetObject(so.ObjectId, OpenMode.ForRead);
                             StructurePosition structurePosition
                                 = new StructurePosition(br.Position, br.Id, br.BlockTableRecord, br.Rotation);
-                            _blockPositions.Add(structurePosition);
+                            if (blocks.Contains(br.BlockTableRecord))
+                            {
+                                _blockPositions.Add(structurePosition);
+                            }
+                            //в общий набор скидывать
+                            //- все блоки в слое колодцев
+                            //- блоки в слое сети и заданного типа
+                            if (br.LayerId.Equals(configsViewModel.StructuresLayerId.Value)
+                                || blocks.Contains(br.BlockTableRecord))
+                            {
+                                _allBlockPositions.Add(structurePosition);
+                            }
+
                         }
                         //загрузить положения блоков в RTree
                         structurePositions.BulkLoad(_blockPositions);
+                        allStructurePositions.BulkLoad(_allBlockPositions);
                     }
-
 
                 }
 
@@ -212,7 +280,7 @@ namespace Civil3DInfoTools.PipeNetworkCreating
                             if (ext != null)
                             {
                                 txtPositions
-                                    .Add(new TextPosition(ext.Value.MinPoint, ext.Value.MaxPoint, txtContent));
+                                    .Add(new TextPosition(ext.Value.MinPoint, ext.Value.MaxPoint, txtContent, so.ObjectId));
                             }
                         }
                         structureLabelPositions.BulkLoad(txtPositions);
@@ -222,7 +290,7 @@ namespace Civil3DInfoTools.PipeNetworkCreating
                 //4. Записать в RTree положение всех текстовых примитивов в слое выбранной сети - это подписи сети,
                 //содержащие атрибутику, а так же привязки примыканий к колодцам
                 //TODO: При переборе текстов они дифференцируются на группы в соответствии с тем, что в них записано
-                //Отбирается только один вид подписей - НОМЕРА ПРИМЫКАНИЙ К КОЛОДЦАМ (ПРОСТО ЦИФРА, ОРИЕНТАЦИЯ - ГОРИЗОНТАЛЬНАЯ)
+                //На данный момент отбирается только один вид подписей - НОМЕРА ПРИМЫКАНИЙ К КОЛОДЦАМ (ПРОСТО ЦИФРА, ОРИЕНТАЦИЯ - ГОРИЗОНТАЛЬНАЯ)
                 {
                     //Выбрать все текстовые объекты в слое сети
                     TypedValue[] tv = new TypedValue[]
@@ -241,9 +309,9 @@ namespace Civil3DInfoTools.PipeNetworkCreating
                         foreach (SelectedObject so in ss)
                         {
                             Entity txtEnt = (Entity)tr.GetObject(so.ObjectId, OpenMode.ForRead);
-                            string txtContent = txtEnt is DBText ?
+                            string txtContent = (txtEnt is DBText ?
                                 (txtEnt as DBText).TextString
-                                : (txtEnt as MText).Text;
+                                : (txtEnt as MText).Text).Trim();
 
                             Extents3d? ext = txtEnt.Bounds;
                             if (ext != null)
@@ -255,14 +323,18 @@ namespace Civil3DInfoTools.PipeNetworkCreating
                                 Vector2d orientationVector = Vector2d.XAxis.RotateBy(rotation);
 
                                 if (pipeJunctionLabelRegex.IsMatch(txtContent)
-                                    && orientationVector.IsCodirectionalTo(Vector2d.XAxis))
+                                    //&& orientationVector.IsCodirectionalTo(Vector2d.XAxis)
+                                    //&& orientationVector.GetAngleTo(Vector2d.XAxis)<0.052//отклонение не более 3 градусов
+                                    //вообще отказаться от этого условия
+                                    )
                                 {
                                     _pipeJunctionLabelPositions
-                                        .Add(new TextPosition(ext.Value.MinPoint, ext.Value.MaxPoint, txtContent));
+                                        .Add(new TextPosition(ext.Value.MinPoint, ext.Value.MaxPoint, txtContent, so.ObjectId));
                                 }
                                 //TODO: else if - далее другие типы подписей...
 
                             }
+
 
 
                         }
@@ -291,6 +363,7 @@ namespace Civil3DInfoTools.PipeNetworkCreating
                     {
                         communicationPolylineIds = ss.GetObjectIds();
 
+
                         foreach (ObjectId polyId in communicationPolylineIds)
                         {
                             //Новые элементы добавляются в RTree по одному
@@ -298,13 +371,20 @@ namespace Civil3DInfoTools.PipeNetworkCreating
                             //с помощью knn search
 
                             Polyline edgePoly = (Polyline)tr.GetObject(polyId, OpenMode.ForRead);
+                            if (edgePoly.Length == 0//если полилиния нулевой длины, то не интересно
+                                || edgePoly.Closed || edgePoly.GetPoint2dAt(0)
+                                .IsEqualTo(edgePoly.GetPoint2dAt(edgePoly.NumberOfVertices-1))//если полилиния замкнута, то не интересно
+                                )
+                            {
+                                continue;
+                            }
+
                             //точки полилинии
                             List<Point2d> polyPts = new List<Point2d>();
                             for (int i = 0; i < edgePoly.NumberOfVertices; i++)
                             {
                                 polyPts.Add(edgePoly.GetPoint2dAt(i));
                             }
-
 
                             //Формируются два новых объекта узлов графа по концам полилинии
                             Point2d startPt = polyPts.First();
@@ -313,7 +393,7 @@ namespace Civil3DInfoTools.PipeNetworkCreating
                             NetworkNode endNode = new NetworkNode(lastPt);
 
                             //Для полилинии формируется объект ребра графа
-                            NetworkEdge edge = new NetworkEdge(polyPts);
+                            NetworkEdge edge = new NetworkEdge(polyPts, polyId);
                             //сразу добавить в общий список
                             networkEdges.Add(edge);
 
@@ -321,8 +401,9 @@ namespace Civil3DInfoTools.PipeNetworkCreating
                             NetworkNode actualStartNode = startNode;
                             {
                                 IReadOnlyList<NetworkNode> nodesInStartPoint
-                                = networkNodesRbush.KnnSearch(startPt.X, startPt.Y, 1, maxDist: Tolerance.Global.EqualPoint);
-                                if (nodesInStartPoint.Count > 0)
+                                = networkNodesRbush.KnnSearch(startPt.X, startPt.Y, 1, maxDist: ZERO_LENGTH)
+                                .Select(it => it.Item).ToList();//не должно быть более одного
+                                if (nodesInStartPoint.Count() > 0)
                                 {
                                     actualStartNode = nodesInStartPoint.First();
                                 }
@@ -337,7 +418,8 @@ namespace Civil3DInfoTools.PipeNetworkCreating
                             NetworkNode actualEndNode = endNode;
                             {
                                 IReadOnlyList<NetworkNode> nodesInEndPoint
-                                = networkNodesRbush.KnnSearch(lastPt.X, lastPt.Y, 1, maxDist: Tolerance.Global.EqualPoint);
+                                = networkNodesRbush.KnnSearch(lastPt.X, lastPt.Y, 1, maxDist: ZERO_LENGTH)
+                                .Select(it => it.Item).ToList();
                                 if (nodesInEndPoint.Count > 0)
                                 {
                                     actualEndNode = nodesInEndPoint.First();
@@ -355,15 +437,50 @@ namespace Civil3DInfoTools.PipeNetworkCreating
                             edge.EndNode = actualEndNode;
                             actualStartNode.AttachedEdges.Add(edge);
                             actualEndNode.AttachedEdges.Add(edge);
-
                         }
                     }
                 }
 
-                //6. Поиск возможных Т-образных примыканий полилиний
-                //Для этого по каждому сегменту каждой полилинии в RTree узлов графа искать 1 ближайший узел
-                //на расстоянии Tolerance.Global.EqualPoint. Если найдено, то это Т-образное пересечние
-                //Соответствующее ребро графа нужно разбить на 2
+                //6. TODO?: Поиск возможных Т-образных примыканий полилиний и блоков рядом с полилиниями
+                //
+                foreach (NetworkEdge edge in networkEdges)
+                {
+                    Point2d startPt = edge.PositionList[0];
+                    Point2d endPt = edge.PositionList[edge.PositionList.Count - 1];
+
+                    for (int i = 0; i < edge.PositionList.Count - 1; i++)
+                    {
+                        Point2d pt0 = edge.PositionList[i];
+                        Point2d pt1 = edge.PositionList[i + 1];
+
+                        //поиск т-образных примыканий
+                        List<NetworkNode> nnList = networkNodesRbush
+                            .KnnSearch(pt0.X, pt0.Y, 0, maxDist: ZERO_LENGTH, x2: pt1.X, y2: pt1.Y)
+                            .Select(it => it.Item).ToList();
+                        foreach (NetworkNode nn in nnList)
+                        {
+                            Point2d nnPos = new Point2d(nn.Envelope.MaxX, nn.Envelope.MaxY);
+                            if (!nnPos.IsEqualTo(startPt) && !nnPos.IsEqualTo(endPt))
+                            {
+                                AddNodeWarning(nn, NodeWarnings.TShapedIntersection);
+                            }
+                        }
+
+                        List<StructurePosition> strList = structurePositions
+                            .KnnSearch(pt0.X, pt0.Y, 0, maxDist: BLOCK_NEAR_POLYLINE_DISTANCE, x2: pt1.X, y2: pt1.Y)
+                            .Select(it => it.Item).ToList();
+                        foreach (StructurePosition str in strList)
+                        {
+                            Point2d strPos = Utils.Point2DBy3D(str.Position);
+                            if (!strPos.IsEqualTo(startPt) && !strPos.IsEqualTo(endPt)
+                                && !structuresNearPolylineNotInEndPointToDraw.Contains(str))
+                            {
+                                structuresNearPolylineNotInEndPointToDraw.Add(str);
+                            }
+                        }
+
+                    }
+                }
 
 
                 //7. Сопоставление данных из Excel
@@ -373,31 +490,662 @@ namespace Civil3DInfoTools.PipeNetworkCreating
                 //- если найдена определить в каком квадрате находится колодец
                 //- найти соответствующие данные из Excel по этому колодцу
                 //- если найдены, искать ближайшие подписи примыканий к колодцам (в радиусе 3-4 ед дл?) (ЕСЛИ ПРИМЫКАНИЕ ТОЛЬКО ОДНО, ТО ПОДПИСИ НЕ БУДЕТ)
-                //- для каждого из примыканий искать ближайшие подписи примыканий к примыкающему сегменту полилинии
-                //- присвоить примыканию номер, который находится ближе всего к сегменту и находится в заданном радиусе от колодца
-                //  если возникает спорная ситуация (когда есть 2 подходящих подписи на одном расстоянии от сегмента), то переходить к следующему примыканию
-                //  если за один обход примыканий спорная ситуация не разрешилась, то необходим ввод пользователя!!!
+                //- сопоставить подписи примыканий и сами примыкания к колодцам
+                foreach (NetworkNode nn in networkNodesList)
+                {
+                    double x = nn.Envelope.MaxX;
+                    double y = nn.Envelope.MaxY;
 
-                //8. Задание всех основных глубин заложения
-                //Для тех узлов, в которых есть блок колодца, но не найдены данные в Excel
-                //будет принята какая-то глубина дна по умолчанию (TODO: Добавить поле ввода в окно!!!)
-                //Для каждого ребра
-                //- если не задана глубина заложения на одном из концов, сделать их равными
-                //- если не задана глубина на обоих концах задать обоим концам глубину по умолчанию согласно вводу в окне
-                //Убедиться, что если в одном узле без колодца стыкуются несколько ребер, 
-                //то в месте стыковки обязательно у всех ребер должна быть одинаковая отметка
+                    IReadOnlyList<StructurePosition> structuresAtNode
+                        = structurePositions.KnnSearch(x, y, 0, maxDist: ZERO_LENGTH).Select(it => it.Item).ToList();
+                    if (structuresAtNode.Count > 0)
+                    {
+                        //если блоков более одного, то принимается блок, который больше по площади BoundingBox
+                        StructurePosition structBlock = GetBiggestBlock(structuresAtNode);
+                        nn.StructureBlock = structBlock;
+                        //Захватить подписи колодцев поблизости
+                        IReadOnlyList<TextPosition> lblsNearNode
+                            = structureLabelPositions.KnnSearch(x, y, 0, maxDist: DISTANCE_TO_GET_WELL_LBL).Select(it => it.Item).ToList();
+                        //Захватить колодцы поблизости
+                        List<StructurePosition> structNearNode
+                            = allStructurePositions.KnnSearch(x, y, 0, maxDist: DISTANCE_TO_GET_WELL_LBL).Select(it => it.Item).ToList();
+
+                        //если два блока имеют одинаковую точку вставки, то рассматирвать только 1 (который больше)
+                        HashSet<StructurePosition> structNearNodeHS = new HashSet<StructurePosition>(structNearNode);
+                        RBush<StructurePosition> structNearNodeRBush = new RBush<StructurePosition>();
+                        structNearNodeRBush.BulkLoad(structNearNode);
+                        List<StructurePosition> structNearNode2 = new List<StructurePosition>();
+
+                        while (structNearNodeHS.Count > 0)
+                        {
+                            StructurePosition sp = structNearNodeHS.First();
+                            double x1 = sp.Position.X;
+                            double y1 = sp.Position.Y;
+                            List<StructurePosition> blocksSamePt
+                                = structNearNodeRBush.KnnSearch(x1, y1, 0, maxDist: ZERO_LENGTH)
+                                .Select(it => it.Item).ToList();
+
+                            structNearNode2.Add(GetBiggestBlock(blocksSamePt));
+
+                            foreach (StructurePosition toRemove in blocksSamePt)
+                            {
+                                structNearNodeHS.Remove(toRemove);
+                            }
+                        }
+
+                        WellLabelingSolver wellsSolver = new WellLabelingSolver(structBlock, structNearNode2, lblsNearNode);
 
 
-                //9. Задание отметок промежуточных точек на ребрах сети
-                //если у ребра есть данные вытянутые из Excel, то интерполировать отметки между обоими сторонами
-                //если данных из Excel нет, то высчитывать отметки относительно поверхности земли
-                //если сеть прокладывается не на одной глубине заложения, то отметки промежуточных точек по интерполяции 
+
+                        if (wellsSolver.TextResult != null)
+                        {
+                            TextPosition wellLbl = wellsSolver.TextResult;
+                            if (!wellLblMapped.Contains(wellLbl))
+                            {
+                                wellLblMapped.Add(wellLbl);
+                            }
+                            else
+                            {
+                                //еще один колодец привязывается к одной и той же подписи
+                                if (!LblDuplicatesToDraw.Contains(wellLbl))
+                                    LblDuplicatesToDraw.Add(wellLbl);
+                            }
+
+
+                            WellLabelingMarkerToDraw wellMarker
+                                = new WellLabelingMarkerToDraw(structBlock, wellLbl);
+                            wellLabelingToDraw.Add(wellMarker);
+
+                            IReadOnlyList<GridSquare> squares = gridSquares.Search(nn.Envelope);
+                            if (squares.Count > 0)
+                            {
+                                GridSquare gridSquare = squares.First();
+
+                                Dictionary<string, WellData> squareData = null;
+                                wellsData.TryGetValue(gridSquare.SquareKey, out squareData);
+
+                                if (squareData != null)
+                                {
+                                    WellData wellData = null;
+                                    squareData.TryGetValue(wellLbl.TextContent, out wellData);
+                                    if (wellData != null)
+                                    {
+                                        if (nn.AttachedEdges.Count != wellData.PipeJunctions.Count)
+                                        {
+                                            //количество присоединений не соответствует Excel
+                                            AddNodeWarning(nn, NodeWarnings.AttachmentCountNotMatches);
+                                        }
+
+
+                                        nn.WellData = wellData;
+                                        wellMarker.ExcelMatch = true;
+                                        if (nn.AttachedEdges.Count > 0 && wellData.PipeJunctions.Count > 0)
+                                        {
+                                            if (nn.AttachedEdges.Count == 1)
+                                            {
+                                                //если присоединение только одно, то данные сразу привязать к трубе
+                                                PipeJunctionData jData = wellData.PipeJunctions.First().Value;
+                                                NetworkEdge en = nn.AttachedEdges.First();
+                                                if (en.StartNode == nn)
+                                                    en.StartPipeJunctionData = jData;
+                                                else
+                                                    en.EndPipeJunctionData = jData;
+                                            }
+                                            else if (nn.AttachedEdges.Count > 1)
+                                            {
+                                                //найти подписи присоединений рядом с колодцем
+                                                List<DistanceItem<TextPosition>> junctionLblsNearNNWithDistance = pipeJunctionLabelPositions
+                                                        .KnnSearch(x, y, 0, maxDist: DISTANCE_TO_GET_JUNCTION_LBLS).ToList();
+                                                List<TextPosition> junctionLblsNearNN = junctionLblsNearNNWithDistance.Select(it => it.Item).ToList();
+
+                                                if (junctionLblsNearNN.Count > 0)
+                                                {
+                                                    PipeJunctionLabelingSolver2 solver
+                                                        = new PipeJunctionLabelingSolver2(nn, junctionLblsNearNN);
+                                                    if (solver.LabelingResult != null)
+                                                    {
+                                                        int colorIndex = 1;
+
+                                                        foreach (KeyValuePair<NetworkEdge, TextPosition> kvp in solver.LabelingResult)
+                                                        {
+                                                            bool start = kvp.Key.StartNode == nn;
+
+                                                            string junctionKey = kvp.Value.TextContent;
+                                                            PipeJunctionData pjd = null;
+                                                            wellData.PipeJunctions.TryGetValue(junctionKey, out pjd);
+                                                            if (pjd != null)
+                                                            {
+                                                                if (start)
+                                                                {
+                                                                    kvp.Key.StartPipeJunctionData = pjd;
+                                                                }
+                                                                else
+                                                                {
+                                                                    kvp.Key.EndPipeJunctionData = pjd;
+                                                                }
+                                                            }
+
+                                                            JunctionLabelingMarkerToDraw marker
+                                                                = new JunctionLabelingMarkerToDraw(kvp.Key, start, colorIndex, kvp.Value, pjd != null);
+                                                            junctionLabelingToDraw.Add(marker);
+
+                                                            if (!junctionLblMapped.Contains(kvp.Value))
+                                                            {
+                                                                junctionLblMapped.Add(kvp.Value);
+                                                            }
+                                                            else
+                                                            {
+                                                                //еще один колодец привязывается к одной и той же подписи
+                                                                if (!junctionLblDuplicatesToDraw.Contains(kvp.Value))
+                                                                    junctionLblDuplicatesToDraw.Add(kvp.Value);
+                                                            }
+
+                                                            colorIndex++;
+                                                        }
+                                                    }
+                                                    else
+                                                    {
+                                                        //не найдено соответствие с подписями присоединений
+                                                        AddNodeWarning(nn, NodeWarnings.JunctionLblsNotFound);
+                                                    }
+                                                }
+
+                                            }
+                                        }
+
+
+                                    }
+                                }
+                                else
+                                {
+                                    //Если squareData == null, значит по этому квадрату нет Excelя -- Выдать предупреждение
+                                    squaresWithNoDataToDraw.Add(gridSquare);
+                                }
+                            }
+                        }
+                        else
+                        {
+                            //не найдена подпись колодца
+                            AddNodeWarning(nn, NodeWarnings.WellLblNotFound);
+                        }
+                    }
+
+                }
 
                 tr.Commit();
             }
-            #endregion
 
         }
+
+        private static StructurePosition GetBiggestBlock(IReadOnlyList<StructurePosition> structuresAtNode)
+        {
+            StructurePosition structBlock = null;
+            double sizeParam = double.NegativeInfinity;
+            foreach (StructurePosition sp in structuresAtNode)
+            {
+                Extents3d? ext = sp.BlockReferenceId.GetObject(OpenMode.ForRead).Bounds;
+                if (ext != null)
+                {
+                    double currSizeParam = (ext.Value.MaxPoint.X - ext.Value.MinPoint.X)
+                        * (ext.Value.MaxPoint.Y - ext.Value.MinPoint.Y);
+
+                    if (currSizeParam > sizeParam)
+                    {
+                        structBlock = sp;
+                        sizeParam = currSizeParam;
+                    }
+                }
+
+            }
+
+            return structBlock;
+        }
+
+        public void DrawMarkers()
+        {
+            Database db = doc.Database;
+            Editor ed = doc.Editor;
+            using (Transaction tr = db.TransactionManager.StartTransaction())
+            {
+                BlockTable bt = tr.GetObject(db.BlockTableId, OpenMode.ForWrite) as BlockTable;
+                BlockTableRecord ms
+                    = (BlockTableRecord)tr.GetObject(bt[BlockTableRecord.ModelSpace], OpenMode.ForWrite);
+                //DBDictionary gd = (DBDictionary)tr.GetObject(db.GroupDictionaryId, OpenMode.ForWrite);
+
+                //Очистить модель от всех маркеров
+                TypedValue[] tv = new TypedValue[]
+                            {
+                    new TypedValue(8, MARKER_LAYER),
+                            };
+                SelectionFilter flt = new SelectionFilter(tv);
+                PromptSelectionResult psr = ed.SelectAll(flt);
+
+                SelectionSet ss = psr.Value;
+                if (ss != null)
+                {
+                    foreach (ObjectId id in ss.GetObjectIds())
+                    {
+                        Entity ent = (Entity)tr.GetObject(id, OpenMode.ForWrite);
+                        ent.Erase();
+                    }
+                }
+
+
+                ObjectId layerId = Utils.CreateLayerIfNotExists(MARKER_LAYER, db, tr);
+                ObjectId txtStyleId = Utils.GetStandardTextStyle(db, tr);
+
+                foreach (StructurePosition str in structuresNearPolylineNotInEndPointToDraw)
+                {
+                    Point3d target = str.Position;
+                    Point3d txtPt = target + Vector3d.YAxis * (-7) + Vector3d.XAxis * 7;
+
+                    using (MLeader leader = new MLeader())
+                    using (MText mText = new MText())
+                    {
+                        mText.Contents = BLOCK_NEAR_POLYLINE_NOT_ON_ENDPOINT_MESSAGE;
+                        mText.Location = txtPt;
+                        mText.ColorIndex = BLOCK_NEAR_POLYLINE_NOT_ON_ENDPOINT_COLOR_INDEX;
+                        mText.LayerId = layerId;
+                        mText.TextStyleId = txtStyleId;
+                        mText.LineWeight = LineWeight.LineWeight030;
+                        mText.TextHeight = 3;
+
+                        leader.SetDatabaseDefaults(db);
+                        leader.ContentType = ContentType.MTextContent;
+                        leader.MText = mText;
+                        leader.ColorIndex = BLOCK_NEAR_POLYLINE_NOT_ON_ENDPOINT_COLOR_INDEX;
+                        leader.LayerId = layerId;
+                        leader.LineWeight = LineWeight.LineWeight030;
+
+                        int idx = leader.AddLeaderLine(target);
+                        leader.AddFirstVertex(idx, target);
+
+                        ms.AppendEntity(leader);
+                        tr.AddNewlyCreatedDBObject(leader, true);
+                    }
+                }
+
+                foreach (JunctionLabelingMarkerToDraw marker in junctionLabelingToDraw)
+                {
+                    using (Polyline markerPoly = new Polyline())
+                    {
+                        markerPoly.ColorIndex = marker.ColorIndex;
+
+                        Point2d pt0 = (marker.Start ? marker.NetworkEdge.PositionList[0]
+                            : marker.NetworkEdge.PositionList[marker.NetworkEdge.PositionList.Count - 1]);
+                        Point2d ptDir = (marker.Start ?
+                            marker.NetworkEdge.PositionList[1]
+                            : marker.NetworkEdge.PositionList[marker.NetworkEdge.PositionList.Count - 2]);
+                        Vector2d dir = ptDir - pt0;
+                        dir = dir.GetNormal() * 0.75;
+                        Point2d pt1 = pt0 + dir;
+
+                        markerPoly.AddVertexAt(0, pt0, 0, 0.1, 0);
+                        markerPoly.AddVertexAt(1, pt1, 0, 0, 0);
+
+
+                        int polyVertNum = 2;
+                        TextPosition txt = marker.TextPosition;
+                        LinkMarkerWithText(markerPoly, pt1, polyVertNum, txt);
+
+                        markerPoly.LineWeight = LineWeight.LineWeight053;
+                        markerPoly.LayerId = layerId;
+
+                        ms.AppendEntity(markerPoly);
+                        tr.AddNewlyCreatedDBObject(markerPoly, true);
+
+                    }
+                    if (marker.ExcelMatch)
+                    {
+                        Entity txtEnt = (Entity)marker.TextPosition.TxtId.GetObject(OpenMode.ForRead);
+                        double height = txtEnt is DBText ? (txtEnt as DBText).Height : (txtEnt as MText).TextHeight;
+
+                        using (DBText excelMatchTxt = new DBText())
+                        {
+                            excelMatchTxt.TextStyleId = txtStyleId;
+                            excelMatchTxt.Height = height / 2;
+                            excelMatchTxt.Position = marker.TextPosition.CornerPts[3] + (Vector3d.XAxis * 0.05);
+                            excelMatchTxt.TextString = DATA_MATCHING_MESSAGE;
+                            excelMatchTxt.ColorIndex = marker.ColorIndex;
+                            excelMatchTxt.LayerId = layerId;
+                            excelMatchTxt.LineWeight = LineWeight.LineWeight030;
+
+                            ms.AppendEntity(excelMatchTxt);
+                            tr.AddNewlyCreatedDBObject(excelMatchTxt, true);
+                        }
+                    }
+
+                }
+
+
+                foreach (WellLabelingMarkerToDraw marker in wellLabelingToDraw)
+                {
+                    using (Polyline markerPoly = new Polyline())
+                    {
+                        markerPoly.ColorIndex = WELL_MARKER_COLOR_INDEX;
+
+                        Point2d pt = Utils.Point2DBy3D(marker.StructurePosition.Position);
+                        markerPoly.AddVertexAt(0, pt, 0, 0, 0);
+
+                        TextPosition txt = marker.TextPosition;
+                        LinkMarkerWithText(markerPoly, pt, 1, txt);
+
+                        markerPoly.LineWeight = LineWeight.LineWeight053;
+                        markerPoly.LayerId = layerId;
+
+                        ms.AppendEntity(markerPoly);
+                        tr.AddNewlyCreatedDBObject(markerPoly, true);
+                    }
+                    if (marker.ExcelMatch)
+                    {
+                        Entity txtEnt = (Entity)marker.TextPosition.TxtId.GetObject(OpenMode.ForRead);
+                        double height = txtEnt is DBText ? (txtEnt as DBText).Height : (txtEnt as MText).TextHeight;
+
+                        using (DBText excelMatchTxt = new DBText())
+                        {
+                            excelMatchTxt.TextStyleId = txtStyleId;
+                            excelMatchTxt.Height = height / 2;
+                            excelMatchTxt.Position = marker.TextPosition.CornerPts[3] + (Vector3d.XAxis * 0.05);
+                            excelMatchTxt.TextString = DATA_MATCHING_MESSAGE;
+                            excelMatchTxt.ColorIndex = WELL_MARKER_COLOR_INDEX;
+                            excelMatchTxt.LayerId = layerId;
+                            excelMatchTxt.LineWeight = LineWeight.LineWeight030;
+
+                            ms.AppendEntity(excelMatchTxt);
+                            tr.AddNewlyCreatedDBObject(excelMatchTxt, true);
+                        }
+                    }
+                }
+
+
+                foreach (GridSquare sq in squaresWithNoDataToDraw)
+                {
+                    Point2d[] pts = Utils.GetPointsToDraw(sq.Envelope);
+                    using (Polyline markerPoly = new Polyline())
+                    {
+                        markerPoly.ColorIndex = SQUARES_WITH_NO_DATA_COLOR_INDEX;
+
+                        for (int i = 0; i < pts.Length; i++)
+                        {
+                            Point2d pt = pts[i];
+                            markerPoly.AddVertexAt(i, pt, 0, 0, 0);
+                        }
+
+                        markerPoly.LineWeight = LineWeight.LineWeight053;
+                        markerPoly.LayerId = layerId;
+                        markerPoly.Closed = true;
+
+                        ms.AppendEntity(markerPoly);
+                        tr.AddNewlyCreatedDBObject(markerPoly, true);
+                    }
+
+                    using (DBText noDataErrTxt = new DBText())
+                    {
+                        noDataErrTxt.TextStyleId = txtStyleId;
+                        noDataErrTxt.Height = 5;
+                        noDataErrTxt.Position = new Point3d(pts[0].X, pts[0].Y, 0) + (Vector3d.XAxis * 0.05) + (Vector3d.YAxis * 0.05);
+                        noDataErrTxt.TextString = SQUARE_WITH_NO_DATA_MESSAGE;
+                        noDataErrTxt.ColorIndex = SQUARES_WITH_NO_DATA_COLOR_INDEX;
+                        noDataErrTxt.LayerId = layerId;
+                        noDataErrTxt.LineWeight = LineWeight.LineWeight030;
+
+                        ms.AppendEntity(noDataErrTxt);
+                        tr.AddNewlyCreatedDBObject(noDataErrTxt, true);
+                    }
+                }
+
+
+                foreach (KeyValuePair<NetworkNode, NodeWarnings> kvp in nodeWarnings)
+                {
+                    List<string> warningMessages = new List<string>();
+                    foreach (KeyValuePair<NodeWarnings, string> wm in nodeWarningsMessages)
+                    {
+                        if (kvp.Value.HasFlag(wm.Key))
+                        {
+                            warningMessages.Add(wm.Value);
+                        }
+                    }
+
+                    string message = String.Join(MText.LineBreak.ToUpper(), warningMessages);
+
+                    Point3d target = new Point3d(kvp.Key.Envelope.MaxX, kvp.Key.Envelope.MaxY, 0);
+                    Point3d txtPt = target + Vector3d.YAxis * 7 + Vector3d.XAxis * 7;
+
+                    using (MLeader leader = new MLeader())
+                    using (MText mText = new MText())
+                    {
+                        //mText.SetDatabaseDefaults(db);
+                        mText.Contents = message;
+                        mText.Location = txtPt;
+                        mText.ColorIndex = NODE_WARNING_COLOR_INDEX;
+                        mText.LayerId = layerId;
+                        mText.TextStyleId = txtStyleId;
+                        mText.LineWeight = LineWeight.LineWeight030;
+                        mText.TextHeight = 3;
+
+                        leader.SetDatabaseDefaults(db);
+                        leader.ContentType = ContentType.MTextContent;
+                        leader.MText = mText;
+                        leader.ColorIndex = NODE_WARNING_COLOR_INDEX;
+                        leader.LayerId = layerId;
+                        leader.LineWeight = LineWeight.LineWeight030;
+
+                        int idx = leader.AddLeaderLine(target);
+                        leader.AddFirstVertex(idx, target);
+
+                        ms.AppendEntity(leader);
+                        tr.AddNewlyCreatedDBObject(leader, true);
+                    }
+                }
+
+
+                foreach (TextPosition lblTxt in LblDuplicatesToDraw.Concat(junctionLblDuplicatesToDraw))
+                {
+                    Point3d target = lblTxt.CornerPts[2];
+                    Point3d txtPt = target + Vector3d.YAxis * 7 + Vector3d.XAxis * 7;
+
+                    using (MLeader leader = new MLeader())
+                    using (MText mText = new MText())
+                    {
+                        mText.Contents = LBL_DULICATE_MESSAGE;
+                        mText.Location = txtPt;
+                        mText.ColorIndex = LBL_DULICATE_COLOR_INDEX;
+                        mText.LayerId = layerId;
+                        mText.TextStyleId = txtStyleId;
+                        mText.LineWeight = LineWeight.LineWeight030;
+                        mText.TextHeight = 3;
+
+                        leader.SetDatabaseDefaults(db);
+                        leader.ContentType = ContentType.MTextContent;
+                        leader.MText = mText;
+                        leader.ColorIndex = LBL_DULICATE_COLOR_INDEX;
+                        leader.LayerId = layerId;
+                        leader.LineWeight = LineWeight.LineWeight030;
+
+                        int idx = leader.AddLeaderLine(target);
+                        leader.AddFirstVertex(idx, target);
+
+                        ms.AppendEntity(leader);
+                        tr.AddNewlyCreatedDBObject(leader, true);
+                    }
+                }
+
+
+                tr.Commit();
+            }
+
+        }
+
+
+
+
+
+        private static void LinkMarkerWithText(Polyline markerPoly, Point2d pt, int polyVertNum, TextPosition txt)
+        {
+            int nearestCornerIndex = txt.GetNearestCorner(new Point3d(pt.X, pt.Y, 0));
+            int repeatCounter = 0;
+            for (int i = nearestCornerIndex; repeatCounter < 5; i = (i + 1) % 4)
+            {
+                markerPoly.AddVertexAt(polyVertNum, Utils.Point2DBy3D(txt.CornerPts[i]), 0, 0, 0);
+
+                repeatCounter++;
+                polyVertNum++;
+            }
+
+            //return polyVertNum;
+        }
+
+
+
+        public void CreatePipeNenwork()
+        {
+            Database db = doc.Database;
+            Dictionary<ObjectId, SelectedPartTypeId> blockStructureMapping = configsViewModel.BlockStructureMapping;
+
+            //Создать новую сеть
+            ObjectId networkId = CivilDB.Network.Create(cdoc, ref communicationLayerName);
+
+            ObjectId tinSurfId = configsViewModel.TinSurfaceId.Value;
+
+            double defaultSumpDepth = configsViewModel.WellDepthVM.NumValue;
+
+            double defaultPipeDepth = configsViewModel.CommunicationDepthVM.NumValue;
+
+            bool sameDepth = configsViewModel.SameDepth;
+
+            ObjectId pipeFamId = configsViewModel.PipeType.PartFamId;
+            ObjectId pipeSizeId = configsViewModel.PipeType.PartSizeId;
+
+            using (Transaction tr = db.TransactionManager.StartTransaction())
+            {
+                CivilDB.Network network = (CivilDB.Network)tr.GetObject(networkId, OpenMode.ForWrite);
+
+                CivilDB.TinSurface tinSurf = (CivilDB.TinSurface)tr.GetObject(tinSurfId, OpenMode.ForRead);
+
+                //создать колодцы
+                foreach (NetworkNode nn in networkNodesList)
+                {
+                    if (nn.StructureBlock != null)
+                    {
+                        SelectedPartTypeId spt = blockStructureMapping[nn.StructureBlock.BlockTableRecordId];
+                        double x = nn.Envelope.MaxX;
+                        double y = nn.Envelope.MaxY;
+
+                        double surfElev = double.NegativeInfinity;
+                        try
+                        {
+                            surfElev = tinSurf.FindElevationAtXY(x, y);
+                        }
+                        catch { }
+
+                        double rimElevByData = double.NegativeInfinity;
+                        if (nn.WellData != null && nn.WellData.TopLevel != double.NegativeInfinity)
+                        {
+                            rimElevByData = nn.WellData.TopLevel;
+                        }
+
+                        double z = rimElevByData != double.NegativeInfinity ? rimElevByData
+                            : surfElev != double.NegativeInfinity ? surfElev : 0;
+                        //если согласно Excel отметка верха ниже, чем отметка поверхности (то есть колодец зарыт в землю)
+                        //то брать отметку верха с поверхности
+                        if (configsViewModel.RimElevationCorrection && rimElevByData != double.NegativeInfinity && surfElev != double.NegativeInfinity && rimElevByData < surfElev)
+                        {
+                            z = surfElev;
+                        }
+
+                        ObjectId stuctId = ObjectId.Null;
+                        network.AddStructure(spt.PartFamId, spt.PartSizeId, new Point3d(x, y, z), nn.StructureBlock.BlockRefRotation, ref stuctId, false /*true*/);
+                        nn.StructId = stuctId;
+
+
+                        if (!nn.StructId.IsNull)
+                        {
+                            CivilDB.Structure str = (CivilDB.Structure)tr.GetObject(nn.StructId, OpenMode.ForWrite);
+                            str.LayerId = configsViewModel.CommunicationLayerId.Value;
+
+                            //str.RefSurfaceId = tinSurfId;
+                            //str.RimToSumpHeight = nn.WellData != null && nn.WellData.BottomLevel != double.NegativeInfinity ?
+                            //    Math.Abs(str.RimElevation - nn.WellData.BottomLevel)
+                            //    : defaultSumpDepth;
+
+                            str.ControlSumpBy = CivilDB.StructureControlSumpType.ByElevation;
+                            str.SumpElevation = nn.WellData != null && nn.WellData.BottomLevel != double.NegativeInfinity ?
+                                nn.WellData.BottomLevel
+                                : str.RimElevation - defaultSumpDepth;
+
+                            //SelectedPartTypeId spt = blockStructureMapping[nn.StructureBlock.BlockTableRecordId];
+                            PartFamily pf = (PartFamily)tr.GetObject(spt.PartFamId, OpenMode.ForRead);
+
+                            try { str.ResizeJunctionStructure(pf.GUID, str.RimElevation, str.SumpElevation); } catch { }
+                        }
+
+                    }
+                }
+
+                tr.Commit();
+            }
+
+            //using (Transaction tr = db.TransactionManager.StartTransaction())
+            //{
+            //Если в узле без колодца стыкуются всего 2 ребра, то эти ребра должны быть объединены
+            HashSet<NetworkEdge> networkEdgesCorrect = new HashSet<NetworkEdge>(networkEdges);
+            foreach (NetworkNode nn in networkNodesList.Where(e => e.StructId.IsNull && e.AttachedEdges.Count == 2))
+            {
+                networkEdgesCorrect.Remove(nn.AttachedEdges[0]);
+                networkEdgesCorrect.Remove(nn.AttachedEdges[1]);
+
+                NetworkEdge joinedEdge = new NetworkEdge(nn/*, tr*/);
+
+                networkEdgesCorrect.Add(joinedEdge);
+            }
+
+            networkEdges = new List<NetworkEdge>(networkEdgesCorrect);
+
+            //    tr.Commit();
+            //}
+
+
+            using (Transaction tr = db.TransactionManager.StartTransaction())
+            {
+                BlockTable bt = tr.GetObject(db.BlockTableId, OpenMode.ForWrite) as BlockTable;
+                BlockTableRecord ms
+                    = (BlockTableRecord)tr.GetObject(bt[BlockTableRecord.ModelSpace], OpenMode.ForWrite);
+
+                //TODO?: Сначала подвергать обработке ребра, у которых нет данных из Excel по обоим концам
+                //затем - есть данные по 1 концу, и затем по обоим концам (не помню, почему у меня появилась такая мысль)
+                //Для каждого ребра
+                foreach (NetworkEdge ne in networkEdges)
+                {
+                    ne.CalcPipePosition(tr, tinSurfId, defaultPipeDepth, sameDepth, ms);
+                }
+
+                //создать трубы
+                //нужно ли присоединять трубы к колодцам?
+                //нужно ли соединять отрезки труб между собой?
+                foreach (NetworkEdge ne in networkEdges)
+                {
+                    CivilDB.Network network = (CivilDB.Network)tr.GetObject(networkId, OpenMode.ForWrite);
+
+                    for (int i = 0; i < ne.PipePositionList.Count - 1; i++)
+                    {
+                        Point3d p0 = ne.PipePositionList[i].GetPt3d();
+                        Point3d p1 = ne.PipePositionList[i + 1].GetPt3d();
+                        LineSegment3d line = new LineSegment3d(p0, p1);
+
+                        ObjectId pipeId = ObjectId.Null;
+                        network.AddLinePipe(pipeFamId, pipeSizeId, line, ref pipeId, false);
+
+                        Entity ent = (Entity)tr.GetObject(pipeId, OpenMode.ForWrite);
+                        ent.LayerId = configsViewModel.CommunicationLayerId.Value;
+                    }
+                }
+
+
+                tr.Commit();
+            }
+
+        }
+
 
         /// <summary>
         /// Полилиния является квадратом
@@ -495,13 +1243,18 @@ namespace Civil3DInfoTools.PipeNetworkCreating
 
             public ObjectId BlockTableRecordId { get; private set; }
 
+            public Point3d Position { get; private set; }
+
+
             public StructurePosition(Point3d blockPos, ObjectId blockReferenceId,
                 ObjectId blockTableRecordId, double blockRefRotation)
             {
+                Position = blockPos;
                 _envelope = new Envelope(blockPos.X, blockPos.Y, blockPos.X, blockPos.Y);
                 BlockReferenceId = blockReferenceId;
                 BlockTableRecordId = blockTableRecordId;
                 BlockRefRotation = blockRefRotation;
+                //BoxArea = boxArea;
             }
         }
 
@@ -512,10 +1265,76 @@ namespace Civil3DInfoTools.PipeNetworkCreating
 
             public string TextContent { get; private set; }
 
-            public TextPosition(Point3d minPt, Point3d maxPt, string textContent)
+            public ObjectId TxtId { get; private set; }
+
+            public CompositeCurve3d BoxCurve { get; private set; }
+
+            //public Point3d P0 { get; private set; }
+            //public Point3d P1 { get; private set; }
+            //public Point3d P2 { get; private set; }
+            //public Point3d P3 { get; private set; }
+
+            public List<Point3d> CornerPts { get; private set; } = new List<Point3d>();
+
+            public TextPosition(Point3d minPt, Point3d maxPt, string textContent, ObjectId txtId)
             {
                 _envelope = new Envelope(minPt.X, minPt.Y, maxPt.X, maxPt.Y);
                 TextContent = textContent;
+                TxtId = txtId;
+
+
+                //кривая, описывающая коробку для расчета расстояния до полилинии
+                Point3d P0 = new Point3d(minPt.X, minPt.Y, 0);
+                Point3d P1 = new Point3d(minPt.X, maxPt.Y, 0);
+                Point3d P2 = new Point3d(maxPt.X, maxPt.Y, 0);
+                Point3d P3 = new Point3d(maxPt.X, minPt.Y, 0);
+                CornerPts.Add(P0);
+                CornerPts.Add(P1);
+                CornerPts.Add(P2);
+                CornerPts.Add(P3);
+                LineSegment3d side0 = new LineSegment3d(P0, P1);
+                LineSegment3d side1 = new LineSegment3d(P1, P2);
+                LineSegment3d side2 = new LineSegment3d(P2, P3);
+                LineSegment3d side3 = new LineSegment3d(P3, P0);
+
+                BoxCurve = new CompositeCurve3d(new Curve3d[] { side0, side1, side2, side3 });
+            }
+
+            public double SquaredDistanceTo(double x, double y)
+            {
+                double dx = AxisDistToPoint(x, _envelope.MinX, _envelope.MaxX);
+                double dy = AxisDistToPoint(y, _envelope.MinY, _envelope.MaxY);
+                return dx * dx + dy * dy;
+            }
+
+            private double AxisDistToPoint(double k, double min, double max)
+            {
+                return k < min ? min - k : k <= max ? 0 : k - max;
+            }
+
+            public Point3d GetCenter()
+            {
+                double x = (_envelope.MinX + _envelope.MaxX) / 2;
+                double y = (_envelope.MinY + _envelope.MaxY) / 2;
+
+                return new Point3d(x, y, 0);
+            }
+
+            public int GetNearestCorner(Point3d pt)
+            {
+                int nearestIndex = -1;
+                double minDist = double.PositiveInfinity; ;
+                for (int i = 0; i < 4; i++)
+                {
+                    Point3d corner = CornerPts[i];
+                    double dist = corner.DistanceTo(pt);
+                    if (dist < minDist)
+                    {
+                        minDist = dist;
+                        nearestIndex = i;
+                    }
+                }
+                return nearestIndex;
             }
         }
 
@@ -529,8 +1348,12 @@ namespace Civil3DInfoTools.PipeNetworkCreating
             private Envelope _envelope;
             public ref readonly Envelope Envelope => ref _envelope;
 
-            //id блока если он есть в этой точке
-            public ObjectId BlockTableRecordId { get; set; }
+            public StructurePosition StructureBlock { get; set; } = null;
+
+            /// <summary>
+            /// Id колодца
+            /// </summary>
+            public ObjectId StructId { get; set; } = ObjectId.Null;
 
             public double BlockRefRotation { get; set; }
 
@@ -545,32 +1368,7 @@ namespace Civil3DInfoTools.PipeNetworkCreating
             }
         }
 
-        /// <summary>
-        /// Ребро графа
-        /// </summary>
-        private class NetworkEdge
-        {
-            public NetworkNode StartNode { get; set; }
 
-            public NetworkNode EndNode { get; set; }
-
-            //данные из Excel если есть для 1-го присоединения
-            public PipeJunctionData StartPipeJunctionData { get; set; }
-
-            //данные из Excel если есть для 2-го присоединения
-            public PipeJunctionData EndPipeJunctionData { get; set; }
-
-            //точки полилинии
-            public List<XYZ> PositionList { get; private set; } = new List<XYZ>();
-
-            public NetworkEdge(IEnumerable<Point2d> polyPts)
-            {
-                foreach (Point2d pt in polyPts)
-                {
-                    PositionList.Add(new XYZ(pt));
-                }
-            }
-        }
 
         private class XYZ
         {
@@ -582,7 +1380,52 @@ namespace Civil3DInfoTools.PipeNetworkCreating
                 Position2d = position2d;
             }
 
+            public Point3d GetPt3d()
+            {
+                return new Point3d(Position2d.X, Position2d.Y, Z);
+            }
+
         }
+
+
+        private class JunctionLabelingMarkerToDraw
+        {
+            public NetworkEdge NetworkEdge { get; private set; }
+
+            public bool Start { get; private set; }
+
+            public int ColorIndex { get; private set; }
+
+            public TextPosition TextPosition { get; private set; }
+
+            public bool ExcelMatch { get; private set; }
+
+            public JunctionLabelingMarkerToDraw(NetworkEdge edge, bool start, int colorIndex, TextPosition txt, bool excelMatch)
+            {
+                NetworkEdge = edge;
+                Start = start;
+                ColorIndex = colorIndex;
+                TextPosition = txt;
+                ExcelMatch = excelMatch;
+            }
+        }
+
+        private class WellLabelingMarkerToDraw
+        {
+            public StructurePosition StructurePosition { get; private set; }
+
+            public TextPosition TextPosition { get; private set; }
+
+            public bool ExcelMatch { get; set; } = false;
+
+            public WellLabelingMarkerToDraw(StructurePosition str, TextPosition txt)
+            {
+                StructurePosition = str;
+                TextPosition = txt;
+            }
+        }
+
+
 
     }
 

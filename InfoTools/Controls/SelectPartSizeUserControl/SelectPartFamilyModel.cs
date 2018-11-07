@@ -17,7 +17,7 @@ namespace Civil3DInfoTools.Controls.SelectPartSizeUserControl
     /// <summary>
     /// PartFamily и все содержащиеся в нем PartSize
     /// </summary>
-    public class SelectPartSizeModel : INotifyPropertyChanged
+    public class SelectPartFamilyModel : INotifyPropertyChanged
     {
         private PartFamily partFamily = null;
         private ObservableCollection<PartSize> partSizes = new ObservableCollection<PartSize>();
@@ -50,18 +50,10 @@ namespace Civil3DInfoTools.Controls.SelectPartSizeUserControl
         }
 
 
-        public SelectPartSizeModel(PartFamily partFamily/*, ObservableCollection<PartSize> partSizes*/)
+        public SelectPartFamilyModel(PartFamily partFamily, ObservableCollection<PartSize> partSizes)
         {
             this.partFamily = partFamily;
-            //this.partSizes = partSizes;
-
-
-            for (int j = 0; j < partFamily.PartSizeCount; j++)
-            {
-                ObjectId psId = partFamily[j];
-                PartSize ps = (PartSize)psId.GetObject(OpenMode.ForRead);
-                this.partSizes.Add(ps);
-            }
+            this.partSizes = partSizes;
         }
     }
 }

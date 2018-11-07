@@ -20,6 +20,7 @@ namespace NavisWorksInfoTools.S1NF0_SOFTWARE
             DisplayName = S1NF0_APP_NAME + ". 2. FBX по наборам выбора")]
     public class FBXExportBySelSets : AddInPlugin
     {
+
         public override int Execute(params string[] parameters)
         {
             Win.MessageBoxResult result

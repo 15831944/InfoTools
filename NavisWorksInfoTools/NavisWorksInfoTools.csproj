@@ -110,6 +110,7 @@
     </Compile>
     <Compile Include="S1NF0_SOFTWARE\SetS1NF0Props.cs" />
     <Compile Include="Test.cs" />
+    <Compile Include="TransformItemsOneByOne.cs" />
     <Compile Include="Utils.cs" />
   </ItemGroup>
   <ItemGroup>
@@ -193,6 +194,9 @@
   <ItemGroup>
     <Resource Include="Images\AddObjectsToStructure.png" />
     <Resource Include="Images\CreateStructure.png" />
+  </ItemGroup>
+  <ItemGroup>
+    <Resource Include="Images\FBXExportBySelSets.png" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
 </Project>

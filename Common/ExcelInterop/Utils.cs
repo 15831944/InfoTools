@@ -10,7 +10,7 @@ namespace Common.ExcelInterop
     public static class Utils
     {
         /// <summary>
-        /// Получмить значения ячеек одной из строк листа
+        /// Получить значения ячеек одной из строк листа
         /// </summary>
         /// <param name="sheet"></param>
         /// <param name="rowNum"></param>
