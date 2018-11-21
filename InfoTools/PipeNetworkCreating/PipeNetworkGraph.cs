@@ -373,7 +373,7 @@ namespace Civil3DInfoTools.PipeNetworkCreating
                             Polyline edgePoly = (Polyline)tr.GetObject(polyId, OpenMode.ForRead);
                             if (edgePoly.Length == 0//если полилиния нулевой длины, то не интересно
                                 || edgePoly.Closed || edgePoly.GetPoint2dAt(0)
-                                .IsEqualTo(edgePoly.GetPoint2dAt(edgePoly.NumberOfVertices-1))//если полилиния замкнута, то не интересно
+                                .IsEqualTo(edgePoly.GetPoint2dAt(edgePoly.NumberOfVertices - 1))//если полилиния замкнута, то не интересно
                                 )
                             {
                                 continue;
@@ -1119,24 +1119,62 @@ namespace Civil3DInfoTools.PipeNetworkCreating
                     ne.CalcPipePosition(tr, tinSurfId, defaultPipeDepth, sameDepth, ms);
                 }
 
+
+                //Получить данные о внутреннем диаметре или высоте трубы
+                //учесть эти данные при создании трубы, чтобы указанные отметки соответствоввали лотку трубы
+                PartFamily pipeFamily = tr.GetObject(pipeFamId, OpenMode.ForRead) as PartFamily;
+                CivilDB.SweptShapeType shapeType = pipeFamily.SweptShape;
+
+                PartSize pipeSize = tr.GetObject(pipeSizeId, OpenMode.ForRead) as PartSize;
+                CivilDB.PartDataRecord record = pipeSize.SizeDataRecord;
+                CivilDB.PartDataField field = null;
+                try
+                {
+                    field = record.GetDataFieldBy(CivilDB.PartContextType.PipeInnerHeight);
+                }
+                catch
+                {
+                    field = record.GetDataFieldBy(CivilDB.PartContextType.PipeInnerDiameter);
+                }
+
+                Vector3d elevCorrectionVector = new Vector3d(0, 0, 0);
+                if (field != null && field.Units.Equals("mm"))
+                {
+                    double pipeHalfHight = (double)field.Value / 2000;//перевод из миллиметров в метры
+                    elevCorrectionVector = Vector3d.ZAxis * pipeHalfHight;
+                }
+
                 //создать трубы
                 //нужно ли присоединять трубы к колодцам?
                 //нужно ли соединять отрезки труб между собой?
+                //положение оси трубы??? Отметки присоединений снимались по лотку трубы?
+                CivilDB.Network network = (CivilDB.Network)tr.GetObject(networkId, OpenMode.ForWrite);
                 foreach (NetworkEdge ne in networkEdges)
                 {
-                    CivilDB.Network network = (CivilDB.Network)tr.GetObject(networkId, OpenMode.ForWrite);
 
+                    //CivilDB.Pipe prevPipe = null;
                     for (int i = 0; i < ne.PipePositionList.Count - 1; i++)
                     {
-                        Point3d p0 = ne.PipePositionList[i].GetPt3d();
-                        Point3d p1 = ne.PipePositionList[i + 1].GetPt3d();
+                        Point3d p0 = ne.PipePositionList[i].GetPt3d() + elevCorrectionVector;
+                        Point3d p1 = ne.PipePositionList[i + 1].GetPt3d() + elevCorrectionVector;
                         LineSegment3d line = new LineSegment3d(p0, p1);
 
                         ObjectId pipeId = ObjectId.Null;
                         network.AddLinePipe(pipeFamId, pipeSizeId, line, ref pipeId, false);
 
-                        Entity ent = (Entity)tr.GetObject(pipeId, OpenMode.ForWrite);
-                        ent.LayerId = configsViewModel.CommunicationLayerId.Value;
+                        if (!pipeId.IsNull)
+                        {
+                            CivilDB.Pipe pipe = (CivilDB.Pipe)tr.GetObject(pipeId, OpenMode.ForWrite);
+                            pipe.LayerId = configsViewModel.CommunicationLayerId.Value;
+
+                            //if (prevPipe != null)//для соединения все рабно нужен колодец
+                            //{
+                            //    pipe.ConnectToPipe(CivilDB.ConnectorPositionType.Start, prevPipe.Id, CivilDB.ConnectorPositionType.End, )
+                            //}
+
+                            //prevPipe = pipe;
+                        }
+
                     }
                 }
 

@@ -1,0 +1,115 @@
+﻿<UserControl x:Class="Civil3DInfoTools.Geology.GeologyTrueScalingProfileWindow.GeologyTrueScalingProfileView2"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
+             xmlns:local="clr-namespace:Civil3DInfoTools.Geology.GeologyTrueScalingProfileWindow"
+             xmlns:numControl="clr-namespace:Common.Controls.NumericUpDownControl;assembly=Common"
+             mc:Ignorable="d" 
+             d:DesignHeight="400" d:DesignWidth="300" Background="WhiteSmoke">
+    <UserControl.Resources>
+        <GridLength x:Key="colWidth">170</GridLength>
+    </UserControl.Resources>
+    
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="30"/>
+            <RowDefinition Height="30"/>
+            <RowDefinition Height="30"/>
+            <RowDefinition Height="30"/>
+            <RowDefinition Height="30"/>
+            <RowDefinition Height="30"/>
+            <RowDefinition Height="30"/>
+            <RowDefinition Height="30"/>
+            <RowDefinition Height="30"/>
+            <RowDefinition Height="30"/>
+            <RowDefinition Height="30"/>
+            <RowDefinition Height="*"/>
+
+        </Grid.RowDefinitions>
+
+
+        <Grid Grid.Row="0">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="{StaticResource colWidth}"/>
+                <ColumnDefinition Width="*"/>
+            </Grid.ColumnDefinitions>
+
+            <Label>Указать линию пов-ти земли</Label>
+            <Button Grid.Column="1" Margin="3,3,3,3" Command="{Binding SpecifyGroundSurfPolyCommand}">^</Button>
+        </Grid>
+        <Grid Grid.Row="1">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="{StaticResource colWidth}"/>
+                <ColumnDefinition Width="*"/>
+            </Grid.ColumnDefinitions>
+
+            <Label>Выбрать штриховки грунтов</Label>
+            <Button Grid.Column="1" Margin="3,3,3,3" Command="{Binding SpecifySoilHatchCommand}">^</Button>
+        </Grid>
+        <Label Grid.Row="2">Исходные масштабные коэффициенты*:</Label>
+        <Grid Grid.Row="3">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="{StaticResource colWidth}"/>
+                <ColumnDefinition Width="*"/>
+            </Grid.ColumnDefinitions>
+
+            <Label>по горизонтали</Label>
+            <numControl:NumericUpDownView Grid.Column="1" DataContext="{Binding StartHorScalingVM}" Margin="3,3,3,3"/>
+        </Grid>
+        <Grid Grid.Row="4">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="{StaticResource colWidth}"/>
+                <ColumnDefinition Width="*"/>
+            </Grid.ColumnDefinitions>
+
+            <Label>по вертикали</Label>
+            <numControl:NumericUpDownView Grid.Column="1" DataContext="{Binding StartVertScalingVM}" Margin="3,3,3,3"/>
+        </Grid>
+        <Grid Grid.Row="5">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="{StaticResource colWidth}"/>
+                <ColumnDefinition Width="*"/>
+            </Grid.ColumnDefinitions>
+
+            <Label>по вертикали грунты</Label>
+            <numControl:NumericUpDownView Grid.Column="1" DataContext="{Binding StartVertSoilScalingVM}" Margin="3,3,3,3"/>
+        </Grid>
+        
+        <Label Grid.Row="6">Требуемые масштабные коэффициенты*:</Label>
+
+        <Grid Grid.Row="7">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="{StaticResource colWidth}"/>
+                <ColumnDefinition Width="*"/>
+            </Grid.ColumnDefinitions>
+
+            <Label>по горизонтали</Label>
+            <numControl:NumericUpDownView Grid.Column="1" DataContext="{Binding EndHorScalingVM}" Margin="3,3,3,3"/>
+        </Grid>
+        <Grid Grid.Row="8">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="{StaticResource colWidth}"/>
+                <ColumnDefinition Width="*"/>
+            </Grid.ColumnDefinitions>
+
+            <Label>по вертикали</Label>
+            <numControl:NumericUpDownView Grid.Column="1" DataContext="{Binding EndVertScalingVM}" Margin="3,3,3,3"/>
+        </Grid>
+
+        <Label Grid.Row="10" ToolTip="сколько метров в одной единице длины">* сколько метров в одной единице длины AutoCAD</Label>
+
+
+        <Grid Grid.Row="9">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="{StaticResource colWidth}"/>
+                <ColumnDefinition Width="*"/>
+            </Grid.ColumnDefinitions>
+
+            <Button Grid.Row="10" Margin="3,3,3,3" Grid.Column="1" IsEnabled="{Binding AcceptBtnIsEnabled}" Command="{Binding CreateProfileCommand}">
+                Построить профиль</Button>
+        </Grid>
+        
+        
+    </Grid>
+</UserControl>

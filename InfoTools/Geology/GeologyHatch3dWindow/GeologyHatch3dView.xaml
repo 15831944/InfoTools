@@ -1,0 +1,100 @@
+﻿<UserControl x:Name="_this" x:Class="Civil3DInfoTools.Geology.GeologyHatch3dWindow.GeologyHatch3dView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
+             xmlns:local="clr-namespace:Civil3DInfoTools.Geology.GeologyHatch3dWindow"
+             xmlns:numControl="clr-namespace:Common.Controls.NumericUpDownControl;assembly=Common"
+             mc:Ignorable="d" 
+             d:DesignHeight="400" d:DesignWidth="300" Background="WhiteSmoke">
+    <UserControl.Resources>
+        <GridLength x:Key="colWidth">170</GridLength>
+    </UserControl.Resources>
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="30"/>
+            <RowDefinition Height="30"/>
+            <RowDefinition Height="30"/>
+            <RowDefinition Height="30"/>
+            <RowDefinition Height="30"/>
+            <RowDefinition Height="30"/>
+            <RowDefinition Height="60"/>
+            <RowDefinition Height="30"/>
+            <RowDefinition Height="*"/>
+
+        </Grid.RowDefinitions>
+
+        <Grid Grid.Row="0">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="{StaticResource colWidth}"/>
+                <ColumnDefinition Width="*"/>
+            </Grid.ColumnDefinitions>
+
+            <Label>Указать линию трассы</Label>
+            <Button Grid.Column="1" Margin="3,3,3,3" Command="{Binding SpecifyAlignmentPolyCommand}">^</Button>
+        </Grid>
+        <Grid Grid.Row="1">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="{StaticResource colWidth}"/>
+                <ColumnDefinition Width="*"/>
+            </Grid.ColumnDefinitions>
+
+            <Label>Выбрать штриховки грунтов</Label>
+            <Button Grid.Column="1" Margin="3,3,3,3" Command="{Binding SpecifySoilHatchCommand}">^</Button>
+        </Grid>
+
+        <Label Grid.Row="2">Масштабные коэффициенты* профиля:</Label>
+        <Grid Grid.Row="3">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="{StaticResource colWidth}"/>
+                <ColumnDefinition Width="*"/>
+            </Grid.ColumnDefinitions>
+
+            <Label>по горизонтали</Label>
+            <numControl:NumericUpDownView Grid.Column="1" DataContext="{Binding HorScalingVM}" Margin="3,3,3,3"/>
+        </Grid>
+        <Grid Grid.Row="4">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="{StaticResource colWidth}"/>
+                <ColumnDefinition Width="*"/>
+            </Grid.ColumnDefinitions>
+
+            <Label>по вертикали</Label>
+            <numControl:NumericUpDownView Grid.Column="1" DataContext="{Binding VertScalingVM}" Margin="3,3,3,3"/>
+        </Grid>
+
+        <Grid Grid.Row="5">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="{StaticResource colWidth}"/>
+                <ColumnDefinition Width="*"/>
+            </Grid.ColumnDefinitions>
+
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="2*"/>
+                    <ColumnDefinition Width="*"/>
+                </Grid.ColumnDefinitions>
+                <Label>Базовая отметка</Label>
+                <Button Grid.Column="1" Margin="3,3,3,3" Command="{Binding SpecifyElevBasePointCommand}" ToolTip="Указать точку">^</Button>
+            </Grid>
+            <numControl:NumericUpDownView IsEnabled="{Binding DataContext.ElevationInputIsEnabled, ElementName=_this}" Grid.Column="1" DataContext="{Binding BaseElevationVM}" Margin="3,3,3,3"/>
+        </Grid>
+
+
+        <Grid Grid.Row="6">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="{StaticResource colWidth}"/>
+                <ColumnDefinition Width="*"/>
+            </Grid.ColumnDefinitions>
+
+            <Button Margin="3,3,3,3" Grid.Column="1" IsEnabled="{Binding AcceptBtnIsEnabled}" Command="{Binding Create3dProfileCommand}">
+                <TextBlock TextWrapping="Wrap">
+                    Построить 3d профиль
+                </TextBlock>
+            </Button>
+        </Grid>
+
+
+        <Label Grid.Row="7" ToolTip="сколько метров в одной единице длины">* сколько метров в одной единице длины AutoCAD</Label>
+    </Grid>
+</UserControl>

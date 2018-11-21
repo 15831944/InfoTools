@@ -232,6 +232,16 @@
     <Compile Include="DisplayUtils.cs" />
     <Compile Include="AuxiliaryCommands\CreateLandSiteBlockCommand.cs" />
     <Compile Include="AuxiliaryCommands\LayersByColorsCommand.cs" />
+    <Compile Include="Geology\GeologyHatch3dCommand.cs" />
+    <Compile Include="Geology\GeologyConvertationCommand.cs" />
+    <Compile Include="Geology\GeologyHatch3dWindow\GeologyHatch3dView.xaml.cs">
+      <DependentUpon>GeologyHatch3dView.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="Geology\GeologyHatch3dWindow\GeologyHatch3dViewModel.cs" />
+    <Compile Include="Geology\GeologyTrueScalingProfileWindow\GeologyTrueScalingProfileView2.xaml.cs">
+      <DependentUpon>GeologyTrueScalingProfileView2.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="Geology\GeologyTrueScalingProfileWindow\GeologyTrueScalingProfileViewModel.cs" />
     <Compile Include="PipeNetworkCreating\ConfigureNetworkCreationWindow2\BlockStructureMappingPairModel.cs" />
     <Compile Include="PipeNetworkCreating\ConfigureNetworkCreationWindow2\ConfigureNetworkCreationView.xaml.cs">
       <DependentUpon>ConfigureNetworkCreationView.xaml</DependentUpon>
@@ -330,6 +340,14 @@
       <Generator>MSBuild:Compile</Generator>
     </Page>
     <Page Include="Controls\SelectLayerUserControl2\View.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="Geology\GeologyHatch3dWindow\GeologyHatch3dView.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="Geology\GeologyTrueScalingProfileWindow\GeologyTrueScalingProfileView2.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>

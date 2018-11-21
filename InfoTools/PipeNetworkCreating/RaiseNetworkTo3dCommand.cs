@@ -26,6 +26,7 @@ namespace Civil3DInfoTools.PipeNetworkCreating
     /// </summary>
     public class RaiseNetworkTo3dCommand
     {
+        #region Мысли
         //ASSUMPTION//ASSUMPTION//ASSUMPTION//ASSUMPTION//ASSUMPTION//ASSUMPTION//ASSUMPTION//ASSUMPTION
         //ПРЕДПОЛАГАЕТСЯ, ЧТО ВСЯ СЕТЬ СОСТОИТ ТОЛЬКО ИЗ ПОЛИЛИНИЙ (МАЛОВЕРОЯТНО, ЧТО МОГУТ БЫТЬ ДУГОВЫЕ ВСТАВКИ, СЧИТАТЬ ЧТО ВСЕ СЕГМЕНТЫ ПРЯМЫЕ).
         //ОТДЕЛЬНЫЕ ПОЛИЛИНИИ СТЫКУЮТСЯ МЕЖДУ СОБОЙ (С УЧЕТОМ ДОПУСКОВ АВТОКАДА). ВОЗМОЖНА Т-ОБРАЗНАЯ СТЫКОВКА?
@@ -48,7 +49,8 @@ namespace Civil3DInfoTools.PipeNetworkCreating
         //НУЖНА ОТДЕЛЬНАЯ УТИЛИТА ДЛЯ ПЕРЕВОДА ЗОН КАБЕЛЕЙ В ОТДЕЛЬНЫЕ ЛИНИИ КАБЕЛЕЙ
 
         //УЧЕСТЬ ВОЗМОЖНОСТЬ СУЩЕСТВОВАНИЯ Т-ОБРАЗНЫХ СТЫКОВОК ЛИНИЙ СЕТЕЙ!
-        //ASSUMPTION//ASSUMPTION//ASSUMPTION//ASSUMPTION//ASSUMPTION//ASSUMPTION//ASSUMPTION//ASSUMPTION
+        //ASSUMPTION//ASSUMPTION//ASSUMPTION//ASSUMPTION//ASSUMPTION//ASSUMPTION//ASSUMPTION//ASSUMPTION 
+        #endregion
 
 
         [CommandMethod("S1NF0_RaiseNetworkTo3d", CommandFlags.Modal)]
@@ -65,43 +67,12 @@ namespace Civil3DInfoTools.PipeNetworkCreating
 
             try
             {
-                //в окне 
-                //1. Указать слой сетки - по умолчанию по кодификатору
-                //2. Указать слой крышки колодцев - по умолчанию по кодификатору
-                //3. Указать слой подписи колодцев - по умолчанию по кодификатору
-                //4. Указать возможные блоки колодцев - по умолчанию M5_075(самый обычный), M5_505(связи), M5_233_A(коверы). Для каждого типа блока задать тип колодца Civil.
-                //5. Указать поверхность земли.
-                //6. Указать путь, где хранятся файлы excel с данными о колодцах.
-                //7. Заложение инженерной сети по умолчанию - для тех случаев, когда в таблицах excel нет данных о глубине заложения
-                //9. Провести сеть параллельно земле если это кабель
                 ConfigureNetworkCreationView configView = new ConfigureNetworkCreationView();
                 ConfigureNetworkCreationViewModel viewModel = new ConfigureNetworkCreationViewModel(doc, cdok, configView);
                 configView.DataContext = viewModel;
                 Application.ShowModalWindow(configView);
-                if (viewModel.AcceptBtnIsEnabled && viewModel.ConfigurationsAccepted)
-                {
-
-                    //TODO: Все настройки хранятся привязанными к чертежу
-                    //Продолжать использовать при последующих вызовах команды если текущий документ соответствует.
-                    //Удалять если соответствующий документ закрывается
-
-                    //Dictionary<int, Dictionary<string, WellData>> wellsData = viewModel.ExcelReader.WellsData;
-
-                    //TODO?: Подсветка всех полилиний выбранного слоя сети. Дать возможность убрать из выделейия часть объектов
-
-                    //PipeNetworkGraph networkGraph = new PipeNetworkGraph(doc, viewModel);
-
-                    //Отрисовать примитивами результат построения графа (распознавания колодцев и текстов, обнаружения соответствующих данных в Excel)
-                    //Дать пользователю принять либо не принять результат
-                    //Если принят, то создавать трубопроводы Civil
-                    //В конце удалить все вспомогательные примитивы
-
-
-                    //Создание структур, труб и их объединение вс соответствии с графом.
-                    //Создается единый Network (называется так же как слой)?
-                    //Возможно нельзя присоединять трубы непосредственно друг к другу (между ними долже быть нулевой колодец)
-
-                }
+                //if (viewModel.AcceptBtnIsEnabled && viewModel.ConfigurationsAccepted)
+                //{}
 
             }
             catch (System.Exception ex)

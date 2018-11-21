@@ -484,10 +484,10 @@ namespace Civil3DInfoTools.PipeNetworkCreating.ConfigureNetworkCreationWindow2
         }
 
 
-        //TODO: Если настройки уже приняты и после этого какие-то настройки еще меняются, ConfigurationsAccepted должно сбрасываться в false
-        //TODO: Кнопка принятия настроек должна как-то выделяться когда ConfigurationsAccepted = true.
-        //TODO?: При этом все настройки, которые могут сбрасывать ConfigurationsAccepted также должны обозначаться определенным образом (можно некоторым образом разграничить элементы управления в окне)
-        //TODO: DataGrid должен быть доступен даже если не выбран список элементов сети (но при этом недоступен выбор типоразмеров в DataGrid)
+        //Если настройки уже приняты и после этого какие-то настройки еще меняются, ConfigurationsAccepted должно сбрасываться в false
+        //Кнопка принятия настроек должна как-то выделяться когда ConfigurationsAccepted = true.
+        //При этом все настройки, которые могут сбрасывать ConfigurationsAccepted также должны обозначаться определенным образом (можно некоторым образом разграничить элементы управления в окне)
+        //DataGrid должен быть доступен даже если не выбран список элементов сети (но при этом недоступен выбор типоразмеров в DataGrid)
 
         private readonly RelayCommand acceptConfigsCommand = null;
         public RelayCommand AcceptConfigsCommand

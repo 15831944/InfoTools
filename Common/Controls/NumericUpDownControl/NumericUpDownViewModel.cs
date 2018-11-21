@@ -10,7 +10,7 @@ namespace Common.Controls.NumericUpDownControl
 {
     public class NumericUpDownViewModel : INotifyPropertyChanged
     {
-        public event EventHandler SelectionChanged;
+        public event EventHandler ValueChanged;
 
         private double numValue = 0;
         private double step;
@@ -31,9 +31,9 @@ namespace Common.Controls.NumericUpDownControl
                 numValue = value;
                 OnPropertyChanged("ValueString");
 
-                if (SelectionChanged != null)
+                if (ValueChanged != null)
                 {
-                    SelectionChanged(this, new EventArgs());
+                    ValueChanged(this, new EventArgs());
                 }
             }
         }

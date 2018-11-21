@@ -26,11 +26,85 @@
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
     <DebugType>pdbonly</DebugType>
     <Optimize>true</Optimize>
-    <OutputPath>bin\Release\</OutputPath>
+    <OutputPath>..\..\InfoTools_Установка\NavisWorks2018\NavisWorksInfoTools\</OutputPath>
     <DefineConstants>TRACE</DefineConstants>
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
   </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Debug 2019|AnyCPU'">
+    <TargetFrameworkVersion>v4.7</TargetFrameworkVersion>
+    <DebugSymbols>true</DebugSymbols>
+    <OutputPath>bin\Debug 2019\</OutputPath>
+    <DefineConstants>DEBUG;TRACE;VERSION2019</DefineConstants>
+    <DebugType>full</DebugType>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Release 2019|AnyCPU'">
+    <TargetFrameworkVersion>v4.7</TargetFrameworkVersion>
+    <DebugType>pdbonly</DebugType>
+    <Optimize>true</Optimize>
+    <OutputPath>..\..\InfoTools_Установка\NavisWorks2019\NavisWorksInfoTools\</OutputPath>
+    <DefineConstants>TRACE;VERSION2019</DefineConstants>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+  </PropertyGroup>
+  
+  
+  <Choose>
+  <When Condition="'$(Configuration)' == 'Release 2019' or '$(Configuration)' == 'Debug 2019'">
+  <ItemGroup>
+  <Reference Include="AdWindows">
+      <HintPath>C:\Program Files\Autodesk\Navisworks Manage 2019\AdWindows.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
+    <Reference Include="Autodesk.Navisworks.Api">
+      <HintPath>C:\Program Files\Autodesk\Navisworks Manage 2019\Autodesk.Navisworks.Api.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
+    <Reference Include="Autodesk.Navisworks.ComApi">
+      <HintPath>C:\Program Files\Autodesk\Navisworks Manage 2019\Autodesk.Navisworks.ComApi.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
+    <Reference Include="Autodesk.Navisworks.Interop.ComApi">
+      <HintPath>C:\Program Files\Autodesk\Navisworks Manage 2019\Autodesk.Navisworks.Interop.ComApi.dll</HintPath>
+      <EmbedInteropTypes>True</EmbedInteropTypes>
+    </Reference>
+    <Reference Include="navisworks.gui.roamer">
+      <HintPath>C:\Program Files\Autodesk\Navisworks Manage 2019\navisworks.gui.roamer.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
+  </ItemGroup>
+  </When>
+  <Otherwise>
+  <ItemGroup>
+  <Reference Include="AdWindows">
+  <HintPath>D:\Program Files\Autodesk\Navisworks Manage 2018\AdWindows.dll</HintPath>
+  <Private>False</Private>
+  </Reference>
+  <Reference Include="Autodesk.Navisworks.Api">
+  <HintPath>D:\Program Files\Autodesk\Navisworks Manage 2018\Autodesk.Navisworks.Api.dll</HintPath>
+  <Private>False</Private>
+  </Reference>
+  <Reference Include="Autodesk.Navisworks.ComApi, Version=15.0.1314.36, Culture=neutral, PublicKeyToken=d85e58fa5af9b484, processorArchitecture=AMD64">
+  <SpecificVersion>False</SpecificVersion>
+  <HintPath>D:\Program Files\Autodesk\Navisworks Manage 2018\Autodesk.Navisworks.ComApi.dll</HintPath>
+  <Private>False</Private>
+  </Reference>
+  <Reference Include="Autodesk.Navisworks.Interop.ComApi">
+  <HintPath>D:\Program Files\Autodesk\Navisworks Manage 2018\Autodesk.Navisworks.Interop.ComApi.dll</HintPath>
+  <EmbedInteropTypes>True</EmbedInteropTypes>
+  </Reference>
+  <Reference Include="navisworks.gui.roamer">
+  <HintPath>D:\Program Files\Autodesk\Navisworks Manage 2018\navisworks.gui.roamer.dll</HintPath>
+  <Private>False</Private>
+  </Reference>
+  </ItemGroup>
+  </Otherwise>
+  </Choose>
+  
+  
+  
   <ItemGroup>
     <Reference Include="AdWindows">
       <HintPath>D:\Program Files\Autodesk\Navisworks Manage 2018\AdWindows.dll</HintPath>
@@ -38,10 +112,12 @@
     </Reference>
     <Reference Include="Autodesk.Navisworks.Api">
       <HintPath>D:\Program Files\Autodesk\Navisworks Manage 2018\Autodesk.Navisworks.Api.dll</HintPath>
+      <Private>False</Private>
     </Reference>
     <Reference Include="Autodesk.Navisworks.ComApi, Version=15.0.1314.36, Culture=neutral, PublicKeyToken=d85e58fa5af9b484, processorArchitecture=AMD64">
       <SpecificVersion>False</SpecificVersion>
       <HintPath>D:\Program Files\Autodesk\Navisworks Manage 2018\Autodesk.Navisworks.ComApi.dll</HintPath>
+      <Private>False</Private>
     </Reference>
     <Reference Include="Autodesk.Navisworks.Interop.ComApi">
       <HintPath>D:\Program Files\Autodesk\Navisworks Manage 2018\Autodesk.Navisworks.Interop.ComApi.dll</HintPath>
@@ -199,4 +275,14 @@
     <Resource Include="Images\FBXExportBySelSets.png" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
+  <PropertyGroup>
+    <PostBuildEvent>mkdir "$(TargetDir)Images"
+mkdir "$(TargetDir)en-US"
+mkdir "$(TargetDir)..\Dependencies"
+
+copy "$(ProjectDir)Images\*png" "$(TargetDir)\Images"
+copy "$(ProjectDir)S1NF0_RibbonPanel.xaml" "$(TargetDir)\en-US"
+copy "$(TargetDir)Common.dll" "$(TargetDir)..\Dependencies"
+copy "$(TargetDir)Common.pdb" "$(TargetDir)..\Dependencies"</PostBuildEvent>
+  </PropertyGroup>
 </Project>
