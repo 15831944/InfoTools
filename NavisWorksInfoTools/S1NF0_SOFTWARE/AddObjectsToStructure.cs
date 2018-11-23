@@ -15,6 +15,7 @@ using WinForms = System.Windows.Forms;
 using System.Xml.Serialization;
 using NavisWorksInfoTools.S1NF0_SOFTWARE.XML.St;
 using NavisWorksInfoTools.S1NF0_SOFTWARE.XML.Cl;
+using Common.XMLClasses;
 
 namespace NavisWorksInfoTools.S1NF0_SOFTWARE
 {
@@ -73,6 +74,7 @@ namespace NavisWorksInfoTools.S1NF0_SOFTWARE
                             using (StreamReader sr = new StreamReader(stFilename))
                             {
                                 string serializedData = sr.ReadToEnd();
+                                //serializedData = serializedData.Replace((char)(0x1F), '_');//это не работает
                                 XmlSerializer xmlSerializer = new XmlSerializer(typeof(Structure));
                                 StringReader stringReader = new StringReader(serializedData);
                                 structure = (Structure)xmlSerializer.Deserialize(stringReader);
@@ -83,6 +85,7 @@ namespace NavisWorksInfoTools.S1NF0_SOFTWARE
                             using (StreamReader sr = new StreamReader(clFilename))
                             {
                                 string serializedData = sr.ReadToEnd();
+                                //serializedData = serializedData.Replace((char)(0x1F), ' ');
                                 XmlSerializer xmlSerializer = new XmlSerializer(typeof(Classifier));
                                 StringReader stringReader = new StringReader(serializedData);
                                 classifier = (Classifier)xmlSerializer.Deserialize(stringReader);
@@ -181,7 +184,7 @@ namespace NavisWorksInfoTools.S1NF0_SOFTWARE
             }
             catch (Exception ex)
             {
-                CommonException(ex, "Задании файла структуры " + S1NF0_APP_NAME);
+                CommonException(ex, "Ошибка при задании файла структуры " + S1NF0_APP_NAME);
             }
 
             return 0;

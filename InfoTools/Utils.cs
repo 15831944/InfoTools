@@ -950,5 +950,51 @@ namespace Civil3DInfoTools
             };
         }
 
+
+        /// <summary>
+        /// Единообразное представление границы штриховки в виде набора некомпозитных кривых
+        /// </summary>
+        /// <param name="hl"></param>
+        /// <returns></returns>
+        public static List<Curve2d> GetHatchLoopCurves(HatchLoop hl)
+        {
+            BulgeVertexCollection bvc = hl.Polyline;
+            Curve2dCollection cc = hl.Curves;
+            //Перевод в общий набор Curve2d
+            List<Curve2d> curves = new List<Curve2d>();
+            if (bvc != null && bvc.Count > 0)
+            {
+                Point2d? prevPt = null;
+                double prevBulge = 0;
+                Action<BulgeVertex> action = new Action<BulgeVertex>(bv =>
+                {
+                    if (prevPt != null)
+                    {
+                        Curve2d c = (prevBulge == 0 ?
+                            (Curve2d)(new LineSegment2d(prevPt.Value, bv.Vertex))
+                            : (Curve2d)(new CircularArc2d(prevPt.Value, bv.Vertex, prevBulge, false)));
+                        curves.Add(c);
+                    }
+                    prevPt = bv.Vertex;
+                    prevBulge = bv.Bulge;
+                });
+                foreach (BulgeVertex bv in bvc)
+                {
+                    action(bv);
+                }
+                foreach (BulgeVertex bv in bvc)//добавление замыкающего сегмента полилинии
+                {
+                    action(bv);
+                    break;
+                }
+            }
+            else if (cc != null && cc.Count > 0)
+            {
+                foreach (Curve2d c in cc) curves.Add(c);
+            }
+
+            return curves;
+        }
+
     }
 }

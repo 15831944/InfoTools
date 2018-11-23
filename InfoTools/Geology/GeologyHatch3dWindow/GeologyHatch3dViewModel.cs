@@ -17,7 +17,7 @@ using System.Threading.Tasks;
 
 namespace Civil3DInfoTools.Geology.GeologyHatch3dWindow
 {
-    public class GeologyHatch3dViewModel : INotifyPropertyChanged
+    public partial class GeologyHatch3dViewModel : INotifyPropertyChanged
     {
         private DBText elevTextTransient = null;
         private Circle elevBasePtTransient = null;
@@ -342,12 +342,6 @@ namespace Civil3DInfoTools.Geology.GeologyHatch3dWindow
                     AddTransient();
                 }
             }
-        }
-
-
-        private void Create3dProfile(object arg)
-        {
-
         }
 
         //////////////////////////////////////////////////////////////////////////////

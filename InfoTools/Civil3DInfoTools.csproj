@@ -151,6 +151,9 @@
       <HintPath>C:\Program Files\Autodesk\AutoCAD 2018\acmgd.dll</HintPath>
       <Private>False</Private>
     </Reference>
+    <Reference Include="AcMPolygonMGD">
+      <HintPath>C:\Program Files\Autodesk\AutoCAD 2018\AcMPolygonMGD.dll</HintPath>
+    </Reference>
     <Reference Include="AecBaseMgd">
       <HintPath>C:\Program Files\Autodesk\AutoCAD 2018\ACA\AecBaseMgd.dll</HintPath>
       <Private>False</Private>
@@ -158,6 +161,9 @@
     <Reference Include="AeccDbMgd">
       <HintPath>C:\Program Files\Autodesk\AutoCAD 2018\C3D\AeccDbMgd.dll</HintPath>
       <Private>False</Private>
+    </Reference>
+    <Reference Include="C5, Version=2.5.0.0, Culture=neutral, PublicKeyToken=282361b99ded7e8e, processorArchitecture=MSIL">
+      <HintPath>..\packages\C5.2.5.3\lib\net45\C5.dll</HintPath>
     </Reference>
     <Reference Include="ExcelDataReader, Version=3.4.2.0, Culture=neutral, PublicKeyToken=93517dbe6a4012fa, processorArchitecture=MSIL">
       <HintPath>..\packages\ExcelDataReader.3.4.2\lib\net45\ExcelDataReader.dll</HintPath>
@@ -234,10 +240,12 @@
     <Compile Include="AuxiliaryCommands\LayersByColorsCommand.cs" />
     <Compile Include="Geology\GeologyHatch3dCommand.cs" />
     <Compile Include="Geology\GeologyConvertationCommand.cs" />
+    <Compile Include="Geology\GeologyHatch3dWindow\GeologyHatch3dProcedure.cs" />
     <Compile Include="Geology\GeologyHatch3dWindow\GeologyHatch3dView.xaml.cs">
       <DependentUpon>GeologyHatch3dView.xaml</DependentUpon>
     </Compile>
     <Compile Include="Geology\GeologyHatch3dWindow\GeologyHatch3dViewModel.cs" />
+    <Compile Include="Geology\GeologyTrueScalingProfileWindow\GeologyTrueScalingProfileProcedure.cs" />
     <Compile Include="Geology\GeologyTrueScalingProfileWindow\GeologyTrueScalingProfileView2.xaml.cs">
       <DependentUpon>GeologyTrueScalingProfileView2.xaml</DependentUpon>
     </Compile>
@@ -258,6 +266,7 @@
     <Compile Include="PipeNetworkCreating\WellLabelingSolver.cs" />
     <Compile Include="PolylineCaptionOverrule.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="RBush\Spatial.cs" />
     <Compile Include="RBush\SpatialEntity.cs" />
     <Compile Include="RoadMarking\CreateBoundariesCommand.cs" />
     <Compile Include="Spillway\ExtractSpillwayPositionsCommand.cs" />

@@ -101,6 +101,7 @@
     <Compile Include="XMLClasses\PositionData.cs" />
     <Compile Include="XMLClasses\Slope.cs" />
     <Compile Include="XMLClasses\SpillwayPosition.cs" />
+    <Compile Include="XMLClasses\XmlPureStream.cs" />
   </ItemGroup>
   <ItemGroup>
     <EmbeddedResource Include="ExceptionHandling\ExceptionForm.resx">

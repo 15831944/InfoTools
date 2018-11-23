@@ -83,7 +83,7 @@ namespace Civil3DInfoTools.Geology
             catch (System.Exception ex)
             {
                 ClosePalette(null, null);
-                CommonException(ex, "Ошибка при переводе масштаба профиля геологии");
+                CommonException(ex, "Ошибка при создании 3d профиля геологии");
             }
 
 

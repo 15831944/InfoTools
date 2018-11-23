@@ -33,42 +33,66 @@ namespace Civil3DInfoTools.AuxiliaryCommands
 
 
             /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-            //посмотреть свойства structure: Rotation, BoundingShape, InnerDiameterOrWidth, InnerLength, DiameterOrWidth, Length 
-            PromptEntityOptions peo = new PromptEntityOptions("\nУкажите колодец");
-            peo.SetRejectMessage("\nМожно выбрать только колодец");
-            peo.AddAllowedClass(typeof(Structure), true);
-            PromptEntityResult per1 = ed.GetEntity(peo);
-            if (per1.Status == PromptStatus.OK)
+            //Какой массив пихать в матрицу трансформации?? Ответ - последовательно по строкам в матрице (не по столбцам!)
+            //Scaling + Translation
+            //Умножение матриц. Порядок преобразований обратен порядку множителей
+            Action<Matrix2d> action = new Action<Matrix2d>(tr =>
             {
-                using (Transaction tr = db.TransactionManager.StartTransaction())
+                string str = "";
+                foreach (double d in tr.ToArray())
                 {
-
-                    Structure str = (Structure)tr.GetObject(per1.ObjectId, OpenMode.ForRead);
-
-                    BoundingShapeType bst = str.BoundingShape;
-                    double rotation = str.Rotation;
-                    double idow = str.InnerDiameterOrWidth;
-                    double dow = str.DiameterOrWidth;
-                    double il = double.NegativeInfinity;
-                    double l = double.NegativeInfinity;
-                    try
-                    {
-                        il = /*bst == BoundingShapeType.Box ?*/ str.InnerLength /*: double.NegativeInfinity*/;
-                    }
-                    catch { }
-                    try
-                    {
-                        l = /*bst == BoundingShapeType.Box ?*/ str.Length /*: double.NegativeInfinity*/;
-                    }
-                    catch { }
-
-                    string message = "Rotation = " + rotation + "\nInnerDiameterOrWidth = " + idow +
-                        "\nDiameterOrWidth = " + dow + "\nInnerLength = " + il + "\nLength = " + l;
-
-                    Win.MessageBox.Show(message);
-                    tr.Commit();
+                    str += d.ToString("f2") + "  ";
                 }
-            }
+                Win.MessageBox.Show(str);
+            });
+
+            Matrix2d transform = Matrix2d.Scaling(0.78, new Point2d(78.78, 87.87));
+            action(transform);
+
+
+            transform = Matrix2d.Scaling(0.78, new Point2d(0, 0)) * Matrix2d.Displacement(new Vector2d(78.78, 87.87));
+            action(transform);
+
+            transform = Matrix2d.Displacement(new Vector2d(78.78, 87.87)) * Matrix2d.Scaling(0.78, new Point2d(0, 0));
+            action(transform);
+
+            /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+            //посмотреть свойства structure: Rotation, BoundingShape, InnerDiameterOrWidth, InnerLength, DiameterOrWidth, Length 
+            //PromptEntityOptions peo = new PromptEntityOptions("\nУкажите колодец");
+            //peo.SetRejectMessage("\nМожно выбрать только колодец");
+            //peo.AddAllowedClass(typeof(Structure), true);
+            //PromptEntityResult per1 = ed.GetEntity(peo);
+            //if (per1.Status == PromptStatus.OK)
+            //{
+            //    using (Transaction tr = db.TransactionManager.StartTransaction())
+            //    {
+
+            //        Structure str = (Structure)tr.GetObject(per1.ObjectId, OpenMode.ForRead);
+
+            //        BoundingShapeType bst = str.BoundingShape;
+            //        double rotation = str.Rotation;
+            //        double idow = str.InnerDiameterOrWidth;
+            //        double dow = str.DiameterOrWidth;
+            //        double il = double.NegativeInfinity;
+            //        double l = double.NegativeInfinity;
+            //        try
+            //        {
+            //            il = /*bst == BoundingShapeType.Box ?*/ str.InnerLength /*: double.NegativeInfinity*/;
+            //        }
+            //        catch { }
+            //        try
+            //        {
+            //            l = /*bst == BoundingShapeType.Box ?*/ str.Length /*: double.NegativeInfinity*/;
+            //        }
+            //        catch { }
+
+            //        string message = "Rotation = " + rotation + "\nInnerDiameterOrWidth = " + idow +
+            //            "\nDiameterOrWidth = " + dow + "\nInnerLength = " + il + "\nLength = " + l;
+
+            //        Win.MessageBox.Show(message);
+            //        tr.Commit();
+            //    }
+            //}
 
             /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
             //Тестовое окно

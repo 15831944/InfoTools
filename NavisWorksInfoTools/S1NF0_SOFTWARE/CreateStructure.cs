@@ -82,7 +82,7 @@ namespace NavisWorksInfoTools.S1NF0_SOFTWARE
                         {
                             Name = rootFolder.DisplayName,
                             IsPrimary = true,
-                            DetailLevels = new List<string>() { "leve1" }
+                            DetailLevels = new List<string>() { "Folder", "Geometry" }
                         };
                         Structure structure = new Structure()
                         {
@@ -91,7 +91,7 @@ namespace NavisWorksInfoTools.S1NF0_SOFTWARE
                             IsPrimary = true,
                         };
                         //Создать StructureDataStorage
-                        StructureDataStorage dataStorage = new StructureDataStorage(doc, stFilename, clFilename, structure, classifier);
+                        StructureDataStorage dataStorage = new StructureDataStorage(doc, stFilename, clFilename, structure, classifier, true);
 
                         //Сформировать XML по структуре папок
                         //Каждая папка - объект без свойств
