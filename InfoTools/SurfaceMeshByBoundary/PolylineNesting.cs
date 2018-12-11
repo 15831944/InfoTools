@@ -698,7 +698,7 @@ namespace Civil3DInfoTools.SurfaceMeshByBoundary
 
         private const bool testDisplay = false;
 
-        //TODO: НЕОБХОДИМО УЧЕСТЬ ВСЕ ЧАСТНЫЕ СЛУЧАИ
+        //НЕОБХОДИМО УЧЕСТЬ ВСЕ ЧАСТНЫЕ СЛУЧАИ
         /// <summary>
         /// Поиск пересечений ребер поверхности с сегментом полилинии
         /// Возврат false если при проходе ребра был выход за границу поверхности

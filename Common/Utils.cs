@@ -94,5 +94,42 @@ namespace Common
         {
             return string.Join("_", pathname.Split(Path.GetInvalidPathChars()));
         }
+
+
+
+        /// <summary>
+        /// Для использования 2-связного списка как циклического списка
+        /// </summary>
+        /// <param name="current"></param>
+        /// <returns></returns>
+        public static LinkedListNode<T> NextVertCycled<T>(LinkedListNode<T> current)
+        {
+            LinkedListNode<T> next = current.Next;
+            if (next != null)
+            {
+                return next;
+            }
+            else
+            {
+                return current.List.First;
+            }
+        }
+        /// <summary>
+        /// Для использования 2-связного списка как циклического списка
+        /// </summary>
+        /// <param name="current"></param>
+        /// <returns></returns>
+        public static LinkedListNode<T> PreviousVertCycled<T>(LinkedListNode<T> current)
+        {
+            LinkedListNode<T> next = current.Previous;
+            if (next != null)
+            {
+                return next;
+            }
+            else
+            {
+                return current.List.Last;
+            }
+        }
     }
 }

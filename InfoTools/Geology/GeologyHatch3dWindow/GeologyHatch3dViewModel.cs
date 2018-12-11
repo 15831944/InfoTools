@@ -20,7 +20,7 @@ namespace Civil3DInfoTools.Geology.GeologyHatch3dWindow
     public partial class GeologyHatch3dViewModel : INotifyPropertyChanged
     {
         private DBText elevTextTransient = null;
-        private Circle elevBasePtTransient = null;
+        private Polyline elevBasePtTransient = null;
 
         private Document doc;
         private PaletteSet ps;
@@ -221,7 +221,13 @@ namespace Civil3DInfoTools.Geology.GeologyHatch3dWindow
                 elevTextTransient.TextStyleId = standardTxtStyle;
                 elevTextTransient.TextString = ElevationInput.ToString("f3");
                 elevTextTransient.Height = 5;
-                elevBasePtTransient = new Circle(pos, Vector3d.ZAxis, 0.5);
+
+                elevBasePtTransient = new Polyline();
+                Point2d pos2d = Utils.Point2DBy3D(pos);
+                elevBasePtTransient.AddVertexAt(0, pos2d, 0, 0, 0);
+                elevBasePtTransient.AddVertexAt(1, pos2d+new Vector2d(0.5,0.5), 0, 0, 0);
+                elevBasePtTransient.AddVertexAt(2, pos2d + new Vector2d(-0.5, 0.5), 0, 0, 0);
+                elevBasePtTransient.Closed = true;
                 elevBasePtTransient.LineWeight = LineWeight.LineWeight030;
                 elevBasePtTransient.ColorIndex = 1;
 
@@ -239,6 +245,8 @@ namespace Civil3DInfoTools.Geology.GeologyHatch3dWindow
                 Graphics.TransientManager tm = Graphics.TransientManager.CurrentTransientManager;
                 tm.EraseTransient(elevTextTransient, new IntegerCollection());
                 tm.EraseTransient(elevBasePtTransient, new IntegerCollection());
+                elevTextTransient.Dispose();
+                elevBasePtTransient.Dispose();
                 elevTextTransient = null;
                 elevBasePtTransient = null;
             }
@@ -273,10 +281,16 @@ namespace Civil3DInfoTools.Geology.GeologyHatch3dWindow
         }
 
 
+
         private void SpecifyAlignmentPoly(object arg)
         {
             if (doc != null)
             {
+                //прервать выполнение любых команд (отправляем на выполнение эскейп-символ)
+                //doc.SendStringToExecute(new string(new char[] { '\x03' }), true, false, false);
+
+                HighlightObjs(false, AlignmentPolyId);
+
                 Editor ed = doc.Editor;
 
                 PromptEntityOptions peo
@@ -286,11 +300,10 @@ namespace Civil3DInfoTools.Geology.GeologyHatch3dWindow
                 PromptEntityResult per1 = ed.GetEntity(peo);
                 if (per1.Status == PromptStatus.OK)
                 {
-                    HighlightObjs(false, AlignmentPolyId);
-
                     AlignmentPolyId = per1.ObjectId;
-                    HighlightObjs(true, AlignmentPolyId);
                 }
+
+                HighlightObjs(true, AlignmentPolyId);
             }
         }
 
@@ -298,6 +311,11 @@ namespace Civil3DInfoTools.Geology.GeologyHatch3dWindow
         {
             if (doc != null)
             {
+                //прервать выполнение любых команд (отправляем на выполнение эскейп-символ)
+                //doc.SendStringToExecute(new string(new char[] { '\x03' }), true, false, false);
+
+                HighlightObjs(false, SoilHatchIds);
+
                 Editor ed = doc.Editor;
                 Database db = doc.Database;
 
@@ -316,12 +334,11 @@ namespace Civil3DInfoTools.Geology.GeologyHatch3dWindow
                     SelectionSet acSSet = acSSPrompt.Value;
                     if (acSSet != null)
                     {
-                        HighlightObjs(false, SoilHatchIds);
-
                         SoilHatchIds = acSSet.GetObjectIds();
-                        HighlightObjs(true, SoilHatchIds);
                     }
                 }
+
+                HighlightObjs(true, SoilHatchIds);
             }
         }
 
@@ -329,6 +346,9 @@ namespace Civil3DInfoTools.Geology.GeologyHatch3dWindow
         {
             if (doc != null)
             {
+                //прервать выполнение любых команд (отправляем на выполнение эскейп-символ)
+                //doc.SendStringToExecute(new string(new char[] { '\x03' }), true, false, false);
+
                 Editor ed = doc.Editor;
 
                 PromptPointOptions ppo = new PromptPointOptions("\nУкажите базовую точку на профиле для задания базовой отметки:");

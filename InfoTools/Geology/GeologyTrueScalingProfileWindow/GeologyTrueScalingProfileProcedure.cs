@@ -33,7 +33,12 @@ namespace Civil3DInfoTools.Geology.GeologyTrueScalingProfileWindow
                             allSelected.Add(groundSurfPolyId);
                             foreach (ObjectId id in allSelected)
                             {
-                                Entity ent = (Entity)tr.GetObject(id, OpenMode.ForRead);
+                                Entity ent = null;
+                                try
+                                {
+                                    ent = (Entity)tr.GetObject(id, OpenMode.ForRead);
+                                }
+                                catch (Autodesk.AutoCAD.Runtime.Exception) { continue; }
                                 Extents3d? ext = ent.Bounds;
                                 if (ext != null)
                                 {
@@ -41,13 +46,14 @@ namespace Civil3DInfoTools.Geology.GeologyTrueScalingProfileWindow
                                     if (minx > minPt.X) minx = minPt.X;
                                     if (miny > minPt.Y) miny = minPt.Y;
                                 }
+
                             }
                             Point2d basePt = new Point2d(minx, miny);
 
 
                             //для трансформации координат
                             //Vector2d baseVector = new Vector2d(minx, miny);
-                            Matrix2d transform =  
+                            Matrix2d transform =
                                 new Matrix2d(new double[]
                                 {
                                     StartHorScaling, 0,                0,
@@ -62,7 +68,15 @@ namespace Civil3DInfoTools.Geology.GeologyTrueScalingProfileWindow
                             //ПОИСК ПО ДИАПАЗОНУ:
                             //Использовать бинарный поиск (https://www.baeldung.com/java-binary-search) для нахождения хотябы одной точки в заданном диапазоне
                             //затем проверять соседние точки на нахождение в диапазоне
-                            Polyline poly = (Polyline)tr.GetObject(groundSurfPolyId, OpenMode.ForRead);
+                            Polyline poly = null;
+                            try
+                            {
+                                poly = (Polyline)tr.GetObject(groundSurfPolyId, OpenMode.ForRead);
+                            }
+                            catch (Autodesk.AutoCAD.Runtime.Exception)
+                            {
+                                return;
+                            }
                             ObjectId groundSurfLayerId = poly.LayerId;
                             List<Point2d> polyPts = new List<Point2d>();
                             for (int i = 0; i < poly.NumberOfVertices; i++)
@@ -90,7 +104,12 @@ namespace Civil3DInfoTools.Geology.GeologyTrueScalingProfileWindow
                             List<HatchData> hatchData = new List<HatchData>();
                             foreach (ObjectId id in soilHatchIds)
                             {
-                                Hatch hatch = (Hatch)tr.GetObject(id, OpenMode.ForRead);
+                                Hatch hatch = null;
+                                try
+                                {
+                                    hatch = (Hatch)tr.GetObject(id, OpenMode.ForRead);
+                                }
+                                catch (Autodesk.AutoCAD.Runtime.Exception) { continue; }
                                 HatchData hd = new HatchData(hatch);
                                 hatchData.Add(hd);
                                 for (int i = 0; i < hatch.NumberOfLoops; i++)
@@ -181,26 +200,28 @@ namespace Civil3DInfoTools.Geology.GeologyTrueScalingProfileWindow
                                 }
 
                                 //полилинии штриховок
-                                HashSet<ObjectId> createdLayers = new HashSet<ObjectId>();
+                                //HashSet<ObjectId> createdLayers = new HashSet<ObjectId>();
                                 ObjectIdCollection hatchIds = new ObjectIdCollection();
                                 foreach (HatchData hd in hatchData)
                                 {
+                                    /*
                                     double patternScale = hd.Hatch.PatternScale;
+                                    
                                     string layerName = patternScale != 1 ? hd.Hatch.PatternName + "_" + patternScale.ToString("f2") : hd.Hatch.PatternName;
 
                                     ObjectId hatchLayerId = Utils.CreateLayerIfNotExists(layerName, db, tr,
                                             lineWeight: LineWeight.LineWeight030);
                                     createdLayers.Add(hatchLayerId);
+                                    */
 
-
-                                    ObjectIdCollection PolyIds = new ObjectIdCollection();
+                                    ObjectIdCollection polyIds = new ObjectIdCollection();
                                     foreach (List<Point2d> polygon in hd.Polygons)
                                     {
                                         if (polygon.Count > 0)
                                         {
                                             using (Polyline geologPoly = new Polyline())
                                             {
-                                                geologPoly.LayerId = hatchLayerId;
+                                                geologPoly.LayerId = hd.Hatch.LayerId; //hatchLayerId;
                                                 geologPoly.ColorIndex = 256;
                                                 geologPoly.LinetypeId = continLtId;
 
@@ -221,20 +242,20 @@ namespace Civil3DInfoTools.Geology.GeologyTrueScalingProfileWindow
 
                                                 if (!id.IsNull && id.IsValid)
                                                 {
-                                                    PolyIds.Add(id);
+                                                    polyIds.Add(id);
                                                 }
                                             }
                                         }
 
                                     }
 
-                                    if (PolyIds.Count > 0)
+                                    if (polyIds.Count > 0)
                                     {
                                         try
                                         {
                                             using (Hatch oHatch = /*(Hatch)hd.Hatch.Clone()*/ new Hatch())
                                             {
-                                                oHatch.LayerId = hatchLayerId;
+                                                oHatch.LayerId = hd.Hatch.LayerId; //hatchLayerId;
 
 
                                                 Vector3d normal = new Vector3d(0.0, 0.0, 1.0);
@@ -258,7 +279,7 @@ namespace Civil3DInfoTools.Geology.GeologyTrueScalingProfileWindow
                                                 oHatch.Associative = true;
 
 
-                                                foreach (ObjectId polyId in PolyIds)
+                                                foreach (ObjectId polyId in polyIds)
                                                 {
                                                     oHatch.AppendLoop(HatchLoopTypes.Default, new ObjectIdCollection() { polyId });
                                                 }
@@ -273,7 +294,7 @@ namespace Civil3DInfoTools.Geology.GeologyTrueScalingProfileWindow
                                     }
 
                                 }
-
+                                /*
                                 short colorIndex = 1;
                                 foreach (ObjectId layerId in createdLayers)
                                 {
@@ -282,7 +303,7 @@ namespace Civil3DInfoTools.Geology.GeologyTrueScalingProfileWindow
 
                                     colorIndex = Convert.ToByte((colorIndex + 1) % 256);
                                 }
-
+                                */
 
                                 drawOrder.MoveToBottom(hatchIds);
 

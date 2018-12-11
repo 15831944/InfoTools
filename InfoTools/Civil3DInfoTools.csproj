@@ -245,6 +245,8 @@
       <DependentUpon>GeologyHatch3dView.xaml</DependentUpon>
     </Compile>
     <Compile Include="Geology\GeologyHatch3dWindow\GeologyHatch3dViewModel.cs" />
+    <Compile Include="Geology\GeologyHatch3dWindow\HatchSegmentGraph.cs" />
+    <Compile Include="Geology\GeologyHatchLayersCommand.cs" />
     <Compile Include="Geology\GeologyTrueScalingProfileWindow\GeologyTrueScalingProfileProcedure.cs" />
     <Compile Include="Geology\GeologyTrueScalingProfileWindow\GeologyTrueScalingProfileView2.xaml.cs">
       <DependentUpon>GeologyTrueScalingProfileView2.xaml</DependentUpon>
@@ -264,6 +266,7 @@
     <Compile Include="PipeNetworkCreating\RaiseNetworkTo3dCommand.cs" />
     <Compile Include="ObjectInsertion\InsertByCoordinatesCommand.cs" />
     <Compile Include="PipeNetworkCreating\WellLabelingSolver.cs" />
+    <Compile Include="PolygonNestingTree.cs" />
     <Compile Include="PolylineCaptionOverrule.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="RBush\Spatial.cs" />
@@ -280,6 +283,7 @@
     <Compile Include="Utils.cs" />
   </ItemGroup>
   <ItemGroup>
+    <Content Include="Draft\ПроверкаДвухКривыхНаНаложение.txt" />
     <Content Include="GeometrySubtracting\Info.txt" />
     <Content Include="PackageContents.xml">
       <SubType>Designer</SubType>

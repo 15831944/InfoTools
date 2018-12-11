@@ -168,6 +168,11 @@ namespace Civil3DInfoTools.Geology.GeologyTrueScalingProfileWindow
         {
             if (doc != null)
             {
+                //прервать выполнение любых команд (отправляем на выполнение эскейп-символ)
+                //doc.SendStringToExecute(new string(new char[] { '\x03' }), true, false, false);
+
+                HighlightObjs(false, GroundSurfPolyId);
+
                 Editor ed = doc.Editor;
                 Database db = doc.Database;
 
@@ -178,11 +183,10 @@ namespace Civil3DInfoTools.Geology.GeologyTrueScalingProfileWindow
                 PromptEntityResult per1 = ed.GetEntity(peo);
                 if (per1.Status == PromptStatus.OK)
                 {
-                    HighlightObjs(false, GroundSurfPolyId);
-
                     GroundSurfPolyId = per1.ObjectId;
-                    HighlightObjs(true, GroundSurfPolyId);
                 }
+
+                HighlightObjs(true, GroundSurfPolyId);
             }
         }
 
@@ -191,6 +195,11 @@ namespace Civil3DInfoTools.Geology.GeologyTrueScalingProfileWindow
         {
             if (doc != null)
             {
+                //прервать выполнение любых команд (отправляем на выполнение эскейп-символ)
+                //doc.SendStringToExecute(new string(new char[] { '\x03' }), true, false, false);
+
+                HighlightObjs(false, SoilHatchIds);
+
                 Editor ed = doc.Editor;
                 Database db = doc.Database;
 
@@ -209,12 +218,11 @@ namespace Civil3DInfoTools.Geology.GeologyTrueScalingProfileWindow
                     SelectionSet acSSet = acSSPrompt.Value;
                     if (acSSet != null)
                     {
-                        HighlightObjs(false, SoilHatchIds);
-
                         SoilHatchIds = acSSet.GetObjectIds();
-                        HighlightObjs(true, SoilHatchIds);
                     }
                 }
+
+                HighlightObjs(true, SoilHatchIds);
             }
         }
 

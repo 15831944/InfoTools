@@ -20,16 +20,13 @@ namespace Civil3DInfoTools
         /// <param name="ex"></param>
         public static void ErrorToCommandLine(Editor ed, string comment, Exception ex = null)
         {
-            ed.WriteMessage("\n~~~~~~~|Ошибка InfoTools|~~~~~~~");
-            ed.WriteMessage("\n" + comment);
+            ed.WriteMessage("\n~~~~~~~" + comment);
             if (ex != null)
             {
                 string errMessage = ex.Message;
                 string stackTrace = ex.StackTrace;
                 ed.WriteMessage("\nMessage: {0}\nStackTrace: {1}", errMessage, stackTrace);
             }
-
-            ed.WriteMessage("\n~~~~~~~|Ошибка InfoTools|~~~~~~~");
         }
 
         /// <summary>
@@ -906,6 +903,22 @@ namespace Civil3DInfoTools
         public static bool LengthIsEquals(double len1, double len2)
         {
             return Math.Abs(len1 - len2) <= lengthDelta;
+        }
+
+        //класс Tolerance по умолчанию имеет толеранс 1E-12. Дан запас
+        //НО НЕТ ГАРАНТИИ, ЧТО ЭТОТ ЗАПАС ДОСТАТОЧЕН (по идее он должен быть достаточен для тех случаев, когда параметр кривой равен ее длине (CompositeCurve))
+        private const double paramDelta = 1E-8;
+
+        public static bool ParameterIsEquals(double param1, double param2/*, double paramDelta*/)
+        {
+            return Math.Abs(param1 - param2) <= paramDelta;
+        }
+
+        public static bool ParameterInsideIntervalOrOnBorder(double param, Interval interval)
+        {
+            return interval.Contains(param)
+                || ParameterIsEquals(interval.LowerBound, param/*, interval.Tolerance*/)
+                || ParameterIsEquals(interval.UpperBound, param/*, interval.Tolerance*/);
         }
 
 

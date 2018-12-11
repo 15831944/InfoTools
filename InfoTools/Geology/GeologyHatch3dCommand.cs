@@ -13,14 +13,23 @@ using static Common.ExceptionHandling.ExeptionHandlingProcedures;
 
 [assembly: CommandClass(typeof(Civil3DInfoTools.Geology.GeologyHatch3dCommand))]
 
+
 namespace Civil3DInfoTools.Geology
 {
+    //TODO: Нужно сделать видео с подробным описанием нюансов, например
+    //- если в штриховке есть островки, которые нужно убрать, то отредактировать штриховку вручную
+    //- полилиния трассы обязательно должна иметь направление в соответствии с профилем (левый край профиля должен соответствовать началу полилинии трассы)
+    //- команда иногда фаталит по неизвестным причинам. Нужно сохраняться почаще!
+    //- длина профиля с учетом горизонтального масштаба должна соответствовать длине трассы 
+    //- если у штриховки есть самопересекающиеся контуры, то они не попадут на 3d профиль 
+
+    //TODO: Нужно решить проблему с самопересекающимися границами!
+
     public class GeologyHatch3dCommand
     {
         private static PaletteSet ps;
         private static GeologyHatch3dView view;
         private static GeologyHatch3dViewModel viewModel;
-
 
         [CommandMethod("S1NF0_GeologyHatch3d", CommandFlags.Modal)]
         public void RaiseNetworkTo3d()

@@ -21,8 +21,6 @@ namespace Civil3DInfoTools.Geology
         private static GeologyTrueScalingProfileView2 view;
         public static GeologyTrueScalingProfileViewModel ViewModel { get; private set; }
 
-        //TODO: Вынести в отдельную команду разнесение штриховок по слоям в соответствии с паттерном и другими свойствами!!!
-
         /// <summary>
         /// Перевод профиля геологии в масштаб повехности земли
         /// </summary>

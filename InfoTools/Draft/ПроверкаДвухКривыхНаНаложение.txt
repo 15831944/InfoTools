@@ -1,0 +1,42 @@
+﻿														CurveCurveIntersector2d intersector = new CurveCurveIntersector2d(thisCurve, otherCurve);
+														bool overlapsOnly = false;
+                                                        if (intersector.OverlapCount != 0)
+                                                        {
+                                                            overlapsOnly = true;
+                                                            //проверить что все точки пересечения находятся на промежутке overlap,
+                                                            //тогда пересечений на самом деле нет
+                                                            List<Interval> overlapIntervals1stCurve = new List<Interval>();
+                                                            for (int i = 0; i < intersector.OverlapCount; i++)
+                                                            {
+                                                                Interval[] intervals = intersector.GetOverlapRanges(i);
+                                                                Interval overlapInterval = intervals[0];
+                                                                overlapIntervals1stCurve.Add(overlapInterval);
+
+                                                            }
+
+                                                            Interval thisCurveInterval = thisCurve.GetInterval();
+                                                            for (int i = 0; i < intersector.NumberOfIntersectionPoints; i++)
+                                                            {
+                                                                double intersectionParam1stCurve
+                                                                    = intersector.GetPointOnCurve1(i).Parameter;
+                                                                //ЕСЛИ ПОЛУЧЕН 0 ИЛИ КОНЕЧНЫЙ ПАРАМЕТР, ТО 
+                                                                //нужно учитывать, что в интервале может быть параметр, взятый с другого конца кривой
+                                                                double intersectionParam1stCurveAlternative = double.NegativeInfinity;
+
+                                                                if (Utils.ParameterIsEquals(intersectionParam1stCurve, thisCurveInterval.LowerBound))
+                                                                    intersectionParam1stCurveAlternative = thisCurveInterval.UpperBound;
+                                                                if (Utils.ParameterIsEquals(intersectionParam1stCurve, thisCurveInterval.UpperBound))
+                                                                    intersectionParam1stCurveAlternative = thisCurveInterval.LowerBound;
+
+                                                                if (!overlapIntervals1stCurve.Any(interv
+                                                                    => Utils.ParameterInsideIntervalOrOnBorder(intersectionParam1stCurve, interv)
+                                                                    || (intersectionParam1stCurveAlternative != double.NegativeInfinity
+                                                                    && Utils.ParameterInsideIntervalOrOnBorder(intersectionParam1stCurveAlternative, interv))))
+                                                                {
+																	//Кривые имеют пересечения, а не только наложения!!!
+                                                                    overlapsOnly = false;
+                                                                    break;
+                                                                }
+                                                            }
+                                                        }
+                                                        

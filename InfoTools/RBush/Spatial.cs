@@ -8,7 +8,7 @@ using RBush;
 
 namespace Civil3DInfoTools.RBush
 {
-    public class Spatial
+    public class Spatial : ISpatialData
     {
         private Envelope _envelope;
         public ref readonly Envelope Envelope => ref _envelope;
@@ -18,6 +18,13 @@ namespace Civil3DInfoTools.RBush
         public Spatial(Extents2d ext, object obj)
         {
             Obj = obj;
+            _envelope = new Envelope
+            (
+                minX: ext.MinPoint.X,
+                minY: ext.MinPoint.Y,
+                maxX: ext.MaxPoint.X,
+                maxY: ext.MaxPoint.Y
+            );
         }
     }
 }

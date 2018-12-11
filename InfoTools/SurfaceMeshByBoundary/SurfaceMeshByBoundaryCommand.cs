@@ -276,10 +276,6 @@ namespace Civil3DInfoTools.SurfaceMeshByBoundary
                                             }
 
 
-
-
-
-
                                             if (polylines.Count > 0)
                                             {
                                                 //Проверить все линии на пересечение друг с другом. Удалить из списка те, которые имеют пересечения
@@ -630,7 +626,12 @@ namespace Civil3DInfoTools.SurfaceMeshByBoundary
                     double bulge = poly.GetBulgeAt(i);
                     if (bulge != 0)
                     {
-                        double r = Math.Abs(1 / bulge);
+                        //double r = Math.Abs(1 / bulge);//КРИВИЗНА bulge ПОЛИЛИНИИ НЕ РАВНА 1/R!!!! КАК ПРАВИЛЬНО ПЕРЕЙТИ ОТ bulge К РАДИУСУ???
+                        //https://www.afralisp.net/autolisp/tutorials/polyline-bulges-part-1.php
+                        double c = poly.GetPoint2dAt(i).GetDistanceTo(poly.GetPoint2dAt((i + 1) % numVert));//длина хорды
+                        double s = c / 2 * bulge;
+                        double r = Math.Abs((Math.Pow((c / 2), 2) + Math.Pow(s, 2)) / (2 * s));
+
                         double maxArcLength = Math.Acos((r - delta) / r) * r * 2;
                         double startDist = poly.GetDistanceAtParameter(i);
                         double endDist = poly.GetDistanceAtParameter((i + 1) % numVert);
