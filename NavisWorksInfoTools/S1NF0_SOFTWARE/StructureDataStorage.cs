@@ -33,6 +33,7 @@ namespace NavisWorksInfoTools.S1NF0_SOFTWARE
         ComApi.InwOpState3 oState = null;
         public Structure Structure { get; set; } = null;
         private Classifier classifier = null;
+        private List<string> propCategories = new List<string>() { "LcOaPropOverrideCat" };
 
         /// <summary>
         /// Имена уровней по умолчанию. Должен быть один уровень для папок и один уровень для конечных элементов
@@ -85,8 +86,8 @@ namespace NavisWorksInfoTools.S1NF0_SOFTWARE
 
 
         public StructureWindow StructureWindow { get; set; } = null;
-        public StructureDataStorage(Document doc, string stPath, string clPath, Structure structure, Classifier classifier,
-            bool newStructureCreationBySelSets = false)
+        public StructureDataStorage(Document doc, string stPath, string clPath, Structure structure,
+            Classifier classifier, bool newStructureCreationBySelSets = false, List<string> propCategories = null)
         {
             this.doc = doc;
             this.stPath = stPath;
@@ -94,6 +95,11 @@ namespace NavisWorksInfoTools.S1NF0_SOFTWARE
             this.oState = ComApiBridge.ComApiBridge.State;
             this.Structure = structure;
             this.classifier = classifier;
+
+            if (propCategories != null)
+            {
+                this.propCategories = propCategories;
+            }
 
             //Все новые классы будут создаваться на 2 DetailLevel. 1 - папки, 2 - конечные элементы 
             //(это относится только к вновь создаваемым объектам)
@@ -274,7 +280,7 @@ namespace NavisWorksInfoTools.S1NF0_SOFTWARE
                     //обнаружен класс без свойств. Он подходит по имени?
                     for (int i = 0; i < DEFAULT_CLASS_NAME.Length; i++)
                     {
-                        if (DefClassesWithNoProps[i]==null &&  @class.Name.Equals(DEFAULT_CLASS_NAME[i]))
+                        if (DefClassesWithNoProps[i] == null && @class.Name.Equals(DEFAULT_CLASS_NAME[i]))
                         {
                             DefClassesWithNoProps[i] = @class;
                         }
@@ -534,7 +540,7 @@ namespace NavisWorksInfoTools.S1NF0_SOFTWARE
         /// <param name="clProps"></param>
         /// <param name="stProps"></param>
         /// <returns></returns>
-        private static string AnalizeNavisProps(PropertyCategoryCollection categories,
+        private string AnalizeNavisProps(PropertyCategoryCollection categories,
             out List<XML.Cl.Property> clProps, out List<XML.St.Property> stProps)
         {
             clProps = new List<XML.Cl.Property>();
@@ -542,19 +548,28 @@ namespace NavisWorksInfoTools.S1NF0_SOFTWARE
 
             foreach (PropertyCategory c in categories)
             {
-                if ((c.Name.Equals("LcOaPropOverrideCat")
-                    && c.DisplayName != S1NF0_DATA_TAB_DISPLAY_NAME)
-                    || c.Name.Equals("LcRevitData_Parameter")//так же брать вкладки свойств из Revit и Civil
-                    || c.Name.Equals("LcRevitData_Type")
-                    || c.Name.Equals("LcRevitData_Element")
-                    || c.Name.Equals("LcRevitMaterialProperties")
-                    || c.Name.Equals("AecDbPropertySet")
+                if (
+                    //(c.Name.Equals("LcOaPropOverrideCat")
+                    //&& c.DisplayName != S1NF0_DATA_TAB_DISPLAY_NAME)
+                    //|| c.Name.Equals("LcRevitData_Parameter")//так же брать вкладки свойств из Revit и Civil
+                    //|| c.Name.Equals("LcRevitData_Type")
+                    //|| c.Name.Equals("LcRevitData_Element")
+                    //|| c.Name.Equals("LcRevitMaterialProperties")
+                    //|| c.Name.Equals("AecDbPropertySet")
+
+                        propCategories.Contains(c.Name)
+                        && !(c.Name.Equals("LcOaPropOverrideCat") && c.DisplayName == S1NF0_DATA_TAB_DISPLAY_NAME)
                     )
                 {
                     foreach (DataProperty p in c.Properties)
                     {
-                        clProps.Add(new XML.Cl.Property() { Name = p.DisplayName, Tag = c.DisplayName });
-                        stProps.Add(new XML.St.Property() { Name = p.DisplayName, Value = Utils.GetDisplayValue(p.Value) });
+                        //Удалять все символы, которые не подходят для XML
+                        string name = Common.Utils.RemoveNonValidXMLCharacters(p.DisplayName);
+                        string tag = Common.Utils.RemoveNonValidXMLCharacters(c.DisplayName);
+                        string value = Common.Utils.RemoveNonValidXMLCharacters(Utils.GetDisplayValue(p.Value));
+
+                        clProps.Add(new XML.Cl.Property() { Name = name, Tag = tag });
+                        stProps.Add(new XML.St.Property() { Name = name, Value = value });
                     }
                 }
             }
@@ -592,10 +607,9 @@ namespace NavisWorksInfoTools.S1NF0_SOFTWARE
             {
                 XML.St.Object @object = new XML.St.Object()
                 {
-                    Name = replacementName,//baseName,// //раньше был баг в мякише, из-за которого имя и id должны были совпадать. update: оказалось что баг не исправили до конца, если имя без guidа то объект не скрыть
+                    Name = replacementName,//baseName - это имя ModelItem в документе Navis (не подходит совсем) //раньше был баг в мякише, из-за которого имя и id должны были совпадать. update: оказалось что баг не исправили до конца, если имя без guidа то объект не скрыть
                     SceneObjectId = replacementName,
                     NavisItem = item,
-
                 };
 
                 //Настрока ссылки на класс и заполнение списка свойств в соответствии со свойствами Navis

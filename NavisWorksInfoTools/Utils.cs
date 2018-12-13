@@ -135,17 +135,27 @@ namespace NavisWorksInfoTools
         /// <summary>
         /// Строковое отображение значения свойства без приставки типа данных
         /// TODO: Если тип данных - double, то...?
+        /// ТОЛЬКО ДЛЯ ПОЛЬЗОВАТЕЛЬСКИХ АТРИБУТОВ!
         /// </summary>
         /// <param name="variantData"></param>
         /// <returns></returns>
         public static string GetDisplayValue(VariantData variantData)
         {
-            string[] strs = variantData.ToString().Split(':');
-            string dispValue = String.Join(":", strs, 1, strs.Length - 1);
-            if (dispValue == null)
+            string dispValue = "";
+            if (variantData.IsNamedConstant)
             {
-                dispValue = "";
+                dispValue = variantData.ToNamedConstant().DisplayName;
             }
+            else
+            {
+                string[] strs = variantData.ToString().Split(':');
+                dispValue = String.Join(":", strs, 1, strs.Length - 1);
+                if (dispValue == null)
+                {
+                    dispValue = "";
+                }
+            }
+
             return dispValue;
         }
 

@@ -5,6 +5,7 @@ using System.Linq;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
+using System.Xml;
 
 namespace Common
 {
@@ -131,5 +132,77 @@ namespace Common
                 return current.List.Last;
             }
         }
+
+
+        /// <summary>
+        /// При парсинге XML могут возникать ошибки типа "hexadecimal value 0x1F, is an invalid character. Line 1, position 1"
+        /// В строке этот символ представлен в виде html кода типа "&#x1F;" (x1F - это шестнадцатиричный номер символа Unicode)
+        /// Из строки удаляются все невалидные включения согласно https://www.w3.org/TR/xml/#charsets
+        /// </summary>
+        /// <returns></returns>
+        public static string RemoveInvalidXmlSubstrs(string xmlStr)
+        {
+            string pattern = "&#((\\d+)|(x\\S+));";
+            Regex regex = new Regex(pattern, RegexOptions.IgnoreCase);
+            if (regex.IsMatch(xmlStr))
+            {
+                xmlStr = regex.Replace(xmlStr, new MatchEvaluator(m =>
+                {
+                    string s = m.Value;
+                    string unicodeNumStr = s.Substring(2, s.Length - 3);
+
+                    int unicodeNum = unicodeNumStr.StartsWith("x") ?
+                    Convert.ToInt32(unicodeNumStr.Substring(1), 16)
+                    : Convert.ToInt32(unicodeNumStr);
+
+                    if ((unicodeNum == 0x9 || unicodeNum == 0xA || unicodeNum == 0xD) ||
+                    ((unicodeNum >= 0x20) && (unicodeNum <= 0xD7FF)) ||
+                    ((unicodeNum >= 0xE000) && (unicodeNum <= 0xFFFD)) ||
+                    ((unicodeNum >= 0x10000) && (unicodeNum <= 0x10FFFF)))
+                    {
+                        return s;
+                    }
+                    else
+                    {
+                        return String.Empty;
+                    }
+                })
+                );
+            }
+            return xmlStr;
+        }
+
+
+
+
+        /// <summary>
+        /// Удаляет из строки символы, которые не подходят для XML
+        /// https://forums.asp.net/t/1483793.aspx?Need+a+method+that+removes+illegal+XML+characters+from+a+String
+        /// </summary>
+        /// <param name="textIn"></param>
+        /// <returns></returns>
+        public static String RemoveNonValidXMLCharacters(string textIn)
+        {
+            StringBuilder textOut = new StringBuilder(); // Used to hold the output.
+            char current; // Used to reference the current character.
+
+
+            if (textIn == null || textIn == string.Empty) return string.Empty; // vacancy test.
+            for (int i = 0; i < textIn.Length; i++)
+            {
+                current = textIn[i];
+
+
+                if ((current == 0x9 || current == 0xA || current == 0xD) ||
+                    ((current >= 0x20) && (current <= 0xD7FF)) ||
+                    ((current >= 0xE000) && (current <= 0xFFFD)) ||
+                    ((current >= 0x10000) && (current <= 0x10FFFF)))
+                {
+                    textOut.Append(current);
+                }
+            }
+            return textOut.ToString();
+        }
+
     }
 }

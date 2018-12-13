@@ -20,6 +20,7 @@ namespace NavisWorksInfoTools.S1NF0_SOFTWARE
     public class SetS1NF0Props : AddInPlugin
     {
         private static int editedCount = 0;
+
         /// <summary>
         /// Раздать свойства родитель и правильное имя узла
         /// </summary>
@@ -70,8 +71,7 @@ namespace NavisWorksInfoTools.S1NF0_SOFTWARE
                     {
                     { ID_PROP_DISPLAY_NAME, Utils.S1NF0PropSpecialValue.RandomGUID},
                     { MATERIAL_ID_PROP_DISPLAY_NAME, "_"},
-                    //{ PROPER_NAME_PROP_DISPLAY_NAME, defProperName},
-                    //{ PARENT_PROP_DISPLAY_NAME, parentId},
+                    { PROPER_NAME_PROP_DISPLAY_NAME, defProperName},
                     }))
                 {
                     editedCount++;

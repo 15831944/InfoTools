@@ -41,9 +41,27 @@ namespace NavisWorksInfoTools.S1NF0_SOFTWARE
             this.folders = folders;
         }
 
+        public List<string> SelectedCategories {
+            get
+            {
+                return propCategoriesViewModel.Categories.Where(c => c.Accept == true)
+                    .Select(c=>c.InternalName).ToList();
+            }
+        }
+        private PropCategoriesControl.PropCategoriesViewModel propCategoriesViewModel
+            = new PropCategoriesControl.PropCategoriesViewModel();
+
         private void Window_Loaded(object sender, RoutedEventArgs e)
         {
             foldersDataGrid.ItemsSource = folders;
+
+            #region WPF ОПЯТЬ ЕБЕТ МОЗГ. ПРИШЛОСЬ ДОБАВЛЯТЬ КОНТРОЛ В КОДБЕХАЙНДЕ
+            PropCategoriesControl.PropCategoriesView propCategoriesView = new PropCategoriesControl.PropCategoriesView();
+            propCategoriesView.Margin = new Thickness(0, 174, 0, 35);
+            mainGrid.Children.Add(propCategoriesView); 
+            #endregion
+
+            propCategoriesView.DataContext = propCategoriesViewModel;
         }
 
         private void Button_Click(object sender, RoutedEventArgs e)

@@ -235,6 +235,16 @@ namespace NavisWorksInfoTools
             DataProperty matIdProp = item.PropertyCategories
                 .FindPropertyByDisplayName(S1NF0_DATA_TAB_DISPLAY_NAME,
                 MATERIAL_ID_PROP_DISPLAY_NAME);
+
+            string exportName = null;
+            DataProperty exportNameProp = item.PropertyCategories
+                .FindPropertyByDisplayName(S1NF0_DATA_TAB_DISPLAY_NAME,
+                PROPER_NAME_PROP_DISPLAY_NAME);
+            if (exportNameProp != null)
+            {
+                exportName = Utils.GetDisplayValue(exportNameProp.Value);
+            }
+
             if (idProp == null || matIdProp == null)
             {
                 if (createIdIfNotExists)
@@ -301,7 +311,8 @@ namespace NavisWorksInfoTools
                 baseNameTrustable = false;
             }
             id = Utils.GetDisplayValue(idProp.Value);
-            replacementName = baseName + "|" + id + "|" + Utils.GetDisplayValue(matIdProp.Value);
+            replacementName = (!String.IsNullOrWhiteSpace(exportName) ? exportName: baseName)
+                + "|" + id + "|" + Utils.GetDisplayValue(matIdProp.Value);
 
             return;
         }

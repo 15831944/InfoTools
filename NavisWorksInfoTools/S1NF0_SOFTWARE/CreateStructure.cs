@@ -91,7 +91,8 @@ namespace NavisWorksInfoTools.S1NF0_SOFTWARE
                             IsPrimary = true,
                         };
                         //Создать StructureDataStorage
-                        StructureDataStorage dataStorage = new StructureDataStorage(doc, stFilename, clFilename, structure, classifier, true);
+                        StructureDataStorage dataStorage = new StructureDataStorage(doc, stFilename, clFilename, structure, classifier, true,
+                            selectRootFolderWindow.SelectedCategories);
 
                         //Сформировать XML по структуре папок
                         //Каждая папка - объект без свойств

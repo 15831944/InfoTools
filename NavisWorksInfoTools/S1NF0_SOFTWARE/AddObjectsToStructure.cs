@@ -73,8 +73,8 @@ namespace NavisWorksInfoTools.S1NF0_SOFTWARE
                             Structure structure = null;
                             using (StreamReader sr = new StreamReader(stFilename))
                             {
-                                string serializedData = sr.ReadToEnd();
-                                //serializedData = serializedData.Replace((char)(0x1F), '_');//это не работает
+                                string serializedData = Common.Utils.RemoveInvalidXmlSubstrs(sr.ReadToEnd());
+
                                 XmlSerializer xmlSerializer = new XmlSerializer(typeof(Structure));
                                 StringReader stringReader = new StringReader(serializedData);
                                 structure = (Structure)xmlSerializer.Deserialize(stringReader);
@@ -84,8 +84,8 @@ namespace NavisWorksInfoTools.S1NF0_SOFTWARE
                             Classifier classifier = null;
                             using (StreamReader sr = new StreamReader(clFilename))
                             {
-                                string serializedData = sr.ReadToEnd();
-                                //serializedData = serializedData.Replace((char)(0x1F), ' ');
+                                string serializedData = Common.Utils.RemoveInvalidXmlSubstrs(sr.ReadToEnd());
+
                                 XmlSerializer xmlSerializer = new XmlSerializer(typeof(Classifier));
                                 StringReader stringReader = new StringReader(serializedData);
                                 classifier = (Classifier)xmlSerializer.Deserialize(stringReader);
