@@ -95,113 +95,117 @@ namespace Civil3DInfoTools.PipeNetworkCreating
                             //TODO?: можно добавить еще CSV
                     }
 
-                    //Определить все видимые листы
-                    HashSet<string> visibleSheets = new HashSet<string>();
-                    for (var i = 0; i < reader.ResultsCount; i++)
+                    if (reader != null)
                     {
-                        // checking visible state
-                        if (reader.VisibleState == "visible")
+                        //Определить все видимые листы
+                        HashSet<string> visibleSheets = new HashSet<string>();
+                        for (var i = 0; i < reader.ResultsCount; i++)
                         {
-                            visibleSheets.Add(reader.Name);
-                        }
-
-                        reader.NextResult();
-                    }
-
-
-                    DataSet result = reader.AsDataSet();
-                    string str = reader.VisibleState;
-
-
-                    reader.Close();
-
-                    int key = Convert.ToInt32(Path.GetFileNameWithoutExtension(fi.FullName)
-                        .Replace("-", "").Replace("_", "").Replace(" ", ""));
-
-                    if (!WellsData.ContainsKey(key))
-                    {
-                        Dictionary<string, WellData> thisFileDict = new Dictionary<string, WellData>();
-
-                        WellsData.Add(key, thisFileDict);
-                        foreach (DataTable table in result.Tables)
-                        {
-                            //если таблица скрыта, то не трогать ее
-                            if (!visibleSheets.Contains(table.TableName))
+                            // checking visible state
+                            if (reader.VisibleState == "visible")
                             {
-                                continue;
+                                visibleSheets.Add(reader.Name);
                             }
 
-                            int colNum = table.Columns.Count;
-                            //int skipped = 0;
-                            bool headerSkipped = false;
-                            WellData currentWellData = null;
-                            foreach (DataRow row in table.Rows)
-                            {
-                                //Пропустить нужное количество строк с начала таблицы
-                                //if (skipped < SKIP_ROWS_COUNT)
-                                //{
-                                //    skipped++;
-                                //    continue;
-                                //}
-                                //считать, что последняя строка шапки таблицы содержит занчения 1, 2, 3, 4...12
-                                if (!headerSkipped)
-                                {
-                                    if (DataRowIsHeaderEnd(row, colNum))
-                                    {
-                                        headerSkipped = true;
-                                    }
+                            reader.NextResult();
+                        }
 
+
+                        DataSet result = reader.AsDataSet();
+                        string str = reader.VisibleState;
+
+
+                        reader.Close();
+
+                        int key = Convert.ToInt32(Path.GetFileNameWithoutExtension(fi.FullName)
+                            .Replace("-", "").Replace("_", "").Replace(" ", ""));
+
+                        if (!WellsData.ContainsKey(key))
+                        {
+                            Dictionary<string, WellData> thisFileDict = new Dictionary<string, WellData>();
+
+                            WellsData.Add(key, thisFileDict);
+                            foreach (DataTable table in result.Tables)
+                            {
+                                //если таблица скрыта, то не трогать ее
+                                if (!visibleSheets.Contains(table.TableName))
+                                {
                                     continue;
                                 }
 
-                                string wellNum = row[WELL_NUM_COL].ToString();
-                                if (!String.IsNullOrEmpty(wellNum))
+                                int colNum = table.Columns.Count;
+                                //int skipped = 0;
+                                bool headerSkipped = false;
+                                WellData currentWellData = null;
+                                foreach (DataRow row in table.Rows)
                                 {
-                                    if (!thisFileDict.ContainsKey(wellNum))
+                                    //Пропустить нужное количество строк с начала таблицы
+                                    //if (skipped < SKIP_ROWS_COUNT)
+                                    //{
+                                    //    skipped++;
+                                    //    continue;
+                                    //}
+                                    //считать, что последняя строка шапки таблицы содержит занчения 1, 2, 3, 4...12
+                                    if (!headerSkipped)
                                     {
-                                        string sizeStr = row[SIZE1_COL].ToString();
-                                        double size1 = -1;
-                                        double size2 = -1;
-                                        double topLevel = double.NegativeInfinity;
-                                        double bottomLevel = double.NegativeInfinity;
-
-                                        double.TryParse(sizeStr, out size1);
-                                        double.TryParse(row[SIZE2_COL].ToString(), out size2);
-
-
-                                        string topLevelStr = row[WELL_TOP_LEVEL_COL].ToString();
-                                        if (CONTAINS_NUMBERS.IsMatch(topLevelStr))//текст должен содержать хотябы одну цифру (иногда там пишут прочерки или что-то такое)
-                                            double.TryParse(topLevelStr.Replace(',', '.'), out topLevel);
-                                        string bottomLevelStr = row[WELL_BOTTOM_LEVEL_COL].ToString();
-                                        if (CONTAINS_NUMBERS.IsMatch(bottomLevelStr))
-                                            double.TryParse(bottomLevelStr.Replace(',', '.'), out bottomLevel);
-
-                                        currentWellData = new WellData()
+                                        if (DataRowIsHeaderEnd(row, colNum))
                                         {
-                                            Num = wellNum,
-                                            NetworkType = row[NETWORK_TYPE_COL].ToString(),
-                                            SizeString = sizeStr,
-                                            Size1 = size1,
-                                            Size2 = size2,
-                                            Material = row[WELL_MATERIAL_COL].ToString(),
-                                            TopLevel = topLevel,
-                                            BottomLevel = bottomLevel,
-                                        };
+                                            headerSkipped = true;
+                                        }
 
-                                        thisFileDict.Add(wellNum, currentWellData);
+                                        continue;
+                                    }
 
+                                    string wellNum = row[WELL_NUM_COL].ToString();
+                                    if (!String.IsNullOrEmpty(wellNum))
+                                    {
+                                        if (!thisFileDict.ContainsKey(wellNum))
+                                        {
+                                            string sizeStr = row[SIZE1_COL].ToString();
+                                            double size1 = -1;
+                                            double size2 = -1;
+                                            double topLevel = double.NegativeInfinity;
+                                            double bottomLevel = double.NegativeInfinity;
+
+                                            double.TryParse(sizeStr, out size1);
+                                            double.TryParse(row[SIZE2_COL].ToString(), out size2);
+
+
+                                            string topLevelStr = row[WELL_TOP_LEVEL_COL].ToString();
+                                            if (CONTAINS_NUMBERS.IsMatch(topLevelStr))//текст должен содержать хотябы одну цифру (иногда там пишут прочерки или что-то такое)
+                                                double.TryParse(topLevelStr.Replace(',', '.'), out topLevel);
+                                            string bottomLevelStr = row[WELL_BOTTOM_LEVEL_COL].ToString();
+                                            if (CONTAINS_NUMBERS.IsMatch(bottomLevelStr))
+                                                double.TryParse(bottomLevelStr.Replace(',', '.'), out bottomLevel);
+
+                                            currentWellData = new WellData()
+                                            {
+                                                Num = wellNum,
+                                                NetworkType = row[NETWORK_TYPE_COL].ToString(),
+                                                SizeString = sizeStr,
+                                                Size1 = size1,
+                                                Size2 = size2,
+                                                Material = row[WELL_MATERIAL_COL].ToString(),
+                                                TopLevel = topLevel,
+                                                BottomLevel = bottomLevel,
+                                            };
+
+                                            thisFileDict.Add(wellNum, currentWellData);
+
+                                            ReadPipeJunctionData(row, currentWellData);
+                                        }
+                                    }
+                                    else if (currentWellData != null)
+                                    {
+                                        //добавление нового присоединения к данным колодца
                                         ReadPipeJunctionData(row, currentWellData);
                                     }
                                 }
-                                else if (currentWellData != null)
-                                {
-                                    //добавление нового присоединения к данным колодца
-                                    ReadPipeJunctionData(row, currentWellData);
-                                }
-                            }
 
+                            }
                         }
                     }
+                    
 
                 }
 

@@ -1,0 +1,27 @@
+﻿<UserControl x:Class="Civil3DInfoTools.Geology.SelectLayerView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
+             xmlns:local="clr-namespace:Civil3DInfoTools.Geology"
+             mc:Ignorable="d" Background="WhiteSmoke" Height="421.429" Width="349.554">
+    <Grid>
+        <DataGrid ItemsSource="{Binding Layers}" IsReadOnly="True" Margin="3,3,3,3"
+                  SelectionMode="Single" SelectedItem="{Binding SelectedLayer}" AutoGenerateColumns="False">
+
+            <DataGrid.Resources>
+                <Style TargetType="{x:Type DataGridCell}">
+                    <Style.Triggers>
+                        <Trigger Property="DataGridCell.IsSelected" Value="True">
+                            <Setter Property="Background" Value="#CCDAFF" />
+                        </Trigger>
+                    </Style.Triggers>
+                </Style>
+            </DataGrid.Resources>
+
+            <DataGrid.Columns>
+                <DataGridTextColumn Header="Слой" Binding="{Binding Name}"/>
+            </DataGrid.Columns>
+        </DataGrid>
+    </Grid>
+</UserControl>

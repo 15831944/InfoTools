@@ -12,6 +12,7 @@
         mc:Ignorable="d"
         Title="Настройка создания модели инженерной сети" Height="740" Width="1000" ResizeMode="NoResize"
         >
+    <!-- CivilFileNameInputView3DInfoTools -->
 
     <Grid Margin="5,5,5,5">
         <Grid.RowDefinitions>

@@ -247,11 +247,19 @@
     <Compile Include="Geology\GeologyHatch3dWindow\GeologyHatch3dViewModel.cs" />
     <Compile Include="Geology\GeologyHatch3dWindow\HatchSegmentGraph.cs" />
     <Compile Include="Geology\GeologyHatchLayersCommand.cs" />
+    <Compile Include="Geology\GeologyHatchLayersWindow\GeologyHatchLayersView.xaml.cs">
+      <DependentUpon>GeologyHatchLayersView.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="Geology\GeologyHatchLayersWindow\GeologyHatchLayersViewModel.cs" />
     <Compile Include="Geology\GeologyTrueScalingProfileWindow\GeologyTrueScalingProfileProcedure.cs" />
     <Compile Include="Geology\GeologyTrueScalingProfileWindow\GeologyTrueScalingProfileView2.xaml.cs">
       <DependentUpon>GeologyTrueScalingProfileView2.xaml</DependentUpon>
     </Compile>
     <Compile Include="Geology\GeologyTrueScalingProfileWindow\GeologyTrueScalingProfileViewModel.cs" />
+    <Compile Include="Geology\SelectLayerView.xaml.cs">
+      <DependentUpon>SelectLayerView.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="Geology\SelectLayerViewModel.cs" />
     <Compile Include="PipeNetworkCreating\ConfigureNetworkCreationWindow2\BlockStructureMappingPairModel.cs" />
     <Compile Include="PipeNetworkCreating\ConfigureNetworkCreationWindow2\ConfigureNetworkCreationView.xaml.cs">
       <DependentUpon>ConfigureNetworkCreationView.xaml</DependentUpon>
@@ -360,7 +368,15 @@
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>
+    <Page Include="Geology\GeologyHatchLayersWindow\GeologyHatchLayersView.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
     <Page Include="Geology\GeologyTrueScalingProfileWindow\GeologyTrueScalingProfileView2.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="Geology\SelectLayerView.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>
