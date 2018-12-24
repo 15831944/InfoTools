@@ -50,4 +50,15 @@
     <VendorDescription>S-Info</VendorDescription>
   </AddIn>
 
+
+  <!--<AddIn Type="Command">
+    <Text>PlaceGenericByCoord</Text>
+    <Description>test</Description>
+    <Assembly>RevitInfoTools\RevitInfoTools.dll</Assembly>
+    <FullClassName>RevitInfoTools.PlaceGenericByCoordCommand</FullClassName>
+    <ClientId>a76ea799-a1b1-4003-b889-7f399e34b3a9</ClientId>
+    <VendorId>S-Info</VendorId>
+    <VendorDescription>S-Info</VendorDescription>
+  </AddIn>-->
+
 </RevitAddIns>

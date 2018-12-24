@@ -13,14 +13,12 @@ using static Common.ExceptionHandling.ExeptionHandlingProcedures;
 
 namespace RevitInfoTools
 {
+
+
     [Transaction(TransactionMode.Manual)]
     [Regeneration(RegenerationOption.Manual)]
     public class Draw3DLineCommand : IExternalCommand
     {
-
-        
-
-
         public Result Execute(ExternalCommandData commandData, ref string message, ElementSet elements)
         {
             UIApplication uiapp = commandData.Application;
@@ -58,12 +56,23 @@ namespace RevitInfoTools
 
                     List<List<XYZ>> lines3d = new List<List<XYZ>>();
 
-                    if(Utils.ReadCoordinatesFromCSV(filenames, projectTransform, lines3d))
+                    if (Utils.ReadCoordinatesFromCSV(filenames, projectTransform, lines3d))
                     {
                         //Загрузить семейство 3d линии если нет
                         Family line3dFamily = Utils.GetFamily(doc, "3d line");
                         ElementId symId = line3dFamily.GetFamilySymbolIds().First();
                         FamilySymbol familySymbol = (FamilySymbol)doc.GetElement(symId);
+
+                        //Вывести форму для выбора семейств
+                        Categories categories = doc.Settings.Categories;
+                        ElementId IdGeneric = categories.get_Item(BuiltInCategory.OST_GenericModel).Id;
+                        SelectTypeWindow selectTypeWindow = new SelectTypeWindow(doc, IdGeneric);
+                        bool? result = selectTypeWindow.ShowDialog();
+                        if (result != null && result.Value
+                            && selectTypeWindow.SelectedFamilySymbols.Count > 0)
+                        {
+                            familySymbol = selectTypeWindow.SelectedFamilySymbols.First();
+                        }
 
                         //Расставить линии по координатам
                         using (Transaction tr = new Transaction(doc))
@@ -75,7 +84,7 @@ namespace RevitInfoTools
                                 familySymbol.Activate();
                                 doc.Regenerate();
                             }
-                            
+
 
                             foreach (List<XYZ> ptList in lines3d)
                             {
@@ -93,11 +102,14 @@ namespace RevitInfoTools
 
                             tr.Commit();
                         }
+
+
+
                     }
 
                 }
             }
-            catch (Autodesk.Revit.Exceptions.OperationCanceledException){}
+            catch (Autodesk.Revit.Exceptions.OperationCanceledException) { }
             catch (Exception ex)
             {
                 CommonException(ex, "Ошибка при вычерчивании 3d линии в Revit");

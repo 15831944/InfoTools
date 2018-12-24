@@ -62,7 +62,8 @@ namespace RevitInfoTools
 
                     List<List<XYZ>> lines3d = new List<List<XYZ>>();
 
-                    if (Utils.ReadCoordinatesFromCSV(filenames, projectTransform, lines3d) && lines3d.Count > 0 && lines3d.First().Count > 0)
+                    if (Utils.ReadCoordinatesFromCSV(filenames, projectTransform, lines3d)
+                        && lines3d.Count > 0 && lines3d.First().Count > 0)
                     {
                         //Выбор семейства из числа загруженных семейств формы
                         //Определить id категории Форма

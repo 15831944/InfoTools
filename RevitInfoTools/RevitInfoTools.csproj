@@ -100,9 +100,11 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="App.cs" />
+    <Compile Include="Draft\ArbitraryReferencePlane.cs" />
     <Compile Include="Draw3DLine2Command.cs" />
     <Compile Include="Draw3DLineCommand.cs" />
     <Compile Include="PlaceCrossSectionsCommand.cs" />
+    <Compile Include="Draft\PlaceGenericByCoordCommand.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="SelectTypeWindow.xaml.cs">
       <DependentUpon>SelectTypeWindow.xaml</DependentUpon>
