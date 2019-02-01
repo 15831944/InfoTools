@@ -7,7 +7,7 @@
         xmlns:categories="clr-namespace:NavisWorksInfoTools.S1NF0_SOFTWARE.PropCategoriesControl"
         xmlns:PropCategoriesControl="clr-namespace:NavisWorksInfoTools.S1NF0_SOFTWARE.PropCategoriesControl;assembly=NavisWorksInfoTools" x:Class="NavisWorksInfoTools.S1NF0_SOFTWARE.SelectRootFolderWindow"
         mc:Ignorable="d"
-        Title="Выберите корневую папку структуры модели" Height="400" Width="387.5" Loaded="Window_Loaded" WindowStartupLocation="CenterScreen">
+        Title="Выберите корневую папку структуры модели" Height="250" Width="400" Loaded="Window_Loaded" WindowStartupLocation="CenterScreen">
     <Grid Name="mainGrid">
         <DataGrid x:Name="foldersDataGrid" Margin="10,10,10,0"
                   AutoGenerateColumns="False"

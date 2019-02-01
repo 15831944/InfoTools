@@ -52,7 +52,7 @@ namespace NavisWorksInfoTools.S1NF0_SOFTWARE
                     }
 
                     //Вывести окно для выбора корневой папки для формирования структуры
-                    SelectRootFolderWindow selectRootFolderWindow = new SelectRootFolderWindow(folders);
+                    SelectRootFolderWindow selectRootFolderWindow = new SelectRootFolderWindow(folders, false);
                     bool? resultRootSelect = selectRootFolderWindow.ShowDialog();
                     if (resultRootSelect != null && resultRootSelect.Value)
                     {

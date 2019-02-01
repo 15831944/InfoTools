@@ -203,10 +203,10 @@ namespace NavisWorksInfoTools
                     continue;//Не заходить во вложенные узлы
                 }
 
-                string baseName, replacementName;
+                string baseName, exportName, replacementName;
                 bool baseNameTrustable;
                 object id;
-                CreateReplacementName(oState, item, out baseName, out baseNameTrustable, out replacementName, out id, true);
+                CreateReplacementName(oState, item, out baseName, out exportName, out baseNameTrustable, out replacementName, out id, true);
 
                 replacements.Enqueue(new FBX.NameReplacement(baseName, baseNameTrustable, replacementName));
 
@@ -226,7 +226,7 @@ namespace NavisWorksInfoTools
         /// <param name="id"></param>
         /// <param name="createIdIfNotExists">ЕСЛИ У ОБЪЕКТА НЕТ ID, ТО ОН БУДЕТ СОЗДАН</param>
         public static void CreateReplacementName(ComApi.InwOpState3 oState, ModelItem item,
-            out string baseName, out bool baseNameTrustable, out string replacementName, out object id,
+            out string baseName, out string exportName, out bool baseNameTrustable, out string replacementName, out object id,
             bool createIdIfNotExists)
         {
             DataProperty idProp = item.PropertyCategories
@@ -236,7 +236,7 @@ namespace NavisWorksInfoTools
                 .FindPropertyByDisplayName(S1NF0_DATA_TAB_DISPLAY_NAME,
                 MATERIAL_ID_PROP_DISPLAY_NAME);
 
-            string exportName = null;
+            exportName = null;
             DataProperty exportNameProp = item.PropertyCategories
                 .FindPropertyByDisplayName(S1NF0_DATA_TAB_DISPLAY_NAME,
                 PROPER_NAME_PROP_DISPLAY_NAME);

@@ -22,6 +22,8 @@ namespace NavisWorksInfoTools.S1NF0_SOFTWARE
     {
         List<FolderItem> folders = null;
 
+        bool showPropCategoriesToSelect = false;
+
         public FolderItem RootFolder
         {
             get
@@ -35,10 +37,11 @@ namespace NavisWorksInfoTools.S1NF0_SOFTWARE
             }
         }
 
-        public SelectRootFolderWindow(List<FolderItem> folders)
+        public SelectRootFolderWindow(List<FolderItem> folders, bool showPropCategoriesToSelect)
         {
             InitializeComponent();
             this.folders = folders;
+            this.showPropCategoriesToSelect = showPropCategoriesToSelect;
         }
 
         public List<string> SelectedCategories {
@@ -55,13 +58,16 @@ namespace NavisWorksInfoTools.S1NF0_SOFTWARE
         {
             foldersDataGrid.ItemsSource = folders;
 
-            #region WPF ОПЯТЬ ЕБЕТ МОЗГ. ПРИШЛОСЬ ДОБАВЛЯТЬ КОНТРОЛ В КОДБЕХАЙНДЕ
-            PropCategoriesControl.PropCategoriesView propCategoriesView = new PropCategoriesControl.PropCategoriesView();
-            propCategoriesView.Margin = new Thickness(0, 174, 0, 35);
-            mainGrid.Children.Add(propCategoriesView); 
-            #endregion
+            if (showPropCategoriesToSelect)
+            {
+                this.Height = 400.0;
+                PropCategoriesControl.PropCategoriesView propCategoriesView = new PropCategoriesControl.PropCategoriesView();
+                propCategoriesView.Margin = new Thickness(0, 174, 0, 35);
+                mainGrid.Children.Add(propCategoriesView);
+                propCategoriesView.DataContext = propCategoriesViewModel;
+            }
 
-            propCategoriesView.DataContext = propCategoriesViewModel;
+            
         }
 
         private void Button_Click(object sender, RoutedEventArgs e)

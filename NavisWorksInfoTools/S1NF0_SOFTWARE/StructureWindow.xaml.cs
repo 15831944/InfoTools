@@ -52,8 +52,8 @@ namespace NavisWorksInfoTools.S1NF0_SOFTWARE
                 selectedNotAddedGeometryModelItems = new List<ModelItem>();
                 foreach (ModelItem item in selectedGeometryModelItems)
                 {
-                    string replacementName, baseName, strId;
-                    if (!dataStorage.ItemAdded(item, out baseName, out replacementName, out strId))
+                    string replacementName, baseName, exportName, strId;
+                    if (!dataStorage.ItemAdded(item, out baseName, out exportName, out replacementName, out strId))
                     {
                         selectedNotAddedGeometryModelItems.Add(item);
                     }

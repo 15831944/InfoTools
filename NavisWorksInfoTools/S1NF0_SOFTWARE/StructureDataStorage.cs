@@ -601,13 +601,13 @@ namespace NavisWorksInfoTools.S1NF0_SOFTWARE
         /// <param name="item"></param>
         public void CreateNewModelObject(XML.St.Object parent, ModelItem item)
         {
-            string replacementName, baseName, strId;
-            bool contains = ItemAdded(item, out baseName, out replacementName, out strId);
+            string replacementName, baseName, exportName, strId;
+            bool contains = ItemAdded(item, out baseName, out exportName, out replacementName, out strId);
             if (!contains && strId != null)//Добавлять только если объект еще не был добавлен и имеет id
             {
                 XML.St.Object @object = new XML.St.Object()
                 {
-                    Name = replacementName,//baseName - это имя ModelItem в документе Navis (не подходит совсем) //раньше был баг в мякише, из-за которого имя и id должны были совпадать. update: оказалось что баг не исправили до конца, если имя без guidа то объект не скрыть
+                    Name = !String.IsNullOrWhiteSpace(exportName) ? exportName : baseName,//replacementName - имя вместе с guid //baseName - имя в модели Navis. Оно не подходит так как может быть определено служебное свойство для имени при экспорте
                     SceneObjectId = replacementName,
                     NavisItem = item,
                 };
@@ -668,13 +668,15 @@ namespace NavisWorksInfoTools.S1NF0_SOFTWARE
         /// <param name="replacementName"></param>
         /// <param name="strId"></param>
         /// <returns></returns>
-        public bool ItemAdded(ModelItem item, out string baseName, out string replacementName, out string strId)
+        public bool ItemAdded(ModelItem item, out string baseName, out string exportName, out string replacementName, out string strId)
         {
             baseName = null;
+            exportName = null;
             strId = null;
             bool baseNameTrustable;
             object id;
-            FBXExport.CreateReplacementName(oState, item, out baseName, out baseNameTrustable, out replacementName, out id, false);
+            FBXExport.CreateReplacementName(oState, item, out baseName, out exportName,
+                out baseNameTrustable, out replacementName, out id, false);
             if (id != null)
             {
                 strId = id.ToString();
