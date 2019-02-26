@@ -238,7 +238,13 @@ namespace Civil3DInfoTools.RoadMarking
                     string targetDocFullPath
                         = Common.Utils.GetNonExistentFileName(Path.GetDirectoryName(adoc.Name), "RoadMarkingBoundaries", "dwg");
                     dbTarget.SaveAs(targetDocFullPath, DwgVersion.Current);
-                    adocTarget = Application.DocumentManager.Open(targetDocFullPath, false);
+                    try
+                    {
+                        //если текущий документ никуда не сохранен, то не сможет открыть
+                        adocTarget = Application.DocumentManager.Open(targetDocFullPath, false);
+                    }
+                    catch { }
+                    
                 }
 
                 

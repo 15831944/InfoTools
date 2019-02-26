@@ -264,15 +264,6 @@ namespace NavisWorksInfoTools
                         .FindPropertyByDisplayName(S1NF0_DATA_TAB_DISPLAY_NAME,
                        MATERIAL_ID_PROP_DISPLAY_NAME);
                 }
-                else
-                {
-                    id = null;
-                    replacementName = null;
-                    baseNameTrustable = false;
-                    baseName = null;
-                    return;
-                }
-
             }
 
 
@@ -310,9 +301,19 @@ namespace NavisWorksInfoTools
                 //но точно не известно на что будет замена в каких случаях
                 baseNameTrustable = false;
             }
-            id = Utils.GetDisplayValue(idProp.Value);
-            replacementName = (!String.IsNullOrWhiteSpace(exportName) ? exportName: baseName)
-                + "|" + id + "|" + Utils.GetDisplayValue(matIdProp.Value);
+
+            if (idProp != null && matIdProp != null)
+            {
+                id = Utils.GetDisplayValue(idProp.Value);
+                replacementName = (!String.IsNullOrWhiteSpace(exportName) ? exportName : baseName)
+                    + "|" + id + "|" + Utils.GetDisplayValue(matIdProp.Value);
+            }
+            else
+            {
+                id = null;
+                replacementName = null;
+            }
+            
 
             return;
         }

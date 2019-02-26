@@ -137,7 +137,7 @@ namespace NavisWorksInfoTools.S1NF0_SOFTWARE
                 Search searchForAllIDs = new Search();
                 searchForAllIDs.Selection.CopyFrom(itemsInSelection);
                 searchForAllIDs.Locations = SearchLocations.DescendantsAndSelf;
-                StructureDataStorage.ConfigureSearchForAllNotHiddenGeometryItemsWithIds(searchForAllIDs);
+                StructureDataStorage.ConfigureSearchForAllNotHiddenGeometryItemsWithIds(searchForAllIDs, false);
                 ModelItemCollection selectedGeometry = searchForAllIDs.FindAll(doc, false);
                 foreach (ModelItem modelItem in selectedGeometry)
                 {

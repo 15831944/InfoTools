@@ -206,11 +206,14 @@ namespace NavisWorksInfoTools.S1NF0_SOFTWARE
         /// НЕЛЬЗЯ НАСТРОИТЬ ПОИСК ТОЛЬКО НЕСКРЫТЫХ ОБЪЕКТОВ
         /// </summary>
         /// <param name="searchForAllIDs"></param>
-        public static void ConfigureSearchForAllNotHiddenGeometryItemsWithIds(Search searchForAllIDs)
+        public static void ConfigureSearchForAllNotHiddenGeometryItemsWithIds(Search searchForAllIDs, bool idNecessary = true)
         {
-            //Имеет свойство Id
-            SearchCondition hasIdCondition = SearchCondition.HasPropertyByCombinedName(tabCN, idCN);
-            searchForAllIDs.SearchConditions.Add(hasIdCondition);
+            if (idNecessary)
+            {
+                //Имеет свойство Id
+                SearchCondition hasIdCondition = SearchCondition.HasPropertyByCombinedName(tabCN, idCN);
+                searchForAllIDs.SearchConditions.Add(hasIdCondition);
+            }
 
             //Является геометрией (проверяется по типу иконки узла Navis)
             NamedConstant namedConstant = new NamedConstant(8, "LcOaNodeIcon"/*, "Геометрия"*/);
@@ -603,8 +606,24 @@ namespace NavisWorksInfoTools.S1NF0_SOFTWARE
         {
             string replacementName, baseName, exportName, strId;
             bool contains = ItemAdded(item, out baseName, out exportName, out replacementName, out strId);
-            if (!contains && strId != null)//Добавлять только если объект еще не был добавлен и имеет id
+            if (strId == null)
             {
+                //если id нет, то принять за id обычное имя
+                strId = baseName;
+                replacementName = baseName;
+
+                contains = AddedGeometryItemsLookUp.ContainsKey(strId);
+                if (contains)
+                {
+
+                }
+            }
+
+            if (!contains /*&& strId != null*/)//Добавлять только если объект еще не был добавлен и имеет id
+            {
+                
+
+
                 XML.St.Object @object = new XML.St.Object()
                 {
                     Name = !String.IsNullOrWhiteSpace(exportName) ? exportName : baseName,//replacementName - имя вместе с guid //baseName - имя в модели Navis. Оно не подходит так как может быть определено служебное свойство для имени при экспорте
