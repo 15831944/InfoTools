@@ -132,6 +132,9 @@ namespace NavisWorksInfoTools.S1NF0_SOFTWARE
             else if (item is SelectionSet)
             {
                 SelectionSet selectionSet = item as SelectionSet;
+
+                XML.St.Object container = dataStorage.CreateNewContainerObject(parent, selectionSet.DisplayName);
+
                 ModelItemCollection itemsInSelection = selectionSet.GetSelectedItems();
 
                 Search searchForAllIDs = new Search();
@@ -141,7 +144,7 @@ namespace NavisWorksInfoTools.S1NF0_SOFTWARE
                 ModelItemCollection selectedGeometry = searchForAllIDs.FindAll(doc, false);
                 foreach (ModelItem modelItem in selectedGeometry)
                 {
-                    dataStorage.CreateNewModelObject(parent, modelItem);
+                    dataStorage.CreateNewModelObject(container, modelItem);
                 }
             }
         }

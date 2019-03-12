@@ -47,9 +47,9 @@ namespace Common
                 {
                     double[] globalPoint = new double[]
                     {
-                            Convert.ToDouble(xyzLineTrim[0].Replace(" ", "").Replace(",",".")),
-                            Convert.ToDouble(xyzLineTrim[1].Replace(" ", "").Replace(",",".")),
-                            Convert.ToDouble(xyzLineTrim[2].Replace(" ", "").Replace(",","."))
+                            Convert.ToDouble(xyzLineTrim[0].Replace(" ", "").Replace(",","."), System.Globalization.CultureInfo.InvariantCulture),
+                            Convert.ToDouble(xyzLineTrim[1].Replace(" ", "").Replace(",","."), System.Globalization.CultureInfo.InvariantCulture),
+                            Convert.ToDouble(xyzLineTrim[2].Replace(" ", "").Replace(",","."), System.Globalization.CultureInfo.InvariantCulture)
                     };
 
                     ptList.Add(globalPoint);
