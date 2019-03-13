@@ -27,7 +27,8 @@ namespace NavisWorksInfoTools.S1NF0_SOFTWARE.XML.Cl
 
         public int CompareTo(Property other)
         {
-           return Name.CompareTo(other.Name);
+            //СРАВНЕНИЕ СТРОК ДОЛЖНО БЫТЬ РЕГИСТРОНЕЗАВИСИМЫМ
+            return Name.ToUpperInvariant().CompareTo(other.Name.ToUpperInvariant());
         }
 
         public override string ToString()

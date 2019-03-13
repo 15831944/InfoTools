@@ -57,6 +57,7 @@ namespace NavisWorksInfoTools.S1NF0_SOFTWARE.XML.Cl
             }
 
             //СВОЙСТВА МОГУТ ИМЕТЬ ОДИНАКОВЫЕ ИМЕНА. В МЯКИШЕ ВСЕ ИМЕНА ДОЛЖНЫ БЫТЬ РАЗНЫМИ. УДАЛИТЬ ДУБЛИКАТЫ
+            //ПРИ ЭТОМ СРАВНЕНИЕ СТРОК ДОЛЖНО БЫТЬ РЕГИСТРОНЕЗАВИСИМЫМ
             editedProps = (new SortedSet<Property>(editedProps)).ToList();
 
             return editedProps;
