@@ -123,7 +123,7 @@ namespace NavisWorksInfoTools.S1NF0_SOFTWARE
                         searchForAllIDs.Selection.CopyFrom(currSelectionColl);
                         searchForAllIDs.Locations = SearchLocations.DescendantsAndSelf;
 
-                        StructureDataStorage.ConfigureSearchForAllNotHiddenGeometryItemsWithIds(searchForAllIDs);
+                        StructureDataStorage.ConfigureSearchForAllGeometryItemsWithIds(searchForAllIDs);
                         ModelItemCollection selectedGeometry = searchForAllIDs.FindAll(doc, false);
                         int nSel = selectedGeometry.Count;
                         if (nSel > n)

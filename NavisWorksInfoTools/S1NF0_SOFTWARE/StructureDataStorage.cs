@@ -32,7 +32,7 @@ namespace NavisWorksInfoTools.S1NF0_SOFTWARE
         string clPath = null;
         ComApi.InwOpState3 oState = null;
         public Structure Structure { get; set; } = null;
-        private Classifier classifier = null;
+        public Classifier Classifier { get; set; } = null;
         private List<string> propCategories = new List<string>() { "LcOaPropOverrideCat" };
 
         /// <summary>
@@ -94,7 +94,7 @@ namespace NavisWorksInfoTools.S1NF0_SOFTWARE
             this.clPath = clPath;
             this.oState = ComApiBridge.ComApiBridge.State;
             this.Structure = structure;
-            this.classifier = classifier;
+            this.Classifier = classifier;
 
             if (propCategories != null)
             {
@@ -206,7 +206,7 @@ namespace NavisWorksInfoTools.S1NF0_SOFTWARE
         /// НЕЛЬЗЯ НАСТРОИТЬ ПОИСК ТОЛЬКО НЕСКРЫТЫХ ОБЪЕКТОВ
         /// </summary>
         /// <param name="searchForAllIDs"></param>
-        public static void ConfigureSearchForAllNotHiddenGeometryItemsWithIds(Search searchForAllIDs, bool idNecessary = true)
+        public static void ConfigureSearchForAllGeometryItemsWithIds(Search searchForAllIDs, bool idNecessary = true)
         {
             if (idNecessary)
             {
@@ -510,7 +510,7 @@ namespace NavisWorksInfoTools.S1NF0_SOFTWARE
             Class @class = new Class()
             { Name = name, NameInPlural = nameInPlural, DetailLevel = DefDetailLevels[defLevelNum], Code = code };
             ClassLookUpByCode.Add(code, @class);
-            classifier.NestedClasses.Add(@class);
+            Classifier.NestedClasses.Add(@class);
 
             if (propKey != null && clProps != null)
             {
@@ -552,13 +552,13 @@ namespace NavisWorksInfoTools.S1NF0_SOFTWARE
             foreach (PropertyCategory c in categories)
             {
                 if (
-                    //(c.Name.Equals("LcOaPropOverrideCat")
-                    //&& c.DisplayName != S1NF0_DATA_TAB_DISPLAY_NAME)
-                    //|| c.Name.Equals("LcRevitData_Parameter")//так же брать вкладки свойств из Revit и Civil
-                    //|| c.Name.Equals("LcRevitData_Type")
-                    //|| c.Name.Equals("LcRevitData_Element")
-                    //|| c.Name.Equals("LcRevitMaterialProperties")
-                    //|| c.Name.Equals("AecDbPropertySet")
+                        //(c.Name.Equals("LcOaPropOverrideCat")
+                        //&& c.DisplayName != S1NF0_DATA_TAB_DISPLAY_NAME)
+                        //|| c.Name.Equals("LcRevitData_Parameter")//так же брать вкладки свойств из Revit и Civil
+                        //|| c.Name.Equals("LcRevitData_Type")
+                        //|| c.Name.Equals("LcRevitData_Element")
+                        //|| c.Name.Equals("LcRevitMaterialProperties")
+                        //|| c.Name.Equals("AecDbPropertySet")
 
                         propCategories.Contains(c.Name)
                         && !(c.Name.Equals("LcOaPropOverrideCat") && c.DisplayName == S1NF0_DATA_TAB_DISPLAY_NAME)
@@ -621,7 +621,7 @@ namespace NavisWorksInfoTools.S1NF0_SOFTWARE
 
             if (!contains /*&& strId != null*/)//Добавлять только если объект еще не был добавлен и имеет id
             {
-                
+
 
 
                 XML.St.Object @object = new XML.St.Object()
@@ -635,8 +635,18 @@ namespace NavisWorksInfoTools.S1NF0_SOFTWARE
                 SetObjectProps(@object, item.PropertyCategories, 1, 1);
 
                 //Добавление в соответствующие списки родителя
-                parent.NestedObjects.Add(@object);
-                parent.NestedGeometryObjectsCurrDoc.Add(@object);
+                if (parent != null)
+                {
+                    parent.NestedObjects.Add(@object);
+                    parent.NestedGeometryObjectsCurrDoc.Add(@object);
+                }
+                else
+                {
+                    Structure.NestedObjects.Add(@object);
+                }
+
+
+
                 //Добавление в словарь поиска по id
                 AddedGeometryItemsLookUp.Add(strId, @object);
             }
@@ -802,7 +812,7 @@ namespace NavisWorksInfoTools.S1NF0_SOFTWARE
             xmlSerializer = new XmlSerializer(typeof(Classifier));
             using (StreamWriter sw = new StreamWriter(clPath /*clSavePath*/))
             {
-                xmlSerializer.Serialize(sw, classifier);
+                xmlSerializer.Serialize(sw, Classifier);
             }
         }
 

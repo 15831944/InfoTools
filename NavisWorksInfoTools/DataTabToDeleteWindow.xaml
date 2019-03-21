@@ -1,0 +1,14 @@
+﻿<Window x:Class="NavisWorksInfoTools.DataTabToDeleteWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:local="clr-namespace:NavisWorksInfoTools"
+        mc:Ignorable="d"
+        Title="DataTabToDeleteWindow" Height="157.792" Width="645.13">
+    <Grid>
+        <TextBox Margin="10,10,10,47" TextWrapping="Wrap" Text="Имя вкладки" Name="dataTabNameTxt"/>
+        <Button Content="OK" Margin="0,0,12,9" HorizontalAlignment="Right" Width="75" Height="20" VerticalAlignment="Bottom" Click="Button_Click"/>
+
+    </Grid>
+</Window>

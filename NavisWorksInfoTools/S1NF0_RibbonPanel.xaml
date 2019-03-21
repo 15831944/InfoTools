@@ -37,6 +37,19 @@
                             Text="TransformItems"
                             Orientation="Vertical"/>
 
+
+                <local:NWRibbonButton x:Uid="DeleteDataTabByName_Button" Id="ID_DeleteDataTabByName_Button"
+                            Size="Large"
+                            ShowText="True"
+                            Text="DeleteDataTabByName"
+                            Orientation="Vertical"/>
+
+                <local:NWRibbonButton x:Uid="CreateStructurePart_Button" Id="ID_CreateStructurePart_Button"
+                            Size="Large"
+                            ShowText="True"
+                            Text="CreateStructurePart"
+                            Orientation="Vertical"/>
+
             </RibbonPanelSource>
         </RibbonPanel>
 

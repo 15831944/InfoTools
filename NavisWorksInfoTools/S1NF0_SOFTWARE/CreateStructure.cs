@@ -12,6 +12,7 @@ using NavisWorksInfoTools.S1NF0_SOFTWARE.XML.Cl;
 using System.IO;
 using static NavisWorksInfoTools.Constants;
 using static Common.ExceptionHandling.ExeptionHandlingProcedures;
+using System.Xml.Serialization;
 
 namespace NavisWorksInfoTools.S1NF0_SOFTWARE
 {
@@ -44,23 +45,23 @@ namespace NavisWorksInfoTools.S1NF0_SOFTWARE
                     return 0;
                 }
 
+                string initialPath = Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments);
+                string initialFileName = "Проект";
+                string docFileName = doc.FileName;
+                if (!String.IsNullOrEmpty(docFileName))
+                {
+                    initialPath = Path.GetDirectoryName(docFileName);
+                    initialFileName = Path.GetFileNameWithoutExtension(docFileName);
+                }
+
                 //Вывести окно для выбора корневой папки для формирования структуры
-                SelectRootFolderWindow selectRootFolderWindow = new SelectRootFolderWindow(folders, true);
+                SelectRootFolderWindow selectRootFolderWindow = new SelectRootFolderWindow(folders, true, initialPath);
                 bool? result = selectRootFolderWindow.ShowDialog();
                 if (result != null && result.Value)
                 {
                     FolderItem rootFolder = selectRootFolderWindow.RootFolder;
 
                     //Запросить имя и путь создаваемого файла структуры
-                    string initialPath = Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments);
-                    string initialFileName = "Проект";
-                    string docFileName = doc.FileName;
-                    if (!String.IsNullOrEmpty(docFileName))
-                    {
-                        initialPath = Path.GetDirectoryName(docFileName);
-                        initialFileName = Path.GetFileNameWithoutExtension(docFileName);
-                    }
-
                     WinForms.SaveFileDialog saveFileDialog = new WinForms.SaveFileDialog();
                     saveFileDialog.InitialDirectory = initialPath;
                     saveFileDialog.Filter = "st.xml files (*.st.xml)|*.st.xml";
@@ -77,13 +78,36 @@ namespace NavisWorksInfoTools.S1NF0_SOFTWARE
                         string clFilename = Path.Combine(Path.GetDirectoryName(stFilename),
                             name.Substring(0, name.Length - 6) + "cl.xml");
 
-                        //Создать пустую структуру и пустой классификатор
-                        Classifier classifier = new Classifier()
+
+                        Classifier classifier = null;
+                        if (selectRootFolderWindow.ViewModel.ClassifierSamplePathVM.FileNameIsValid)
                         {
-                            Name = rootFolder.DisplayName,
-                            IsPrimary = true,
-                            DetailLevels = new List<string>() { "Folder", "Geometry" }
-                        };
+                            //Если был указан образец структуры, то десериализовать его 
+                            //и использовать как основу для для создаваемого классификатора
+                            using (StreamReader sr = new StreamReader(
+                                selectRootFolderWindow.ViewModel.ClassifierSamplePathVM.FileName))
+                            {
+                                string serializedData = Common.Utils.RemoveInvalidXmlSubstrs(sr.ReadToEnd());
+
+                                XmlSerializer xmlSerializer = new XmlSerializer(typeof(Classifier));
+                                StringReader stringReader = new StringReader(serializedData);
+                                classifier = (Classifier)xmlSerializer.Deserialize(stringReader);
+                            }
+                        }
+                        else
+                        {
+                            //пустой классификатор
+                            classifier = new Classifier()
+                            {
+                                Name = rootFolder.DisplayName,
+                                IsPrimary = true,
+                                DetailLevels = new List<string>() { "Folder", "Geometry" }
+                            };
+                        }
+
+
+
+                        //Создать пустую структуру
                         Structure structure = new Structure()
                         {
                             Name = rootFolder.DisplayName,
@@ -140,7 +164,7 @@ namespace NavisWorksInfoTools.S1NF0_SOFTWARE
                 Search searchForAllIDs = new Search();
                 searchForAllIDs.Selection.CopyFrom(itemsInSelection);
                 searchForAllIDs.Locations = SearchLocations.DescendantsAndSelf;
-                StructureDataStorage.ConfigureSearchForAllNotHiddenGeometryItemsWithIds(searchForAllIDs, false);
+                StructureDataStorage.ConfigureSearchForAllGeometryItemsWithIds(searchForAllIDs, false);
                 ModelItemCollection selectedGeometry = searchForAllIDs.FindAll(doc, false);
                 foreach (ModelItem modelItem in selectedGeometry)
                 {

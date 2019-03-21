@@ -5,9 +5,11 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:local="clr-namespace:NavisWorksInfoTools.S1NF0_SOFTWARE"
         xmlns:categories="clr-namespace:NavisWorksInfoTools.S1NF0_SOFTWARE.PropCategoriesControl"
+        xmlns:fileNameInput="clr-namespace:Common.Controls.FileNameInputControl;assembly=Common"
         xmlns:PropCategoriesControl="clr-namespace:NavisWorksInfoTools.S1NF0_SOFTWARE.PropCategoriesControl;assembly=NavisWorksInfoTools" x:Class="NavisWorksInfoTools.S1NF0_SOFTWARE.SelectRootFolderWindow"
+    
         mc:Ignorable="d"
-        Title="Выберите корневую папку структуры модели" Height="250" Width="400" Loaded="Window_Loaded" WindowStartupLocation="CenterScreen">
+        Title="Выберите корневую папку структуры модели" Height="300" Width="604" Loaded="Window_Loaded" WindowStartupLocation="CenterScreen">
     <Grid Name="mainGrid">
         <DataGrid x:Name="foldersDataGrid" Margin="10,10,10,0"
                   AutoGenerateColumns="False"
@@ -19,9 +21,5 @@
             </DataGrid.Columns>
         </DataGrid>
         <Button x:Name="okButton" Content="OK" Margin="0,0,10,10" Height="20" VerticalAlignment="Bottom" HorizontalAlignment="Right" Width="75" Click="Button_Click" IsEnabled="False"/>
-
-        <!-- WPF ОПЯТЬ ЕБЕТ МОЗГ. ПРИШЛОСЬ ДОБАВЛЯТЬ КОНТРОЛ В КОДБЕХАЙНДЕ -->
-        <!--<PropCategoriesControl:PropCategoriesView x:Name="propCategoriesView" Margin="0,174,0,35"/> -->
-
     </Grid>
 </Window>

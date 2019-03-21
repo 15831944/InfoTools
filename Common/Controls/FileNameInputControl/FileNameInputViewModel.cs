@@ -13,6 +13,10 @@ namespace Common.Controls.FileNameInputControl
 {
     public class FileNameInputViewModel : INotifyPropertyChanged
     {
+        private SolidColorBrush _invalidFilenameTextColor = new SolidColorBrush(Colors.DarkSlateGray);
+
+        private bool _validationForFileOrDirectory = true;
+
         public event EventHandler FileNameChanged;
 
         private string fileName = null;
@@ -21,6 +25,12 @@ namespace Common.Controls.FileNameInputControl
             get { return fileName; }
             set
             {
+                if (String.IsNullOrEmpty(value))
+                {
+                    fileName = "";
+                    return;
+                }
+
                 //не позволяет вводить недопустимые для имени файла символы
                 if (value.IndexOfAny(Path.GetInvalidPathChars()) >= 0)
                 {
@@ -28,7 +38,7 @@ namespace Common.Controls.FileNameInputControl
                 }
 
                 //проверяет есть ли такой файл
-                FileNameIsValid = File.Exists(value) || Directory.Exists(value);
+
 
                 fileName = value;
                 OnPropertyChanged("FileName");
@@ -42,17 +52,24 @@ namespace Common.Controls.FileNameInputControl
         }
 
 
-
-
-        public bool FileNameIsValid { get; private set; } = false;
+        public bool FileNameIsValid
+        {
+            get
+            {
+                if (_validationForFileOrDirectory)
+                    return File.Exists(FileName) || Directory.Exists(FileName);
+                else
+                    return File.Exists(FileName);
+            }
+        }
 
         public SolidColorBrush TextColor
         {
             get
             {
-                return FileNameIsValid ? 
-                    new SolidColorBrush(Colors.Black) 
-                    : new SolidColorBrush(Colors.DarkSlateGray);
+                return FileNameIsValid ?
+                    new SolidColorBrush(Colors.Black)
+                    : _invalidFilenameTextColor;
             }
         }
 
@@ -66,8 +83,16 @@ namespace Common.Controls.FileNameInputControl
         public RelayCommand BrowseCommand
         { get { return browseCommand; } }
 
-        public FileNameInputViewModel(string openFileDialogFilter, string openFileDialogTitle)
+        public FileNameInputViewModel(string openFileDialogFilter, string openFileDialogTitle,
+            SolidColorBrush invalidFilenameTextColor = null, bool validationForFileOrDirectory = true)
         {
+            if (invalidFilenameTextColor != null)
+            {
+                this._invalidFilenameTextColor = invalidFilenameTextColor;
+            }
+
+            _validationForFileOrDirectory = validationForFileOrDirectory;
+
             browseCommand = new RelayCommand(new Action<object>(Browse));
 
             this.OpenFileDialogFilter = openFileDialogFilter;
@@ -79,7 +104,7 @@ namespace Common.Controls.FileNameInputControl
         private void Browse(object obj)
         {
             string initialPath = Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments);
-            if (!String.IsNullOrEmpty(FileName) && FileNameIsValid)
+            if (!String.IsNullOrEmpty(FileName) && (File.Exists(FileName) || Directory.Exists(FileName)))
             {
                 string dir = null;
                 FileAttributes attr = File.GetAttributes(FileName);

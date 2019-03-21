@@ -143,10 +143,15 @@
     <Compile Include="ChangeLinksProps.xaml.cs">
       <DependentUpon>ChangeLinksProps.xaml</DependentUpon>
     </Compile>
+    <Compile Include="DataTabToDeleteWindow.xaml.cs">
+      <DependentUpon>DataTabToDeleteWindow.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="DeleteDataTabByName.cs" />
     <Compile Include="S1NF0_RibbonPanel.cs" />
     <Compile Include="Constants.cs" />
     <Compile Include="Draft\EventController.cs" />
     <Compile Include="S1NF0_SOFTWARE\CreateStructure.cs" />
+    <Compile Include="S1NF0_SOFTWARE\CreateStructurePart.cs" />
     <Compile Include="S1NF0_SOFTWARE\FBXExport3.cs" />
     <Compile Include="FBX\ASCIIModelNamesEditor.cs" />
     <Compile Include="FBX\BinaryModelNamesEditor.cs" />
@@ -158,6 +163,7 @@
       <DependentUpon>PropCategoriesView.xaml</DependentUpon>
     </Compile>
     <Compile Include="S1NF0_SOFTWARE\PropCategoriesControl\PropCategoriesViewModel.cs" />
+    <Compile Include="S1NF0_SOFTWARE\SelectRootFolderViewModel.cs" />
     <Compile Include="S1NF0_SOFTWARE\SelectRootFolderWindow.xaml.cs">
       <DependentUpon>SelectRootFolderWindow.xaml</DependentUpon>
     </Compile>
@@ -191,6 +197,10 @@
   </ItemGroup>
   <ItemGroup>
     <Page Include="ChangeLinksProps.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="DataTabToDeleteWindow.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>

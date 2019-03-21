@@ -1,4 +1,5 @@
 ﻿using Autodesk.Navisworks.Api.Plugins;
+using NavisWorksInfoTools.S1NF0_SOFTWARE;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -30,8 +31,14 @@ namespace NavisWorksInfoTools
     [Command("ID_FBXExportBySelSets_Button", DisplayName = "FBX по наборам выбора", LargeIcon = "FBXExportBySelSets.png",
         ToolTip = "Выполнить выгрузку в FBX по сохраненным наборам выбора")]
 
-    [Command("ID_TransformItems_Button", DisplayName = "FBX по наборам выбора", /*LargeIcon = "FBXExportBySelSets.png",*/
+    [Command("ID_TransformItems_Button", DisplayName = "TransformItems", /*LargeIcon = "FBXExportBySelSets.png",*/
         ToolTip = "TransformItems")]
+
+    [Command("ID_DeleteDataTabByName_Button", DisplayName = "DeleteDataTabByName", /*LargeIcon = "FBXExportBySelSets.png",*/
+        ToolTip = "DeleteDataTabByName")]
+
+    [Command("ID_CreateStructurePart_Button", DisplayName = "CreateStructurePart", /*LargeIcon = "FBXExportBySelSets.png",*/
+        ToolTip = "CreateStructurePart")]
     public class S1NF0_RibbonPanel : CommandHandlerPlugin
     {
         public override int ExecuteCommand(string name, params string[] parameters)
@@ -64,6 +71,12 @@ namespace NavisWorksInfoTools
                     break;
                 case "ID_TransformItems_Button":
                     TransformItemsOneByOne.Execute();
+                    break;
+                case "ID_DeleteDataTabByName_Button":
+                    DeleteDataTabByName.Execute();
+                    break;
+                case "ID_CreateStructurePart_Button":
+                    CreateStructurePart.Execute();
                     break;
             }
 
