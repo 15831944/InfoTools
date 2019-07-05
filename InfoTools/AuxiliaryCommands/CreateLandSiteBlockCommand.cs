@@ -91,10 +91,10 @@ namespace Civil3DInfoTools.AuxiliaryCommands
 
 
                 //Выбор полилиний
-                
+
                 PromptSelectionOptions pso = new PromptSelectionOptions();
                 pso.MessageForAdding = selectOnlyPolylines ? "\nВыберите полилинии границ участка" : "\nВыберите объекты";
-                
+
                 SelectionFilter flt = null;
                 if (selectOnlyPolylines)
                 {
@@ -103,7 +103,7 @@ namespace Civil3DInfoTools.AuxiliaryCommands
                     new TypedValue(0, "LWPOLYLINE")
                     };
                     flt = new SelectionFilter(tv);
-                    
+
                 }
                 else
                 {
@@ -140,85 +140,96 @@ namespace Civil3DInfoTools.AuxiliaryCommands
                     peo1.SetRejectMessage("\nМожно выбрать только поверхность TIN");
                     peo1.AddAllowedClass(typeof(DBText), true);
                     PromptEntityResult per1 = ed.GetEntity(peo1);
-                    if (per1.Status == PromptStatus.OK)
+
+                    //Снять подсветку
+                    Utils.Highlight(selectedPolylines, false);
+
+                    string blockName = null;
+
+                    using (Transaction tr = db.TransactionManager.StartTransaction())
                     {
-                        //Снять подсветку
-                        Utils.Highlight(selectedPolylines, false);
-
-                        string blockName = null;
-
-                        using (Transaction tr = db.TransactionManager.StartTransaction())
+                        string initialName = null;
+                        DBText dBText = null;
+                        if (per1.Status == PromptStatus.OK)
                         {
-                            DBText dBText = tr.GetObject(per1.ObjectId, OpenMode.ForRead) as DBText;
-                            string initialName = dBText.TextString;
-                            //Создать новый блок
-                            blockName = Utils.GetSafeSymbolName(initialName);
+                            dBText = tr.GetObject(per1.ObjectId, OpenMode.ForRead) as DBText;
+                            initialName = dBText.TextString;
+                        }
+                        else
+                        {
+                            initialName = Guid.NewGuid().ToString();
+                        }
 
-                            BlockTable bt = tr.GetObject(db.BlockTableId, OpenMode.ForWrite) as BlockTable;
+                        //Создать новый блок
+                        blockName = Utils.GetSafeSymbolName(initialName);
 
-                            if (bt.Has(blockName))
+                        BlockTable bt = tr.GetObject(db.BlockTableId, OpenMode.ForWrite) as BlockTable;
+
+                        if (bt.Has(blockName))
+                        {
+                            //Если блок с таким именем уже есть, то найти такое имя, которого еще нет
+                            int i = 0;
+                            string nameToCheck = null;
+                            do
                             {
-                                //Если блок с таким именем уже есть, то найти такое имя, которого еще нет
-                                int i = 0;
-                                string nameToCheck = null;
-                                do
-                                {
-                                    nameToCheck = blockName + "_" + i;
-                                    i++;
-                                }
-                                while (bt.Has(nameToCheck));
-                                blockName = nameToCheck;
+                                nameToCheck = blockName + "_" + i;
+                                i++;
                             }
+                            while (bt.Has(nameToCheck));
+                            blockName = nameToCheck;
+                        }
 
-                            //Создать таблицу map3d для записи правильного названия блока (если еще нет) --- ОТМЕНЕНО, ТАК КАК НЕ ВИДНО В NAVIS
-                            //MapApplication mapApp = HostMapApplicationServices.Application;
-                            //ProjectModel projModel = mapApp.ActiveProject;
-                            //Tables odTables = projModel.ODTables;
-                            //Autodesk.Gis.Map.ObjectData.Table odTable = null;
-                            ////FieldDefinitions fDefs = null;
-                            //if (!odTables.IsTableDefined("ReferenceNumber"))
-                            //{
-                            //    FieldDefinitions fDefs = mapApp.ActiveProject.MapUtility.NewODFieldDefinitions();
-                            //    FieldDefinition def = fDefs.Add("ReferenceNumber", "Условный номер участка",
-                            //    Autodesk.Gis.Map.Constants.DataType.Character, 0);
+                        #region
+                        //Создать таблицу map3d для записи правильного названия блока (если еще нет) --- ОТМЕНЕНО, ТАК КАК НЕ ВИДНО В NAVIS
+                        //MapApplication mapApp = HostMapApplicationServices.Application;
+                        //ProjectModel projModel = mapApp.ActiveProject;
+                        //Tables odTables = projModel.ODTables;
+                        //Autodesk.Gis.Map.ObjectData.Table odTable = null;
+                        ////FieldDefinitions fDefs = null;
+                        //if (!odTables.IsTableDefined("ReferenceNumber"))
+                        //{
+                        //    FieldDefinitions fDefs = mapApp.ActiveProject.MapUtility.NewODFieldDefinitions();
+                        //    FieldDefinition def = fDefs.Add("ReferenceNumber", "Условный номер участка",
+                        //    Autodesk.Gis.Map.Constants.DataType.Character, 0);
 
-                            //    odTables.Add("ReferenceNumber", fDefs, "", true);
-                            //}
-                            //odTable = odTables["ReferenceNumber"];
+                        //    odTables.Add("ReferenceNumber", fDefs, "", true);
+                        //}
+                        //odTable = odTables["ReferenceNumber"];
+                        #endregion
+
+                        //Создание нового блока
+                        BlockTableRecord btr = new BlockTableRecord();
+                        btr.Name = blockName.Trim();
+                        ObjectId btrId = bt.Add(btr);
+                        tr.AddNewlyCreatedDBObject(btr, true);
+
+                        ObjectId layerId = ObjectId.Null;
+                        ObjectIdCollection objectIdCollection = new ObjectIdCollection();
+                        //Копирование всех полилиний в созданный блок
+                        foreach (ObjectId id in acSSet.GetObjectIds())
+                        {
+                            Entity polyline = (Entity)tr.GetObject(id, OpenMode.ForRead);
+                            if (layerId == ObjectId.Null)
+                                layerId = polyline.LayerId;//Запомнить слой.
+
+                            Entity polylineCopy = (Entity)polyline.Clone();
+                            if (polylineCopy is Polyline)
+                                (polylineCopy as Polyline).Elevation = 0.0;
+
+                            //Поменять цвет
+                            if (setColor)
+                                polylineCopy.ColorIndex = colorIndex;
+                            else
+                                polylineCopy.ColorIndex = 256;//По слою
+
+                            objectIdCollection.Add(btr.AppendEntity(polylineCopy));
+                            tr.AddNewlyCreatedDBObject(polylineCopy, true);
+                        }
 
 
-                            //Создание нового блока
-                            BlockTableRecord btr = new BlockTableRecord();
-                            btr.Name = blockName.Trim();
-                            ObjectId btrId = bt.Add(btr);
-                            tr.AddNewlyCreatedDBObject(btr, true);
-
-                            ObjectId layerId = ObjectId.Null;
-                            ObjectIdCollection objectIdCollection = new ObjectIdCollection();
-                            //Копирование всех полилиний в созданный блок
-                            foreach (ObjectId id in acSSet.GetObjectIds())
-                            {
-                                Entity polyline = (Entity)tr.GetObject(id, OpenMode.ForRead);
-                                if (layerId == ObjectId.Null)
-                                    layerId = polyline.LayerId;//Запомнить слой.
-
-                                Entity polylineCopy = (Entity)polyline.Clone();
-                                if (polylineCopy is Polyline)
-                                    (polylineCopy as Polyline).Elevation = 0.0;
-
-                                //Поменять цвет
-                                if (setColor)
-                                    polylineCopy.ColorIndex = colorIndex;
-                                else
-                                    polylineCopy.ColorIndex = 256;//По слою
-
-                                objectIdCollection.Add(btr.AppendEntity(polylineCopy));
-                                tr.AddNewlyCreatedDBObject(polylineCopy, true);
-                            }
-
-
-                            //Создать атрибут внутри блока
-                            //using (Transaction trAttr = db.TransactionManager.StartTransaction())
+                        //Создать атрибут внутри блока
+                        //using (Transaction trAttr = db.TransactionManager.StartTransaction())
+                        if (dBText != null)
                             using (AttributeDefinition acAttDef = new AttributeDefinition())
                             {
                                 acAttDef.Position = dBText.Position != Point3d.Origin ? dBText.Position : dBText.AlignmentPoint;
@@ -241,82 +252,84 @@ namespace Civil3DInfoTools.AuxiliaryCommands
                                 //trAttr.Commit();
                             }
 
-                            //Создать штриховку http://adndevblog.typepad.com/autocad/2012/07/hatch-using-the-autocad-net-api.html
-                            if (selectOnlyPolylines)
+                        //Создать штриховку http://adndevblog.typepad.com/autocad/2012/07/hatch-using-the-autocad-net-api.html
+                        if (selectOnlyPolylines)
+                        {
+                            using (Hatch oHatch = new Hatch())
                             {
-                                using (Hatch oHatch = new Hatch())
+
+                                try
                                 {
+                                    Vector3d normal = new Vector3d(0.0, 0.0, 1.0);
+                                    oHatch.Normal = normal;
+                                    oHatch.Elevation = 0.0;
+                                    oHatch.PatternScale = objectIdCollection.Count == 1 ? 2.0 : 10.0;
+                                    oHatch.SetHatchPattern(HatchPatternType.PreDefined, "ANSI37");
+                                    if (setColor)
+                                        oHatch.ColorIndex = colorIndex;
+                                    else
+                                        oHatch.ColorIndex = 256;//По слою
+                                    oHatch.LayerId = layerId;
 
-                                    try
+                                    btr.AppendEntity(oHatch);
+                                    tr.AddNewlyCreatedDBObject(oHatch, true);
+
+                                    oHatch.Associative = true;
+                                    foreach (ObjectId id in objectIdCollection)
                                     {
-                                        Vector3d normal = new Vector3d(0.0, 0.0, 1.0);
-                                        oHatch.Normal = normal;
-                                        oHatch.Elevation = 0.0;
-                                        oHatch.PatternScale = objectIdCollection.Count == 1 ? 2.0 : 10.0;
-                                        oHatch.SetHatchPattern(HatchPatternType.PreDefined, "ANSI37");
-                                        if (setColor)
-                                            oHatch.ColorIndex = colorIndex;
-                                        else
-                                            oHatch.ColorIndex = 256;//По слою
-                                        oHatch.LayerId = layerId;
-
-                                        btr.AppendEntity(oHatch);
-                                        tr.AddNewlyCreatedDBObject(oHatch, true);
-
-                                        oHatch.Associative = true;
-                                        foreach (ObjectId id in objectIdCollection)
-                                        {
-                                            oHatch.AppendLoop((int)HatchLoopTypes.Default, new ObjectIdCollection() { id });
-                                        }
-
-                                        oHatch.EvaluateHatch(true);
+                                        oHatch.AppendLoop((int)HatchLoopTypes.Default, new ObjectIdCollection() { id });
                                     }
-                                    catch (System.Exception)
-                                    {
-                                        try { oHatch.Erase(true); } catch { }
-                                    }
+
+                                    oHatch.EvaluateHatch(true);
+                                }
+                                catch (System.Exception)
+                                {
+                                    try { oHatch.Erase(true); } catch { }
                                 }
                             }
-
-
-
-                            //Создание вхождения этого блока
-                            BlockTableRecord ms = (BlockTableRecord)tr.GetObject(bt[BlockTableRecord.ModelSpace], OpenMode.ForWrite);
-                            BlockReference br = new BlockReference(Point3d.Origin, btrId);
-                            br.LayerId = layerId;
-                            ObjectId brId = ms.AppendEntity(br);
-                            tr.AddNewlyCreatedDBObject(br, true);
-
-
-                            //Заполнить значение атрибута
-                            AttributeCollection ac = br.AttributeCollection;
-                            //AttributeReference ar = (AttributeReference)tr.GetObject(ac[0], OpenMode.ForWrite);
-                            //ar.TextString = initialName;
-
-                            //Привязать к вхождению блока запись таблицы map3d --- ОТМЕНЕНО, ТАК КАК НЕ ВИДНО В NAVIS
-                            //Records odrecords = odTable.GetObjectTableRecords(Convert.ToUInt32(0), brId,
-                            //                                        Autodesk.Gis.Map.Constants.OpenMode.OpenForRead, false);
-                            //Record odRecord = Autodesk.Gis.Map.ObjectData.Record.Create();
-                            //odTable.InitRecord(odRecord);
-
-                            //Autodesk.Gis.Map.Utilities.MapValue mapVal = odRecord[0];
-                            //mapVal.Assign(name);
-                            //odTable.AddRecord(odRecord, br);
-
-
-                            tr.Commit();
-                        }
-
-                        if (!String.IsNullOrEmpty(blockName))
-                        {
-                            adoc.SendStringToExecute("_ATTSYNC _N " + blockName + "\n", false, false, false);
                         }
 
 
 
-                        adoc.SendStringToExecute("S1NF0_CreateLandSiteBlock\n", false, false, false);
+                        //Создание вхождения этого блока
+                        BlockTableRecord ms = (BlockTableRecord)tr.GetObject(bt[BlockTableRecord.ModelSpace], OpenMode.ForWrite);
+                        BlockReference br = new BlockReference(Point3d.Origin, btrId);
+                        br.LayerId = layerId;
+                        ObjectId brId = ms.AppendEntity(br);
+                        tr.AddNewlyCreatedDBObject(br, true);
 
+
+                        //Заполнить значение атрибута
+                        AttributeCollection ac = br.AttributeCollection;
+                        //AttributeReference ar = (AttributeReference)tr.GetObject(ac[0], OpenMode.ForWrite);
+                        //ar.TextString = initialName;
+
+                        //Привязать к вхождению блока запись таблицы map3d --- ОТМЕНЕНО, ТАК КАК НЕ ВИДНО В NAVIS
+                        //Records odrecords = odTable.GetObjectTableRecords(Convert.ToUInt32(0), brId,
+                        //                                        Autodesk.Gis.Map.Constants.OpenMode.OpenForRead, false);
+                        //Record odRecord = Autodesk.Gis.Map.ObjectData.Record.Create();
+                        //odTable.InitRecord(odRecord);
+
+                        //Autodesk.Gis.Map.Utilities.MapValue mapVal = odRecord[0];
+                        //mapVal.Assign(name);
+                        //odTable.AddRecord(odRecord, br);
+
+
+                        tr.Commit();
                     }
+
+                    if (!String.IsNullOrEmpty(blockName)&& per1.Status == PromptStatus.OK)
+                    {
+                        adoc.SendStringToExecute("_ATTSYNC _N " + blockName + "\n", false, false, false);
+                    }
+
+
+
+                    adoc.SendStringToExecute("S1NF0_CreateLandSiteBlock\n", false, false, false);
+
+
+
+
 
                 }
             }

@@ -16,9 +16,7 @@ namespace NavisWorksInfoTools.S1NF0_SOFTWARE.XML.St
 
         [XmlIgnore]
         private string _value;
-        /// <summary>
-        /// TODO: Navis может хранить четыре типа string, int, double и bool
-        /// </summary>
+
         [XmlAttribute]
         public string Value { get { return _value; } set { _value = value.Trim(); } }
 

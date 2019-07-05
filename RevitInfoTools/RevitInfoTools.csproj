@@ -100,6 +100,7 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="App.cs" />
+    <Compile Include="BusyIndicatorTestCommand.cs" />
     <Compile Include="Draft\ArbitraryReferencePlane.cs" />
     <Compile Include="Draw3DLine2Command.cs" />
     <Compile Include="Draw3DLineCommand.cs" />
@@ -116,7 +117,9 @@
     <None Include="Families\3d line.rfa" />
     <None Include="Families\Водосброс2Укл.rfa" />
     <None Include="Families\Водосброс3Укл.rfa" />
-    <None Include="RevitInfoTools.addin" />
+    <None Include="RevitInfoTools.addin">
+      <SubType>Designer</SubType>
+    </None>
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\Common\Common.csproj">

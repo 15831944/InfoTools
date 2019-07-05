@@ -14,6 +14,7 @@ using System.IO;
 using ComApi = Autodesk.Navisworks.Api.Interop.ComApi;
 using ComApiBridge = Autodesk.Navisworks.Api.ComApi;
 using static NavisWorksInfoTools.Constants;
+using Common.Controls.BusyIndicator;
 
 namespace NavisWorksInfoTools
 {
@@ -114,8 +115,21 @@ namespace NavisWorksInfoTools
                             }
                             string notEditedFileName = Path.Combine(notEditedDirectory,
                                 Path.GetFileName(fbxFullFileName));
+
+                            if (ManualUse)
+                            {
+                                BusyIndicatorHelper.ShowBusyIndicator();
+                                BusyIndicatorHelper.SetMessage("Стандартный экспорт FBX");
+                            }
+                                
+
                             if (FBXplugin.Execute(notEditedFileName) == 0)//Выполнить экспорт в FBX
                             {
+                                if (ManualUse)
+                                {
+                                    BusyIndicatorHelper.SetMessage("Редактирование FBX");
+                                }
+
                                 bool isASCII = IsASCIIFBXFile(notEditedFileName);
                                 if (isASCII || GetBinaryVersionNum(notEditedFileName) <= 7500)
                                 {
@@ -163,9 +177,15 @@ namespace NavisWorksInfoTools
                                     fbxEditor.FbxFileNameEdited = fbxFullFileName;
                                     fbxEditor.EditModelNames();
 
+                                    
+
                                     if (ManualUse)
+                                    {
+                                        BusyIndicatorHelper.CloseBusyIndicator();
                                         Win.MessageBox.Show("Файл FBX с отредактированными именами моделей - " + fbxEditor.FbxFileNameEdited,
                                         "Готово", Win.MessageBoxButton.OK, Win.MessageBoxImage.Information);
+                                    }
+                                        
                                 }
                                 else
                                 {
@@ -175,6 +195,13 @@ namespace NavisWorksInfoTools
                             else
                             {
                                 throw new Exception("При экспорте FBX из NavisWorks произошли ошибки");
+                            }
+
+
+                            if (ManualUse)
+                            {
+                                //на всякий случай
+                                BusyIndicatorHelper.CloseBusyIndicator();
                             }
                         }
 

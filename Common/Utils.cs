@@ -142,7 +142,7 @@ namespace Common
         /// <returns></returns>
         public static string RemoveInvalidXmlSubstrs(string xmlStr)
         {
-            string pattern = "&#((\\d+)|(x\\S+));";
+            string pattern = "&#[^&#]((\\d+)|(x\\S+))[^;];";
             Regex regex = new Regex(pattern, RegexOptions.IgnoreCase);
             if (regex.IsMatch(xmlStr))
             {

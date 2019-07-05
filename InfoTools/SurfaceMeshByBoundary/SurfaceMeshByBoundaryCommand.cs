@@ -485,23 +485,31 @@ namespace Civil3DInfoTools.SurfaceMeshByBoundary
 
         private static bool TinSurfIdIsValid()
         {
-            bool idIsValid = !tinSurfId.IsNull && !tinSurfId.IsErased && !tinSurfId.IsEffectivelyErased && tinSurfId.IsValid;
-            if (idIsValid)
+            try
             {
-                //Проверить что поверхность принадлежит текущему документу
-                bool inCurrentDoc = false;
-                using (Transaction tr = DB.TransactionManager.StartTransaction())
+                bool idIsValid = !tinSurfId.IsNull && !tinSurfId.IsErased && !tinSurfId.IsEffectivelyErased && tinSurfId.IsValid;
+                if (idIsValid)
                 {
-                    TinSurface tinSurf = tr.GetObject(tinSurfId, OpenMode.ForRead) as TinSurface;
-                    inCurrentDoc = tinSurf != null;
-                    tr.Commit();
+                    //Проверить что поверхность принадлежит текущему документу
+                    bool inCurrentDoc = false;
+                    using (Transaction tr = DB.TransactionManager.StartTransaction())
+                    {
+                        TinSurface tinSurf = tr.GetObject(tinSurfId, OpenMode.ForRead) as TinSurface;
+                        inCurrentDoc = tinSurf != null;
+                        tr.Commit();
+                    }
+                    return inCurrentDoc;
                 }
-                return inCurrentDoc;
+                else
+                {
+                    return false;
+                }
             }
-            else
+            catch
             {
                 return false;
             }
+            
 
         }
 

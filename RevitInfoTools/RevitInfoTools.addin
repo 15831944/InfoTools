@@ -51,6 +51,16 @@
   </AddIn>
 
 
+  <AddIn Type="Command">
+    <Text>BusyIndicatorTest</Text>
+    <Description>Test</Description>
+    <Assembly>RevitInfoTools\RevitInfoTools.dll</Assembly>
+    <FullClassName>RevitInfoTools.BusyIndicatorTestCommand</FullClassName>
+    <ClientId>62435bda-99a9-4666-858e-8272c02cdb18</ClientId>
+    <VendorId>S-Info</VendorId>
+    <VendorDescription>S-Info</VendorDescription>
+  </AddIn>
+
   <!--<AddIn Type="Command">
     <Text>PlaceGenericByCoord</Text>
     <Description>test</Description>
