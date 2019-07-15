@@ -84,12 +84,16 @@ namespace Civil3DInfoTools
             List<double> pattern = new List<double>();
             for (int i = 0; i < ltype.NumDashes; i++)
             {
-                //TODO: Учесть возможность вставки подряд двух пробелов или двух штрихов
-                //(если это вообще возможно сделать)
+                //Учтена возможность вставки подряд двух пробелов или двух штрихов
                 double dash = ltype.DashLengthAt(i);
                 if (dash != 0)
                 {
-                    pattern.Add(dash * ltScale);//домножить на масштаб типа линии
+                    double dashValue = dash * ltScale;
+                    if (i != 0 && Math.Sign(pattern[i - 1]) == Math.Sign(dashValue))
+                        pattern[i - 1] += dashValue;//такой же знак как и у предыдущего => объединить в один
+                    else
+                        pattern.Add(dashValue);//новый штрих
+
                 }
 
             }
