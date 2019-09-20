@@ -27,22 +27,20 @@ namespace Common.Controls.FileNameInputControl
             {
                 if (String.IsNullOrEmpty(value))
                 {
-                    fileName = "";
-                    return;
+                    value = "";
                 }
-
-                //не позволяет вводить недопустимые для имени файла символы
-                if (value.IndexOfAny(Path.GetInvalidPathChars()) >= 0)
+                else
                 {
-                    value = Common.Utils.GetSavePathName(value);
+                    //не позволяет вводить недопустимые для имени файла символы
+                    if (value.IndexOfAny(Path.GetInvalidPathChars()) >= 0)
+                    {
+                        value = Common.Utils.GetSavePathName(value);
+                    }
                 }
-
-                //проверяет есть ли такой файл
-
 
                 fileName = value;
-                OnPropertyChanged("FileName");
-                OnPropertyChanged("TextColor");
+                OnPropertyChanged(nameof(FileName));
+                OnPropertyChanged(nameof(TextColor));
 
                 if (FileNameChanged != null)
                 {

@@ -15,17 +15,17 @@ namespace Common.Controls.BusyIndicator
         private static BusyIndicatorView progWindow;
         private static EventWaitHandle _progressWindowWaitHandle;
 
-        public static void ShowBusyIndicator()
+        public static void ShowBusyIndicator(string message = "Something happening")
         {
             //Starts New Progress Window Thread
             using (_progressWindowWaitHandle = new AutoResetEvent(false))
             {
 
                 //Starts the progress window thread
-                Thread newprogWindowThread = new Thread(new ThreadStart(ShowProgWindow));
+                Thread newprogWindowThread = new Thread(new ParameterizedThreadStart(ShowProgWindow));
                 newprogWindowThread.SetApartmentState(ApartmentState.STA);//https://stackoverflow.com/a/4156000/8020304
                 newprogWindowThread.IsBackground = true;
-                newprogWindowThread.Start();
+                newprogWindowThread.Start(message);
 
                 //Wait for thread to notify that it has created the window
                 _progressWindowWaitHandle.WaitOne();
@@ -56,11 +56,11 @@ namespace Common.Controls.BusyIndicator
 
 
 
-        private static void ShowProgWindow()
+        private static void ShowProgWindow(object message)
         {
             //creates and shows the progress window
             progWindow = new BusyIndicatorView();
-            
+            progWindow.Message = (string)message;
             progWindow.Show();
 
             //Notifies command thread the window has been created

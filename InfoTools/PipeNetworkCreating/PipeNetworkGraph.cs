@@ -122,7 +122,7 @@ namespace Civil3DInfoTools.PipeNetworkCreating
                 HashSet<ObjectId> blocks = configsViewModel.Blocks;
 
                 //данные о колодцах
-                Dictionary<int, Dictionary<string, WellData>> wellsData = configsViewModel.ExcelReader.WellsData;
+                Dictionary<int, Dictionary<string, WellData>> wellsData = configsViewModel.ExcelReader?.WellsData;
 
                 //1. Записать квадраты сетки в RTree
                 //загрузка квадратов в RTree
@@ -552,9 +552,16 @@ namespace Civil3DInfoTools.PipeNetworkCreating
                             }
 
 
+
+
                             WellLabelingMarkerToDraw wellMarker
-                                = new WellLabelingMarkerToDraw(structBlock, wellLbl);
+                            = new WellLabelingMarkerToDraw(structBlock, wellLbl);
                             wellLabelingToDraw.Add(wellMarker);
+
+
+                            if (wellsData == null || wellsData.Count == 0)
+                                continue;
+
 
                             IReadOnlyList<GridSquare> squares = gridSquares.Search(nn.Envelope);
                             if (squares.Count > 0)

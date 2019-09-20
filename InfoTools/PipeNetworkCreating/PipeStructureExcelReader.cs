@@ -40,11 +40,16 @@ namespace Civil3DInfoTools.PipeNetworkCreating
             WellsData
         { get; private set; } = new Dictionary<int, Dictionary<string, WellData>>();
 
-        public List<FileInfo> WellDataFiles { get; private set; } = null;
+        public List<FileInfo> WellDataFiles { get; private set; } = new List<FileInfo>();
 
 
         public PipeStructureExcelReader(string path)
         {
+            if (String.IsNullOrEmpty(path))
+            {
+                return;
+            }
+
             //path может быть либо папкой либо файлом
             //Получить директорию, в которой лежат все файлы с данными о колодцах
             string dir = null;

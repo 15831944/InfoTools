@@ -106,7 +106,7 @@ namespace Civil3DInfoTools.Controls.SelectPartSizeUserControl
         /// <summary>
         /// binding
         /// </summary>
-        public ObservableCollection<PartSize> PartSizes { get { return SelectedPartFamily.PartSizes; } }
+        public ObservableCollection<PartSize> PartSizes { get { return SelectedPartFamily?.PartSizes; } }
 
         public event PropertyChangedEventHandler PropertyChanged;
         public void OnPropertyChanged([CallerMemberName]string prop = "")

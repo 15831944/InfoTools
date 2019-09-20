@@ -22,7 +22,7 @@ using Common;
 using Common.Controls.FileNameInputControl;
 using System.IO;
 using System.Windows.Media;
-
+using Common.Controls.BusyIndicator;
 
 namespace Civil3DInfoTools.PipeNetworkCreating.ConfigureNetworkCreationWindow2
 {
@@ -78,7 +78,7 @@ namespace Civil3DInfoTools.PipeNetworkCreating.ConfigureNetworkCreationWindow2
             {
                 configurationsAccepted = value;
                 EnableCreateNetworkBtn(this, new EventArgs());
-                OnPropertyChanged("AcceptBtnColor");
+                OnPropertyChanged(nameof(AcceptBtnColor));
             }
         }
 
@@ -106,7 +106,7 @@ namespace Civil3DInfoTools.PipeNetworkCreating.ConfigureNetworkCreationWindow2
             set
             {
                 gridLayerVM = value;
-                OnPropertyChanged("GridLayerVM");
+                OnPropertyChanged(nameof(GridLayerVM));
             }
         }
 
@@ -124,7 +124,7 @@ namespace Civil3DInfoTools.PipeNetworkCreating.ConfigureNetworkCreationWindow2
             set
             {
                 structuresLayerVM = value;
-                OnPropertyChanged("StructuresLayerVM");
+                OnPropertyChanged(nameof(StructuresLayerVM));
             }
         }
 
@@ -142,7 +142,7 @@ namespace Civil3DInfoTools.PipeNetworkCreating.ConfigureNetworkCreationWindow2
             set
             {
                 structureLabelsLayerVM = value;
-                OnPropertyChanged("StructureLabelsLayerVM");
+                OnPropertyChanged(nameof(StructureLabelsLayerVM));
             }
         }
 
@@ -163,9 +163,9 @@ namespace Civil3DInfoTools.PipeNetworkCreating.ConfigureNetworkCreationWindow2
             set
             {
                 selectedPartsListItem = value;
-                OnPropertyChanged("SelectedPartsListItem");
-                OnPropertyChanged("SelectedPartsList");
-                OnPropertyChanged("PartsListSelected");
+                OnPropertyChanged(nameof(SelectedPartsListItem));
+                OnPropertyChanged(nameof(SelectedPartsList));
+                OnPropertyChanged(nameof(PartsListSelected));
 
                 EnableCreateNetworkBtn(this, new EventArgs());
             }
@@ -203,64 +203,76 @@ namespace Civil3DInfoTools.PipeNetworkCreating.ConfigureNetworkCreationWindow2
         {
             get
             {
-                blocksCompleteInput = true;
-                HashSet<ObjectId> blocks = new HashSet<ObjectId>();
-                foreach (BlockStructureMappingPairModel bsModel in BlocksStructuresMappingColl)
-                {
-                    BlockTableRecord btr = bsModel.BlockVM.SelectedBlock;
-                    PartFamily pf = bsModel.StructureVM.SelectedPartFamily?.PartFamily;
-                    PartSize ps = bsModel.StructureVM.SelectedPartSize;
-
-                    if (btr != null)//проверка, что блок введен в строку
-                    {
-                        if (!blocks.Contains(btr.Id))//блоки могут повторяться!!!
-                            blocks.Add(btr.Id);
-                    }
-                    else
-                    {
-                        blocksCompleteInput = false;
-                        //ввод неполный, то считать ввод не выполнен вообще
-                        blocks.Clear();
-                        break;
-                    }
-                }
-                return blocks;
+                return GetSelectedBlocks();
             }
         }
 
+        private HashSet<ObjectId> GetSelectedBlocks()
+        {
+            blocksCompleteInput = true;
+            HashSet<ObjectId> blocks = new HashSet<ObjectId>();
+            foreach (BlockStructureMappingPairModel bsModel in BlocksStructuresMappingColl)
+            {
+                BlockTableRecord btr = bsModel.BlockVM.SelectedBlock;
+                PartFamily pf = bsModel.StructureVM.SelectedPartFamily?.PartFamily;
+                PartSize ps = bsModel.StructureVM.SelectedPartSize;
+
+                if (btr != null)//проверка, что блок введен в строку
+                {
+                    if (!blocks.Contains(btr.Id))//блоки могут повторяться!!!
+                        blocks.Add(btr.Id);
+                }
+                else
+                {
+                    blocksCompleteInput = false;
+                    //ввод неполный, то считать ввод не выполнен вообще
+                    blocks.Clear();
+                    break;
+                }
+            }
+            return blocks;
+        }
+
+
+
+        private bool blocksStructureMappingCompleteInput = false;
 
         //enables create network
         public Dictionary<ObjectId, SelectedPartTypeId> BlockStructureMapping
         {
             get
             {
-                blocksCompleteInput = true;
-                Dictionary<ObjectId, SelectedPartTypeId> mapping
-                    = new Dictionary<ObjectId, SelectedPartTypeId>();
-
-                foreach (BlockStructureMappingPairModel bsModel in BlocksStructuresMappingColl)
-                {
-                    BlockTableRecord btr = bsModel.BlockVM.SelectedBlock;
-                    PartFamily pf = bsModel.StructureVM.SelectedPartFamily?.PartFamily;
-                    PartSize ps = bsModel.StructureVM.SelectedPartSize;
-
-                    if (btr != null && pf != null && ps != null)//проверка, что ввод в строку полный
-                    {
-                        if (!mapping.ContainsKey(btr.Id))//блоки могут повторяться!!!
-                            mapping.Add(btr.Id, new SelectedPartTypeId(pf.Id, ps.Id));
-                    }
-                    else
-                    {
-                        blocksCompleteInput = false;
-                        //ввод неполный, то считать ввод не выполнен вообще
-                        mapping.Clear();
-                        break;
-                    }
-                }
-                return mapping;
+                return GetBlockStructureMapping();
             }
         }
 
+        private Dictionary<ObjectId, SelectedPartTypeId> GetBlockStructureMapping()
+        {
+            blocksStructureMappingCompleteInput = true;
+            Dictionary<ObjectId, SelectedPartTypeId> mapping
+                = new Dictionary<ObjectId, SelectedPartTypeId>();
+
+            foreach (BlockStructureMappingPairModel bsModel in BlocksStructuresMappingColl)
+            {
+                BlockTableRecord btr = bsModel.BlockVM.SelectedBlock;
+                PartFamily pf = bsModel.StructureVM.SelectedPartFamily?.PartFamily;
+                PartSize ps = bsModel.StructureVM.SelectedPartSize;
+
+                if (btr != null && pf != null && ps != null)//проверка, что ввод в строку полный
+                {
+                    if (!mapping.ContainsKey(btr.Id))//блоки могут повторяться!!!
+                        mapping.Add(btr.Id, new SelectedPartTypeId(pf.Id, ps.Id));
+                }
+                else
+                {
+                    blocksStructureMappingCompleteInput = false;
+                    //ввод неполный, то считать ввод не выполнен вообще
+                    mapping.Clear();
+                    break;
+                }
+            }
+            return mapping;
+        }
 
 
         private readonly RelayCommand addBlockStructureMappingPairCommand = null;
@@ -275,7 +287,7 @@ namespace Civil3DInfoTools.PipeNetworkCreating.ConfigureNetworkCreationWindow2
             set
             {
                 pipeVM = value;
-                OnPropertyChanged("PipeVM");
+                OnPropertyChanged(nameof(PipeVM));
             }
         }
 
@@ -303,8 +315,8 @@ namespace Civil3DInfoTools.PipeNetworkCreating.ConfigureNetworkCreationWindow2
             set
             {
                 selectedTinSurface = value;
-                OnPropertyChanged("SelectedTinSurface");
-                OnPropertyChanged("SelectedSurfaceName");
+                OnPropertyChanged(nameof(SelectedTinSurface));
+                OnPropertyChanged(nameof(SelectedSurfaceName));
 
                 EnableCreateNetworkBtn(this, new EventArgs());
             }
@@ -345,7 +357,7 @@ namespace Civil3DInfoTools.PipeNetworkCreating.ConfigureNetworkCreationWindow2
             set
             {
                 communicationDepthVM = value;
-                OnPropertyChanged("CommunicationDepthVM");
+                OnPropertyChanged(nameof(CommunicationDepthVM));
             }
         }
 
@@ -357,7 +369,7 @@ namespace Civil3DInfoTools.PipeNetworkCreating.ConfigureNetworkCreationWindow2
             set
             {
                 wellDepthVM = value;
-                OnPropertyChanged("WellDepthVM");
+                OnPropertyChanged(nameof(WellDepthVM));
             }
         }
 
@@ -368,7 +380,7 @@ namespace Civil3DInfoTools.PipeNetworkCreating.ConfigureNetworkCreationWindow2
             set
             {
                 sameDepth = value;
-                OnPropertyChanged("SameDepth");
+                OnPropertyChanged(nameof(SameDepth));
             }
         }
 
@@ -380,7 +392,7 @@ namespace Civil3DInfoTools.PipeNetworkCreating.ConfigureNetworkCreationWindow2
             set
             {
                 rimElevationCorrection = value;
-                OnPropertyChanged("RimElevationCorrection");
+                OnPropertyChanged(nameof(RimElevationCorrection));
             }
         }
 
@@ -392,7 +404,7 @@ namespace Civil3DInfoTools.PipeNetworkCreating.ConfigureNetworkCreationWindow2
             set
             {
                 excelPathVM = value;
-                OnPropertyChanged("ExcelPathVM");
+                OnPropertyChanged(nameof(ExcelPathVM));
             }
         }
 
@@ -401,7 +413,7 @@ namespace Civil3DInfoTools.PipeNetworkCreating.ConfigureNetworkCreationWindow2
         {
             get
             {
-                if (ExcelPathVM.FileNameIsValid)
+                if (ExcelPathVM.FileName.Equals("") || ExcelPathVM.FileNameIsValid)
                 {
                     return ExcelPathVM.FileName;
                 }
@@ -416,7 +428,7 @@ namespace Civil3DInfoTools.PipeNetworkCreating.ConfigureNetworkCreationWindow2
             set
             {
                 communicationLayerVM = value;
-                OnPropertyChanged("CommunicationLayerVM");
+                OnPropertyChanged(nameof(CommunicationLayerVM));
             }
         }
 
@@ -434,11 +446,12 @@ namespace Civil3DInfoTools.PipeNetworkCreating.ConfigureNetworkCreationWindow2
         {
             get
             {
-                int i = Blocks.Count;//обновляет значение blocksCompleteInput
+                GetSelectedBlocks();//обновляет значение blocksCompleteInput
                 return GridLayerId != null && StructuresLayerId != null && StructureLabelsLayerId != null
                     //&& Blocks.Count > 0 //возможно сеть не должна содержать колодцев
                     && blocksCompleteInput
-                    && !String.IsNullOrEmpty(ExcelPath)
+                    && (ExcelPath.Equals("") //если пустой путь к экспликации колодцев - не использовать ее
+                    || !String.IsNullOrEmpty(ExcelPath))
                     && CommunicationLayerId != null;
             }
         }
@@ -450,13 +463,21 @@ namespace Civil3DInfoTools.PipeNetworkCreating.ConfigureNetworkCreationWindow2
         {
             get
             {
-                int i = BlockStructureMapping.Count;//обновляет значение blocksCompleteInput
-                return ConfigurationsAccepted && GridLayerId != null && StructuresLayerId != null
+                GetBlockStructureMapping();//обновляет значение blocksStructureMappingCompleteInput
+                return /*AcceptBtnIsEnabled*/
+
+
+                    GridLayerId != null && StructuresLayerId != null && StructureLabelsLayerId != null
+                    && blocksStructureMappingCompleteInput
+                    && (ExcelPath.Equals("") //если пустой путь к экспликации колодцев - не использовать ее
+                    || !String.IsNullOrEmpty(ExcelPath))
+                    && CommunicationLayerId != null
+                
+
+
+                    && ConfigurationsAccepted
                     && StructureLabelsLayerId != null && PartsListSelected
-                    //&& BlockStructureMapping.Count > 0//возможно сеть не должна содержать колодцев
-                    && blocksCompleteInput
-                    && PipeType != null && TinSurfaceId != null && !String.IsNullOrEmpty(ExcelPath)
-                    && CommunicationLayerId != null;
+                    && PipeType != null && TinSurfaceId != null;
             }
         }
 
@@ -468,7 +489,7 @@ namespace Civil3DInfoTools.PipeNetworkCreating.ConfigureNetworkCreationWindow2
         /// <param name="e"></param>
         private void EnableCreateNetworkBtn(object sender, EventArgs e)
         {
-            OnPropertyChanged("CreateNetworkBtnIsEnabled");
+            OnPropertyChanged(nameof(CreateNetworkBtnIsEnabled));
         }
 
         /// <summary>
@@ -479,7 +500,7 @@ namespace Civil3DInfoTools.PipeNetworkCreating.ConfigureNetworkCreationWindow2
         /// <param name="e"></param>
         private void EnableAcceptBtn(object sender, EventArgs e)
         {
-            OnPropertyChanged("AcceptBtnIsEnabled");
+            OnPropertyChanged(nameof(AcceptBtnIsEnabled));
             ConfigurationsAccepted = false;
         }
 
@@ -642,7 +663,7 @@ namespace Civil3DInfoTools.PipeNetworkCreating.ConfigureNetworkCreationWindow2
                     try
                     {
                         TinSurface tinSurface = tr.GetObject(defaultTinSurface.Value, OpenMode.ForRead) as TinSurface;
-                        if (tinSurface!=null)
+                        if (tinSurface != null)
                         {
                             SelectedTinSurface = tinSurface;
                         }
@@ -670,8 +691,8 @@ namespace Civil3DInfoTools.PipeNetworkCreating.ConfigureNetworkCreationWindow2
             CommunicationLayerVM.SelectionChanged += EnableCreateNetworkBtn;
             CommunicationLayerVM.SelectionChanged += EnableAcceptBtn;
 
-            OnPropertyChanged("AcceptBtnIsEnabled");
-            OnPropertyChanged("CreateNetworkBtnIsEnabled");
+            OnPropertyChanged(nameof(AcceptBtnIsEnabled));
+            OnPropertyChanged(nameof(CreateNetworkBtnIsEnabled));
 
             //Сохранить введенные данные в окно при любом закрытии
             thisWindow.Closing += SaveInput;
@@ -738,17 +759,22 @@ namespace Civil3DInfoTools.PipeNetworkCreating.ConfigureNetworkCreationWindow2
         private void AcceptConfigs(object obj)
         {
             //Попытаться считать данные из Excel
-            ExcelReader = new PipeStructureExcelReader(ExcelPath);
-            if (ExcelReader.WellDataFiles.Count == 0)
+            ExcelReader = !String.IsNullOrEmpty(ExcelPath) ? new PipeStructureExcelReader(ExcelPath) : null;
+            bool accept = true;
+            if (ExcelReader != null && ExcelReader.WellDataFiles.Count == 0)
             {
                 MessageBox.Show("В указанной директории не найдено ни одного файла Excel с подходящими именами. "
                     + "Для каждого квадрата должен быть отдельный файл с данными по колодцам. Файлы должны называться в соответствии с номером квадрата. "
                     + "Например, \"11111111\" или \"1111-11-11\" или \"1111_11_11\". Расширение \".xlsx\" или \".xls\"", "Отмена");
                 return;
             }
-            if (ExcelReader.ReadDataFromExcel())
+            if (ExcelReader != null)
             {
-                if (ExcelReader.WellsData.Count == 0 || ExcelReader.WellsData.All(kvp => kvp.Value == null || kvp.Value.Count == 0))
+                accept = ExcelReader.ReadDataFromExcel();
+                if (accept &&(
+                    ExcelReader.WellsData.Count == 0 
+                    || ExcelReader.WellsData.All(kvp => kvp.Value == null 
+                    || kvp.Value.Count == 0)))
                 {
                     MessageBox.Show("В указанных файлах Excel не удалось обнаружить данные о колодцах. Возможно файлы имеют неверный формат "
                         + "(смотри пример файла данных по гиперссылке в окне настройки)."
@@ -756,12 +782,29 @@ namespace Civil3DInfoTools.PipeNetworkCreating.ConfigureNetworkCreationWindow2
                     return;
                 }
 
+               
+            }
+
+
+            if (accept)
+            {
                 //Скрыть окно 
                 thisWindow.Hide();
-                //Запустить построение графа 
-                networkGraph = new PipeNetworkGraph(doc, cdoc, this);
-                //Отрисовать маркеры распознавания объектов
-                networkGraph.DrawMarkers();
+
+
+                BusyIndicatorHelper.ShowBusyIndicator("Построение графа сети");
+                try
+                {
+                    //Запустить построение графа 
+                    networkGraph = new PipeNetworkGraph(doc, cdoc, this);
+                    //Отрисовать маркеры распознавания объектов
+                    networkGraph.DrawMarkers();
+                }
+                finally
+                {
+                    BusyIndicatorHelper.CloseBusyIndicator();
+                }
+
 
                 //Показ модели и ожидание нажатия любой клавиши
                 Editor ed = doc.Editor;
@@ -798,8 +841,18 @@ namespace Civil3DInfoTools.PipeNetworkCreating.ConfigureNetworkCreationWindow2
         private void CreatePipeNenwork(object obj)
         {
             thisWindow.Close();
-            //создать сеть Civil 3d
-            networkGraph.CreatePipeNenwork();
+
+            BusyIndicatorHelper.ShowBusyIndicator("Создание сети Civil 3D");
+            try
+            {
+                //создать сеть Civil 3d
+                networkGraph.CreatePipeNenwork();
+            }
+            finally
+            {
+                BusyIndicatorHelper.CloseBusyIndicator();
+            }
+            
         }
 
         public void SaveInput(object sender, CancelEventArgs e)
@@ -824,21 +877,26 @@ namespace Civil3DInfoTools.PipeNetworkCreating.ConfigureNetworkCreationWindow2
             defaultTinSurface = TinSurfaceId;
             defaultRimElevationCorrection = RimElevationCorrection;
 
-            int decision = 0;
-            HashSet<ObjectId> blocks = Blocks;
-            if (blocksCompleteInput)
-            {
-                //полностью введен набор блоков - их нужно сохранить
-                decision = 1;
-            }
-            Dictionary<ObjectId, SelectedPartTypeId> blockStructureMapping = BlockStructureMapping;
-            if (blocksCompleteInput)
+            int saveBlocksMode = 0;
+
+            HashSet<ObjectId> blocks = null;
+            Dictionary <ObjectId, SelectedPartTypeId> blockStructureMapping = BlockStructureMapping;
+            if (blocksStructureMappingCompleteInput)
             {
                 //таблица сопоставления полностью заполнена - ее нужно сохранить
-                decision = 2;
+                saveBlocksMode = 2;
+            }
+            else
+            {
+                blocks = Blocks;
+                if (blocks.Count > 0)
+                {
+                    //введены блоки - их нужно сохранить
+                    saveBlocksMode = 1;
+                }
             }
 
-            switch (decision)
+            switch (saveBlocksMode)
             {
                 case 0:
                     defaultBlockStructureTable = null;
