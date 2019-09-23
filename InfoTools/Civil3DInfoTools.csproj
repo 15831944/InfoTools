@@ -207,8 +207,10 @@
   <ItemGroup>
     <Compile Include="App.cs" />
     <Compile Include="AuxiliaryCommands\AddPointToSurfaceWithoutDeformCommand.cs" />
-    <Compile Include="AuxiliaryCommands\TestWindow.xaml.cs">
-      <DependentUpon>TestWindow.xaml</DependentUpon>
+    <Compile Include="AuxiliaryCommands\ChangePipeTypeCommand.cs" />
+    <Compile Include="AuxiliaryCommands\SetPipeTypeViewModel.cs" />
+    <Compile Include="AuxiliaryCommands\SetPipeTypeView.xaml.cs">
+      <DependentUpon>SetPipeTypeView.xaml</DependentUpon>
     </Compile>
     <Compile Include="Constants.cs" />
     <Compile Include="Controls\SelectPartSizeUserControl\SelectPartFamilyModel.cs" />
@@ -234,7 +236,6 @@
     <Compile Include="Draft\GeologColumnsToExcelCommand.cs" />
     <Compile Include="Draft\GeologColumnsToExcelCommand2.cs" />
     <Compile Include="AuxiliaryCommands\ColumnsToExcelCommand.cs" />
-    <Compile Include="AuxiliaryCommands\TestCommand.cs" />
     <Compile Include="DisplayUtils.cs" />
     <Compile Include="AuxiliaryCommands\CreateLandSiteBlockCommand.cs" />
     <Compile Include="AuxiliaryCommands\LayersByColorsCommand.cs" />
@@ -340,7 +341,7 @@
     </COMReference>
   </ItemGroup>
   <ItemGroup>
-    <Page Include="AuxiliaryCommands\TestWindow.xaml">
+    <Page Include="AuxiliaryCommands\SetPipeTypeView.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>

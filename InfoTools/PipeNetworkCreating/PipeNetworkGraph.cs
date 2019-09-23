@@ -1027,6 +1027,8 @@ namespace Civil3DInfoTools.PipeNetworkCreating
             {
                 CivilDB.Network network = (CivilDB.Network)tr.GetObject(networkId, OpenMode.ForWrite);
 
+                network.PartsListId = configsViewModel.SelectedPartsList.Id;
+
                 CivilDB.TinSurface tinSurf = (CivilDB.TinSurface)tr.GetObject(tinSurfId, OpenMode.ForRead);
 
                 //создать колодцы

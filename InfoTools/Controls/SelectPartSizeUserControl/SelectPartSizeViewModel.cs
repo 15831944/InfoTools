@@ -29,8 +29,8 @@ namespace Civil3DInfoTools.Controls.SelectPartSizeUserControl
             {
                 partsList = value;
                 PartFamilies = GetPartFams(doc, partsList, ObjectId.Null, ObjectId.Null);
-                OnPropertyChanged("PartsList");
-                OnPropertyChanged("PartSizes");
+                OnPropertyChanged(nameof(PartsList));
+                OnPropertyChanged(nameof(PartSizes));
             }
         }
 
@@ -46,9 +46,9 @@ namespace Civil3DInfoTools.Controls.SelectPartSizeUserControl
             set
             {
                 selectedPartFamilyItem = value;
-                OnPropertyChanged("SelectedPartFamilyItem");
-                OnPropertyChanged("PartSizes");//эта строка нужна?
-                OnPropertyChanged("PartFamDefined");
+                OnPropertyChanged(nameof(SelectedPartFamilyItem));
+                OnPropertyChanged(nameof(PartSizes));//эта строка нужна?
+                OnPropertyChanged(nameof(PartFamDefined));
             }
         }
 
@@ -72,7 +72,7 @@ namespace Civil3DInfoTools.Controls.SelectPartSizeUserControl
             set
             {
                 selectedPartSizeItem = value;
-                OnPropertyChanged("SelectedPartSizeItem");
+                OnPropertyChanged(nameof(SelectedPartSizeItem));
 
                 if (SelectionChanged != null)
                 {
@@ -98,7 +98,7 @@ namespace Civil3DInfoTools.Controls.SelectPartSizeUserControl
             set
             {
                 partFamilies = value;
-                OnPropertyChanged("PartFamilies");
+                OnPropertyChanged(nameof(PartFamilies));
             }
         }
 
