@@ -1162,6 +1162,7 @@ namespace Civil3DInfoTools.PipeNetworkCreating
                 {
 
                     //CivilDB.Pipe prevPipe = null;
+                    
                     for (int i = 0; i < ne.PipePositionList.Count - 1; i++)
                     {
                         Point3d p0 = ne.PipePositionList[i].GetPt3d() + elevCorrectionVector;
@@ -1185,6 +1186,26 @@ namespace Civil3DInfoTools.PipeNetworkCreating
                         }
 
                     }
+
+
+                    //помимо труб создать 3d полилинию
+                    using (Polyline3d poly3d = new Polyline3d())
+                    {
+                        poly3d.LayerId = configsViewModel.CommunicationLayerId.Value;
+                        ms.AppendEntity(poly3d);
+                        tr.AddNewlyCreatedDBObject(poly3d, true);
+
+                        for (int i = 0; i < ne.PipePositionList.Count; i++)
+                        {
+                            Point3d p = ne.PipePositionList[i].GetPt3d() + elevCorrectionVector;
+                            PolylineVertex3d vertex = new PolylineVertex3d(p);
+                            poly3d.AppendVertex(vertex);
+                            tr.AddNewlyCreatedDBObject(vertex, true);
+                        }
+                    }
+                        
+
+
                 }
 
 
