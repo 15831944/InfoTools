@@ -326,13 +326,12 @@ namespace Civil3DInfoTools.RoadMarking
                 {
                     startFromDash = pattern[0] > 0;
                 }
-                //SortedSet<Curve> curves = new SortedSet<Curve>(new CurvePositionComparer(curve));
-                List<Curve> curves = new List<Curve>();
+                
+                
+                DoubleCollection splittingParams = new DoubleCollection();
                 if (pattern.Count > 1)
                 {
                     //Расчитать параметры для разбивки полилинии
-                    DoubleCollection splittingParams = new DoubleCollection();
-
                     double currParam = curve.StartParam;
                     double currDist = curve.GetDistanceAtParameter(currParam);
                     double length = curve.GetDistanceAtParameter(curve.EndParam);
@@ -361,10 +360,12 @@ namespace Civil3DInfoTools.RoadMarking
                         }
 
                     }
+                }
 
 
-
-
+                List<Curve> curves = new List<Curve>();
+                if (splittingParams.Count != 0)
+                {
                     //Использовать метод Curve.GetSplitCurves для создания сегментов
                     DBObjectCollection splitted = curve.GetSplitCurves(splittingParams);
                     foreach (DBObject dbo in splitted)
@@ -375,7 +376,7 @@ namespace Civil3DInfoTools.RoadMarking
                         }
                     }
                 }
-                else //if (startFromDash)//Сплошная линия
+                else//Сплошная линия
                 {
                     object o = curve.Clone();
                     if (o != null && o is Curve)

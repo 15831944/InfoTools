@@ -82,8 +82,6 @@ namespace Civil3DInfoTools.AuxiliaryCommands
 
                         //Нельзя узнать текущий PartFamily и PartSize???
                         //pipe.SwapPartFamilyAndSize
-
-                        ed.WriteMessage("\n" + pipe.PartSizeName);
                     }
 
                     if (partsListId == ObjectId.Null) return;
