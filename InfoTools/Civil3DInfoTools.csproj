@@ -181,6 +181,9 @@
     <Reference Include="Microsoft.Expression.Interactions, Version=4.0.0.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL">
       <HintPath>..\packages\System.Windows.Interactivity.WPF.2.0.20525\lib\net40\Microsoft.Expression.Interactions.dll</HintPath>
     </Reference>
+    <Reference Include="Newtonsoft.Json, Version=12.0.0.0, Culture=neutral, PublicKeyToken=30ad4fe6b2a6aeed, processorArchitecture=MSIL">
+      <HintPath>..\packages\Newtonsoft.Json.12.0.2\lib\net45\Newtonsoft.Json.dll</HintPath>
+    </Reference>
     <Reference Include="PresentationCore" />
     <Reference Include="PresentationFramework" />
     <Reference Include="RBush, Version=1.0.0.0, Culture=neutral, processorArchitecture=MSIL">
@@ -208,6 +211,7 @@
     <Compile Include="App.cs" />
     <Compile Include="AuxiliaryCommands\AddPointToSurfaceWithoutDeformCommand.cs" />
     <Compile Include="AuxiliaryCommands\ChangePipeTypeCommand.cs" />
+    <Compile Include="AuxiliaryCommands\GenegateUnigineSplineCommand.cs" />
     <Compile Include="AuxiliaryCommands\SetPipeTypeViewModel.cs" />
     <Compile Include="AuxiliaryCommands\SetPipeTypeView.xaml.cs">
       <DependentUpon>SetPipeTypeView.xaml</DependentUpon>
