@@ -49,27 +49,44 @@ namespace Civil3DInfoTools.AuxiliaryCommands
                     if (poly == null) return;
 
                     ObjectId[] verts = poly.Cast<ObjectId>().ToArray();
+
+
+
                     List<Point3d> pts = new List<Point3d>(verts.Length);
                     for (int i = 0; i < verts.Length; i++)
                     {
                         PolylineVertex3d vt = tr.GetObject(verts[i], OpenMode.ForRead) as PolylineVertex3d;
                         Point3d point3d = vt.Position;
                         pts.Add(point3d);
+                    }
 
-                        unigineSpline.points.Add(new double[] { point3d.X, point3d.Y, point3d.Z });
+
+                    List<Vector3d> tangents = new List<Vector3d>(verts.Length);
+                    tangents.Add((pts[1] - pts[0]).GetNormal());
+                    for (int i = 1; i < verts.Length - 1; i++)
+                    {
+                        Vector3d tangent = ((pts[i + 1] - pts[i]) + (pts[i] - pts[i - 1])).GetNormal();
+                        tangents.Add(tangent);
+                    }
+                    tangents.Add((pts[verts.Length - 1] - pts[verts.Length - 2]).GetNormal());
+
+
+
+
+                    for (int i = 0; i < verts.Length; i++)
+                    {
+                        unigineSpline.points.Add(new double[] { pts[i].X, pts[i].Y, pts[i].Z });
 
                         if (i > 0)
                         {
                             //сегмент
-                            Vector3d tangent = (point3d - pts[i - 1]).GetNormal();//TODO: сделать плавный переход касательных
-                            double[] tang = new double[] { tangent.X, tangent.Y, tangent.Z };
                             UnigineSegment segment = new UnigineSegment()
                             {
                                 start_index = i - 1,
-                                start_tangent = tang,
+                                start_tangent = new double[] { tangents[i - 1].X, tangents[i - 1].Y, tangents[i - 1].Z },
                                 start_up = new double[] { 0, 0, 1 },
                                 end_index = i,
-                                end_tangent = tang,
+                                end_tangent = new double[] { -tangents[i].X, -tangents[i].Y, -tangents[i].Z },
                                 end_up = new double[] { 0, 0, 1 },
                             };
                             unigineSpline.segments.Add(segment);
