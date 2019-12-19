@@ -92,6 +92,9 @@ namespace NavisWorksInfoTools.S1NF0_SOFTWARE
                                 XmlSerializer xmlSerializer = new XmlSerializer(typeof(Classifier));
                                 StringReader stringReader = new StringReader(serializedData);
                                 classifier = (Classifier)xmlSerializer.Deserialize(stringReader);
+                                classifier.ClassName = classifier.Name;
+                                classifier.DefaultClasses[0] = classifier.Name + "_DefaultFolder";
+                                classifier.DefaultClasses[1] = classifier.Name + "_DefaultGeometry";
                             }
                         }
                         else
@@ -100,9 +103,12 @@ namespace NavisWorksInfoTools.S1NF0_SOFTWARE
                             classifier = new Classifier()
                             {
                                 Name = rootFolder.DisplayName,
+                                ClassName = rootFolder.DisplayName,
                                 IsPrimary = true,
                                 DetailLevels = new List<string>() { "Folder", "Geometry" }
                             };
+                            classifier.DefaultClasses[0] = rootFolder.DisplayName + "_DefaultFolder";
+                            classifier.DefaultClasses[1] = rootFolder.DisplayName + "_DefaultGeometry";
                         }
 
 
@@ -115,7 +121,8 @@ namespace NavisWorksInfoTools.S1NF0_SOFTWARE
                             IsPrimary = true,
                         };
                         //Создать StructureDataStorage
-                        StructureDataStorage dataStorage = new StructureDataStorage(doc, stFilename, clFilename, structure, classifier, true,
+                        StructureDataStorage dataStorage = new StructureDataStorage(
+                            doc, stFilename, clFilename, structure, classifier, true,
                             selectRootFolderWindow.SelectedCategories);
 
                         //Сформировать XML по структуре папок

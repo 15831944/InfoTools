@@ -14,6 +14,7 @@ namespace NavisWorksInfoTools.S1NF0_SOFTWARE.XML.St
         [XmlAttribute]
         public string Name { get { return name; } set { name = value.Trim(); } }
 
+
         [XmlAttribute]
         public string Classifier { get; set; }
 

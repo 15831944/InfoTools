@@ -43,6 +43,7 @@ namespace Civil3DInfoTools.AuxiliaryCommands
 
                 //создание данных для сериализации
                 UnigineSpline unigineSpline = new UnigineSpline();
+                Point3d center = Point3d.Origin;
                 using (Transaction tr = db.TransactionManager.StartTransaction())
                 {
                     Polyline3d poly = tr.GetObject(per1.ObjectId, OpenMode.ForRead) as Polyline3d;
@@ -58,6 +59,18 @@ namespace Civil3DInfoTools.AuxiliaryCommands
                         PolylineVertex3d vt = tr.GetObject(verts[i], OpenMode.ForRead) as PolylineVertex3d;
                         Point3d point3d = vt.Position;
                         pts.Add(point3d);
+                    }
+
+                    //найти среднюю точку
+                    foreach (Point3d pt in pts)
+                    {
+                        center = center.Add(new Vector3d(pt.X, pt.Y, pt.Z));
+                    }
+                    center = center.DivideBy(pts.Count);
+
+                    for (int i = 0; i < pts.Count; i++)
+                    {
+                        pts[i] = pts[i].Subtract(new Vector3d(center.X, center.Y, center.Z));
                     }
 
 
@@ -79,14 +92,19 @@ namespace Civil3DInfoTools.AuxiliaryCommands
 
                         if (i > 0)
                         {
+                            //тангенсы должны быть по модулю примерно 1/4 от расстояния между точками
+                            double mult = (pts[i] - pts[i - 1]).Length / 4;
+                            Vector3d tan0 = tangents[i - 1] * mult;
+                            Vector3d tan1 = -tangents[i] * mult;
+
                             //сегмент
                             UnigineSegment segment = new UnigineSegment()
                             {
                                 start_index = i - 1,
-                                start_tangent = new double[] { tangents[i - 1].X, tangents[i - 1].Y, tangents[i - 1].Z },
+                                start_tangent = new double[] { tan0.X, tan0.Y, tan0.Z },
                                 start_up = new double[] { 0, 0, 1 },
                                 end_index = i,
-                                end_tangent = new double[] { -tangents[i].X, -tangents[i].Y, -tangents[i].Z },
+                                end_tangent = new double[] { tan1.X, tan1.Y, tan1.Z },
                                 end_up = new double[] { 0, 0, 1 },
                             };
                             unigineSpline.segments.Add(segment);
@@ -99,7 +117,8 @@ namespace Civil3DInfoTools.AuxiliaryCommands
 
                 //сериализация
                 //TODO: Сделать выбор папки
-                string fileName = Common.Utils.GetNonExistentFileName(Path.GetDirectoryName(adoc.Name), "unigineSpline", "spl");
+                string fileName = Common.Utils.GetNonExistentFileName(Path.GetDirectoryName(adoc.Name), 
+                    center.ToString().Replace(',','_').Substring(1, center.ToString().Length-2), "spl");
                 using (StreamWriter file = System.IO.File.CreateText(fileName))
                 {
                     JsonSerializer serializer = new JsonSerializer();

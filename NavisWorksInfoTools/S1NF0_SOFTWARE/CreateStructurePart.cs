@@ -116,7 +116,8 @@ namespace NavisWorksInfoTools.S1NF0_SOFTWARE
 
                             //Создать StructureDataStorage
                             //TODO: Нужно добавить выбор категорий!
-                            StructureDataStorage dataStorage = new StructureDataStorage(doc, stFilename, clFilename, structure, classifier, true);
+                            StructureDataStorage dataStorage = new StructureDataStorage(
+                                doc, stFilename, clFilename, structure, classifier, true);
 
                             //Напихать все объекты в StructureDataStorage сплошным списком
                             foreach (ModelItem item in selectedGeometry)

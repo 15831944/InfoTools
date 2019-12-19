@@ -78,7 +78,7 @@ namespace NavisWorksInfoTools.S1NF0_SOFTWARE
                                 XmlSerializer xmlSerializer = new XmlSerializer(typeof(Structure));
                                 StringReader stringReader = new StringReader(serializedData);
                                 structure = (Structure)xmlSerializer.Deserialize(stringReader);
-
+                                
                             }
 
                             Classifier classifier = null;
@@ -89,6 +89,9 @@ namespace NavisWorksInfoTools.S1NF0_SOFTWARE
                                 XmlSerializer xmlSerializer = new XmlSerializer(typeof(Classifier));
                                 StringReader stringReader = new StringReader(serializedData);
                                 classifier = (Classifier)xmlSerializer.Deserialize(stringReader);
+                                classifier.ClassName = classifier.Name;
+                                classifier.DefaultClasses[0] = classifier.Name + "_DefaultFolder";
+                                classifier.DefaultClasses[1] = classifier.Name + "_DefaultGeometry";
                             }
 
                             DataStorage = new StructureDataStorage(doc, stFilename, clFilename, structure, classifier);
