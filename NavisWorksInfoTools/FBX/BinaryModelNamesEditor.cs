@@ -522,9 +522,7 @@ namespace NavisWorksInfoTools.FBX
             uint valueToWrite = value;
             if (globalOffsetChange != 0 && value != 0)
             {
-
-                valueToWrite += Convert.ToUInt32(globalOffsetChange);
-
+                valueToWrite = Convert.ToUInt32(Convert.ToInt64(valueToWrite) + globalOffsetChange);
             }
 
             bw.Write(valueToWrite);
@@ -538,9 +536,7 @@ namespace NavisWorksInfoTools.FBX
             ulong valueToWrite = value;
             if (globalOffsetChange != 0 && value != 0)
             {
-
-                valueToWrite += Convert.ToUInt64(globalOffsetChange);
-
+                valueToWrite = Convert.ToUInt64(Convert.ToInt64(valueToWrite) + globalOffsetChange);
             }
 
             bw.Write(valueToWrite);
@@ -585,7 +581,9 @@ namespace NavisWorksInfoTools.FBX
                     if (!renamingModelsStarted)
                     {
                         NameReplacement firstElem = replacements.Peek();
-                        NameReplacement secondElem = replacements.ElementAt(1);
+                        NameReplacement secondElem = replacements.Count > 1 ?
+                                replacements.ElementAt(1)
+                                : null;
                         if (
                             //modelName.Equals("Environment")//УЗЕЛ Environment ЕСТЬ НЕ ВСЕГДА!!! В каких случаях его нет пока не понятно.
                             firstElem.OldName.Equals(modelName)
@@ -593,7 +591,7 @@ namespace NavisWorksInfoTools.FBX
                         {
                             renamingModelsStarted = true;
                         }
-                        else if (secondElem.OldNameTrustable && secondElem.OldName.Equals(modelName))
+                        else if (secondElem!=null && secondElem.OldNameTrustable && secondElem.OldName.Equals(modelName))
                         {
                             // На всякий случай проверяем второй элемент в очереди (возможно 1-й вообще не появится в FBX?)
                             renamingModelsStarted = true;

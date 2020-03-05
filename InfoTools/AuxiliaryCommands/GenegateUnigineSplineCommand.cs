@@ -51,8 +51,6 @@ namespace Civil3DInfoTools.AuxiliaryCommands
 
                     ObjectId[] verts = poly.Cast<ObjectId>().ToArray();
 
-
-
                     List<Point3d> pts = new List<Point3d>(verts.Length);
                     for (int i = 0; i < verts.Length; i++)
                     {
@@ -78,13 +76,11 @@ namespace Civil3DInfoTools.AuxiliaryCommands
                     tangents.Add((pts[1] - pts[0]).GetNormal());
                     for (int i = 1; i < verts.Length - 1; i++)
                     {
-                        Vector3d tangent = ((pts[i + 1] - pts[i]) + (pts[i] - pts[i - 1])).GetNormal();
+                        Vector3d tangent = ((pts[i + 1] - pts[i]).GetNormal()
+                            + (pts[i] - pts[i - 1]).GetNormal()).GetNormal();
                         tangents.Add(tangent);
                     }
                     tangents.Add((pts[verts.Length - 1] - pts[verts.Length - 2]).GetNormal());
-
-
-
 
                     for (int i = 0; i < verts.Length; i++)
                     {
@@ -111,20 +107,81 @@ namespace Civil3DInfoTools.AuxiliaryCommands
                         }
                     }
 
+                    if (poly.Closed || pts[0].IsEqualTo(pts[verts.Length - 1]))
+                    {
+                        UnigineSegment lastSeg = unigineSpline.segments.Last();
+                        UnigineSegment firstSeg = unigineSpline.segments.First();
+
+                        if (pts[0].IsEqualTo(pts[verts.Length - 1]))
+                        {
+                            //замыкающий сегмент привязывается к стартовой точке
+                            
+                            lastSeg.end_index = 0;
+
+                            //тангенсы в стартовой точке
+                            Vector3d tan = ((pts[1] - pts[0]).GetNormal()
+                                + (pts[verts.Length - 1] - pts[verts.Length - 2]).GetNormal()).GetNormal();
+                            Vector3d tanLast = -tan * (pts[lastSeg.end_index] - pts[lastSeg.start_index]).Length / 4;
+                            lastSeg.end_tangent = new double[] { tanLast.X, tanLast.Y, tanLast.Z };
+
+                            
+                            Vector3d tanFirst = tan * (pts[firstSeg.end_index] - pts[firstSeg.start_index]).Length / 4;
+                            firstSeg.start_tangent = new double[] { tanFirst.X, tanFirst.Y, tanFirst.Z };
+                        }
+                        else
+                        {
+                            //тангенсы в стартовой и последней точке
+                            Point3d lastPt = pts[verts.Length - 1];
+                            Point3d firstPt = pts[0];
+                            Vector3d tanStart = ((pts[1] - firstPt).GetNormal()
+                                + (firstPt - lastPt).GetNormal()).GetNormal();
+                            Vector3d tanEnd = ((firstPt - lastPt).GetNormal()
+                                + (lastPt - pts[verts.Length - 2]).GetNormal()).GetNormal();
+
+                            Vector3d tanLast = -tanEnd * (pts[lastSeg.end_index] - pts[lastSeg.start_index]).Length / 4;
+                            lastSeg.end_tangent = new double[] { tanLast.X, tanLast.Y, tanLast.Z };
+
+                            Vector3d tanFirst = tanStart * (pts[firstSeg.end_index] - pts[firstSeg.start_index]).Length / 4;
+                            firstSeg.start_tangent = new double[] { tanFirst.X, tanFirst.Y, tanFirst.Z };
+
+                            //замыкающий сегмент
+                            double mult = (firstPt - lastPt).Length / 4;
+                            Vector3d tan0 = tanEnd * mult;
+                            Vector3d tan1 = -tanStart * mult;
+
+                            UnigineSegment segment = new UnigineSegment()
+                            {
+                                start_index = verts.Length - 1,
+                                start_tangent = new double[] { tan0.X, tan0.Y, tan0.Z },
+                                start_up = new double[] { 0, 0, 1 },
+                                end_index = 0,
+                                end_tangent = new double[] { tan1.X, tan1.Y, tan1.Z },
+                                end_up = new double[] { 0, 0, 1 },
+                            };
+                            unigineSpline.segments.Add(segment);
+
+                            
+                        }
+
+                    }
+
+
                     tr.Commit();
                 }
 
 
                 //сериализация
                 //TODO: Сделать выбор папки
-                string fileName = Common.Utils.GetNonExistentFileName(Path.GetDirectoryName(adoc.Name), 
-                    center.ToString().Replace(',','_').Substring(1, center.ToString().Length-2), "spl");
-                using (StreamWriter file = System.IO.File.CreateText(fileName))
+                if (unigineSpline.segments.Count > 0)
                 {
-                    JsonSerializer serializer = new JsonSerializer();
-                    serializer.Serialize(file, unigineSpline);
+                    string fileName = Common.Utils.GetNonExistentFileName(Path.GetDirectoryName(adoc.Name),
+                    center.ToString().Replace(',', '_').Substring(1, center.ToString().Length - 2), "spl");
+                    using (StreamWriter file = System.IO.File.CreateText(fileName))
+                    {
+                        JsonSerializer serializer = new JsonSerializer();
+                        serializer.Serialize(file, unigineSpline);
+                    }
                 }
-
             }
             catch (System.Exception ex)
             {
