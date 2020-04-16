@@ -86,7 +86,19 @@ namespace NavisWorksInfoTools
                     Dictionary<string, int> columnHeaderLookup = new Dictionary<string, int>();
                     foreach (KeyValuePair<int, Common.ExcelInterop.CellValue> kvp in tableHeader)
                     {
-                        columnHeaderLookup.Add(kvp.Value.DisplayString, kvp.Key);
+                        string columnName = kvp.Value.DisplayString;
+                        try
+                        {
+                            columnHeaderLookup.Add(columnName, kvp.Key);
+                        }
+                        catch(ArgumentException)
+                        {
+                            Win.MessageBox.Show(
+                                "Строка с названиями столбцов содрежит одинаковые названия. Повторяется \""+ columnName + "\"." ,
+                                "Одинаковые названия столбцов");
+                            return 0;
+                        }
+                        
                     }
 
                     //get state object of COM API
