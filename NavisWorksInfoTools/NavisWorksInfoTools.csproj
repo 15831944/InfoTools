@@ -167,6 +167,9 @@
     <Compile Include="S1NF0_SOFTWARE\SelectRootFolderWindow.xaml.cs">
       <DependentUpon>SelectRootFolderWindow.xaml</DependentUpon>
     </Compile>
+    <Compile Include="S1NF0_SOFTWARE\SetS1NF0PropsDialog.xaml.cs">
+      <DependentUpon>SetS1NF0PropsDialog.xaml</DependentUpon>
+    </Compile>
     <Compile Include="S1NF0_SOFTWARE\StructureDataStorage.cs" />
     <Compile Include="S1NF0_SOFTWARE\AddObjectsToStructure.cs" />
     <Compile Include="S1NF0_SOFTWARE\StructureWindow.xaml.cs">
@@ -213,6 +216,10 @@
       <Generator>MSBuild:Compile</Generator>
     </Page>
     <Page Include="S1NF0_SOFTWARE\SelectRootFolderWindow.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="S1NF0_SOFTWARE\SetS1NF0PropsDialog.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>

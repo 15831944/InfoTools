@@ -282,7 +282,7 @@ namespace NavisWorksInfoTools
                     {
                     { ID_PROP_DISPLAY_NAME, Utils.S1NF0PropSpecialValue.RandomGUID},
                     { MATERIAL_ID_PROP_DISPLAY_NAME, "_"}
-                    });
+                    }, new Dictionary<string, bool>());//ничего не переписывать
 
                     idProp = item.PropertyCategories
                         .FindPropertyByDisplayName(S1NF0_DATA_TAB_DISPLAY_NAME,

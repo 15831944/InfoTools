@@ -198,8 +198,9 @@ namespace NavisWorksInfoTools
         /// <param name="overwrite">перезаписывать свойства если они уже есть</param>
         /// <returns></returns>
         public static bool SetS1NF0PropsToItem
-            (ComApi.InwOpState3 oState, ModelItem item, Dictionary<string, object> propsToWrite,
-            bool overwrite = false)
+            (ComApi.InwOpState3 oState, ModelItem item, 
+            Dictionary<string, object> propsToWrite,
+            Dictionary<string, bool> toOverwrite)
         {
             ComApi.InwOaPropertyVec propsToSet
                                     = oState.ObjectFactory(ComApi.nwEObjectType.eObjectType_nwOaPropertyVec);
@@ -225,7 +226,8 @@ namespace NavisWorksInfoTools
                         {
                             if (propsToWrite.ContainsKey(prop.UserName))
                             {
-                                if (!overwrite)
+                                if (toOverwrite.ContainsKey(prop.UserName)
+                                    && !toOverwrite[prop.UserName])
                                     propsToWrite.Remove(prop.UserName);
                                 else
                                     continue;//Перейти к следующему свойству

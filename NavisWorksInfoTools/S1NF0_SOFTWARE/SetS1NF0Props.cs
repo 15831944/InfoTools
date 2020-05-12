@@ -28,9 +28,20 @@ namespace NavisWorksInfoTools.S1NF0_SOFTWARE
         /// <returns></returns>
         public override int Execute(params string[] parameters)
         {
-            Win.MessageBoxResult result = Win.MessageBox.Show("Начать раздачу служебных свойств S1NF0?", "Добавить служебные свойства", Win.MessageBoxButton.YesNo);
+            //Win.MessageBoxResult result = Win.MessageBox.Show("Начать раздачу служебных свойств S1NF0?", "Добавить служебные свойства", Win.MessageBoxButton.YesNo);
 
-            if (result == Win.MessageBoxResult.Yes)
+            SetS1NF0PropsDialog dialog = new SetS1NF0PropsDialog(
+                new Dictionary<string, bool>()
+                    {
+                    { ID_PROP_DISPLAY_NAME, false},
+                    { MATERIAL_ID_PROP_DISPLAY_NAME, false},
+                    { PROPER_NAME_PROP_DISPLAY_NAME, false},
+                    }
+                );
+            bool? result = dialog.ShowDialog();
+
+
+            if (result.HasValue && result.Value /*result == Win.MessageBoxResult.Yes*/)
             {
                 try
                 {
@@ -40,7 +51,8 @@ namespace NavisWorksInfoTools.S1NF0_SOFTWARE
                     Document doc = Application.ActiveDocument;
                     ModelItemEnumerableCollection rootItems = doc.Models.RootItems;
                     editedCount = 0;
-                    SetTreePropsRecurse(rootItems, oState, "ROOT");
+                    var toOverwrite = dialog.ToOverwrite;
+                    SetTreePropsRecurse(rootItems, oState, "ROOT", toOverwrite);
 
                     Win.MessageBox.Show("Всего объектов с добавленными свойствами - " + editedCount,
                         "Готово", Win.MessageBoxButton.OK, Win.MessageBoxImage.Information);
@@ -56,7 +68,9 @@ namespace NavisWorksInfoTools.S1NF0_SOFTWARE
         }
 
 
-        private void SetTreePropsRecurse(IEnumerable<ModelItem> items, ComApi.InwOpState3 oState, object parentId)
+        private void SetTreePropsRecurse(IEnumerable<ModelItem> items,
+            ComApi.InwOpState3 oState, object parentId,
+            Dictionary<string, bool> toOverwrite)
         {
             foreach (ModelItem item in items)
             {
@@ -72,14 +86,15 @@ namespace NavisWorksInfoTools.S1NF0_SOFTWARE
                     { ID_PROP_DISPLAY_NAME, Utils.S1NF0PropSpecialValue.RandomGUID},
                     { MATERIAL_ID_PROP_DISPLAY_NAME, "_"},
                     { PROPER_NAME_PROP_DISPLAY_NAME, defProperName},
-                    }))
+                    }, toOverwrite))
                 {
                     editedCount++;
                 }
                 
                 DataProperty idProp = item.PropertyCategories
                     .FindPropertyByDisplayName(S1NF0_DATA_TAB_DISPLAY_NAME, ID_PROP_DISPLAY_NAME);//Ссылка на id этого элемента для передачи детям
-                SetTreePropsRecurse(item.Children, oState, Utils.GetUserPropValue(idProp.Value));
+                SetTreePropsRecurse(item.Children, oState,
+                    Utils.GetUserPropValue(idProp.Value), toOverwrite);
             }
         }
 
