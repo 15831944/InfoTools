@@ -489,6 +489,9 @@ namespace Civil3DInfoTools.Geology.GeologyHatch3dWindow
 
                                                 foreach (Point2dCollection holePts2d in bwh.Value)
                                                 {
+                                                    if (holePts2d.Count < 3)
+                                                        continue;
+
                                                     using (Polyline poly = new Polyline())
                                                     {
                                                         for (int i = 0; i < holePts2d.Count; i++)
@@ -601,7 +604,7 @@ namespace Civil3DInfoTools.Geology.GeologyHatch3dWindow
                                 ent.Highlight();
                             }
                             tr.Commit();
-                        }                            
+                        }
                     }
 
                 }
@@ -650,6 +653,9 @@ namespace Civil3DInfoTools.Geology.GeologyHatch3dWindow
             {
                 for (int i = 0; i < boundaries.Count; i++)
                 {
+                    if (pts[i].Count < 3)
+                        continue;
+
                     HatchNestingNode insertingNode
                         = new HatchNestingNode(boundaries[i], extends[i], pts[i], ptParams[i], hatch);
                     Insert(root, insertingNode);
