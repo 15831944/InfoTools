@@ -172,7 +172,9 @@
       <HintPath>..\packages\ExcelDataReader.DataSet.3.4.2\lib\net35\ExcelDataReader.DataSet.dll</HintPath>
     </Reference>
     <Reference Include="KnnUtility">
-      <HintPath>C:\Users\kzaharov\Source\Repos\RBush\KnnUtility\bin\Debug\KnnUtility.dll</HintPath>
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">$(SolutionDir)RBush\KnnUtility\Debug\KnnUtility.dll</HintPath>
+      <HintPath Condition="'$(Configuration)|$(Platform)'=='Release|AnyCPU'">$(SolutionDir)RBush\KnnUtility\Release\KnnUtility.dll</HintPath>
     </Reference>
     <Reference Include="ManagedMapApi">
       <HintPath>C:\Program Files\Autodesk\AutoCAD 2018\Map\ManagedMapApi.dll</HintPath>
@@ -188,7 +190,8 @@
     <Reference Include="PresentationFramework" />
     <Reference Include="RBush, Version=1.0.0.0, Culture=neutral, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
-      <HintPath>C:\Users\kzaharov\Source\Repos\RBush\RBush\bin\Debug\netstandard1.2\RBush.dll</HintPath>
+      <HintPath Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">$(SolutionDir)RBush\Debug\netstandard1.2\RBush.dll</HintPath>
+      <HintPath Condition="'$(Configuration)|$(Platform)'=='Release|AnyCPU'">$(SolutionDir)RBush\Release\netstandard1.2\RBush.dll</HintPath>
     </Reference>
     <Reference Include="System" />
     <Reference Include="System.Collections.Immutable, Version=1.2.1.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a, processorArchitecture=MSIL">

@@ -259,3 +259,18 @@ paket-files/
 # Python Tools for Visual Studio (PTVS)
 __pycache__/
 *.pyc
+
+
+
+
+
+
+!/RBush/Debug/
+!/RBush/Release/
+!/RBush/KnnUtility/Debug/
+!/RBush/KnnUtility/Release/
+
+!/RBush/Debug/netstandard1.2/RBush.pdb
+!/RBush/Release/netstandard1.2/RBush.pdb
+!/RBush/KnnUtility/Debug/KnnUtility.pdb
+!/RBush/KnnUtility/Release/KnnUtility.pdb
