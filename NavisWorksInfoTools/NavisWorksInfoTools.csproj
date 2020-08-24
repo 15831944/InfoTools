@@ -54,23 +54,23 @@
     <When Condition="'$(Configuration)' == 'Release 2019' or '$(Configuration)' == 'Debug 2019'">
       <ItemGroup>
         <Reference Include="AdWindows">
-          <HintPath>C:\Program Files\Autodesk\Navisworks Manage 2019\AdWindows.dll</HintPath>
+          <HintPath>$(NAVISWORKS_MANAGE_2019)AdWindows.dll</HintPath>
           <Private>False</Private>
         </Reference>
         <Reference Include="Autodesk.Navisworks.Api">
-          <HintPath>C:\Program Files\Autodesk\Navisworks Manage 2019\Autodesk.Navisworks.Api.dll</HintPath>
+          <HintPath>$(NAVISWORKS_MANAGE_2019)Autodesk.Navisworks.Api.dll</HintPath>
           <Private>False</Private>
         </Reference>
         <Reference Include="Autodesk.Navisworks.ComApi">
-          <HintPath>C:\Program Files\Autodesk\Navisworks Manage 2019\Autodesk.Navisworks.ComApi.dll</HintPath>
+          <HintPath>$(NAVISWORKS_MANAGE_2019)Autodesk.Navisworks.ComApi.dll</HintPath>
           <Private>False</Private>
         </Reference>
         <Reference Include="Autodesk.Navisworks.Interop.ComApi">
-          <HintPath>C:\Program Files\Autodesk\Navisworks Manage 2019\Autodesk.Navisworks.Interop.ComApi.dll</HintPath>
+          <HintPath>$(NAVISWORKS_MANAGE_2019)Autodesk.Navisworks.Interop.ComApi.dll</HintPath>
           <EmbedInteropTypes>True</EmbedInteropTypes>
         </Reference>
         <Reference Include="navisworks.gui.roamer">
-          <HintPath>C:\Program Files\Autodesk\Navisworks Manage 2019\navisworks.gui.roamer.dll</HintPath>
+          <HintPath>$(NAVISWORKS_MANAGE_2019)navisworks.gui.roamer.dll</HintPath>
           <Private>False</Private>
         </Reference>
       </ItemGroup>
@@ -78,24 +78,24 @@
     <Otherwise>
       <ItemGroup>
         <Reference Include="AdWindows">
-          <HintPath>D:\Program Files\Autodesk\Navisworks Manage 2018\AdWindows.dll</HintPath>
+          <HintPath>$(NAVISWORKS_MANAGE_2018)AdWindows.dll</HintPath>
           <Private>False</Private>
         </Reference>
         <Reference Include="Autodesk.Navisworks.Api">
-          <HintPath>D:\Program Files\Autodesk\Navisworks Manage 2018\Autodesk.Navisworks.Api.dll</HintPath>
+          <HintPath>$(NAVISWORKS_MANAGE_2018)Autodesk.Navisworks.Api.dll</HintPath>
           <Private>False</Private>
         </Reference>
         <Reference Include="Autodesk.Navisworks.ComApi, Version=15.0.1314.36, Culture=neutral, PublicKeyToken=d85e58fa5af9b484, processorArchitecture=AMD64">
           <SpecificVersion>False</SpecificVersion>
-          <HintPath>D:\Program Files\Autodesk\Navisworks Manage 2018\Autodesk.Navisworks.ComApi.dll</HintPath>
+          <HintPath>$(NAVISWORKS_MANAGE_2018)Autodesk.Navisworks.ComApi.dll</HintPath>
           <Private>False</Private>
         </Reference>
         <Reference Include="Autodesk.Navisworks.Interop.ComApi">
-          <HintPath>D:\Program Files\Autodesk\Navisworks Manage 2018\Autodesk.Navisworks.Interop.ComApi.dll</HintPath>
+          <HintPath>$(NAVISWORKS_MANAGE_2018)Autodesk.Navisworks.Interop.ComApi.dll</HintPath>
           <EmbedInteropTypes>True</EmbedInteropTypes>
         </Reference>
         <Reference Include="navisworks.gui.roamer">
-          <HintPath>D:\Program Files\Autodesk\Navisworks Manage 2018\navisworks.gui.roamer.dll</HintPath>
+          <HintPath>$(NAVISWORKS_MANAGE_2018)navisworks.gui.roamer.dll</HintPath>
           <Private>False</Private>
         </Reference>
       </ItemGroup>
@@ -103,24 +103,24 @@
   </Choose>
   <ItemGroup>
     <Reference Include="AdWindows">
-      <HintPath>D:\Program Files\Autodesk\Navisworks Manage 2018\AdWindows.dll</HintPath>
+      <HintPath>$(NAVISWORKS_MANAGE_2018)AdWindows.dll</HintPath>
       <Private>False</Private>
     </Reference>
     <Reference Include="Autodesk.Navisworks.Api">
-      <HintPath>D:\Program Files\Autodesk\Navisworks Manage 2018\Autodesk.Navisworks.Api.dll</HintPath>
+      <HintPath>$(NAVISWORKS_MANAGE_2018)Autodesk.Navisworks.Api.dll</HintPath>
       <Private>False</Private>
     </Reference>
     <Reference Include="Autodesk.Navisworks.ComApi, Version=15.0.1314.36, Culture=neutral, PublicKeyToken=d85e58fa5af9b484, processorArchitecture=AMD64">
       <SpecificVersion>False</SpecificVersion>
-      <HintPath>D:\Program Files\Autodesk\Navisworks Manage 2018\Autodesk.Navisworks.ComApi.dll</HintPath>
+      <HintPath>$(NAVISWORKS_MANAGE_2018)Autodesk.Navisworks.ComApi.dll</HintPath>
       <Private>False</Private>
     </Reference>
     <Reference Include="Autodesk.Navisworks.Interop.ComApi">
-      <HintPath>D:\Program Files\Autodesk\Navisworks Manage 2018\Autodesk.Navisworks.Interop.ComApi.dll</HintPath>
+      <HintPath>$(NAVISWORKS_MANAGE_2018)Autodesk.Navisworks.Interop.ComApi.dll</HintPath>
       <EmbedInteropTypes>True</EmbedInteropTypes>
     </Reference>
     <Reference Include="navisworks.gui.roamer">
-      <HintPath>D:\Program Files\Autodesk\Navisworks Manage 2018\navisworks.gui.roamer.dll</HintPath>
+      <HintPath>$(NAVISWORKS_MANAGE_2018)navisworks.gui.roamer.dll</HintPath>
       <Private>False</Private>
     </Reference>
     <Reference Include="PresentationCore" />

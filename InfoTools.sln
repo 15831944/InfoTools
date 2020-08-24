@@ -1,7 +1,7 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
-# Visual Studio 15
-VisualStudioVersion = 15.0.27703.2026
+# Visual Studio Version 16
+VisualStudioVersion = 16.0.30128.74
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Civil3DInfoTools", "InfoTools\Civil3DInfoTools.csproj", "{2A73D95B-2743-4EAA-8299-C86E32EAD31E}"
 EndProject
@@ -22,6 +22,11 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "BatInstaller", "BatInstalle
 	EndProjectSection
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "NavisWorksInfoTools", "NavisWorksInfoTools\NavisWorksInfoTools.csproj", "{FB674034-56FC-407B-BC1A-704E0DD1E274}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{A9F9F530-999E-4E20-9914-13C1E160246A}"
+	ProjectSection(SolutionItems) = preProject
+		BuildInstructions.txt = BuildInstructions.txt
+	EndProjectSection
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

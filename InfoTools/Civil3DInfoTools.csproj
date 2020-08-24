@@ -136,30 +136,30 @@
   </PropertyGroup>
   <ItemGroup>
     <Reference Include="accoremgd">
-      <HintPath>C:\Program Files\Autodesk\AutoCAD 2018\accoremgd.dll</HintPath>
+      <HintPath>$(AUTOCAD2018)\accoremgd.dll</HintPath>
       <Private>False</Private>
     </Reference>
     <Reference Include="acdbmgd">
-      <HintPath>C:\Program Files\Autodesk\AutoCAD 2018\acdbmgd.dll</HintPath>
+      <HintPath>$(AUTOCAD2018)\acdbmgd.dll</HintPath>
       <Private>False</Private>
     </Reference>
     <Reference Include="acdbmgdbrep">
-      <HintPath>C:\Program Files\Autodesk\AutoCAD 2018\acdbmgdbrep.dll</HintPath>
+      <HintPath>$(AUTOCAD2018)\acdbmgdbrep.dll</HintPath>
       <Private>False</Private>
     </Reference>
     <Reference Include="acmgd">
-      <HintPath>C:\Program Files\Autodesk\AutoCAD 2018\acmgd.dll</HintPath>
+      <HintPath>$(AUTOCAD2018)\acmgd.dll</HintPath>
       <Private>False</Private>
     </Reference>
     <Reference Include="AcMPolygonMGD">
-      <HintPath>C:\Program Files\Autodesk\AutoCAD 2018\AcMPolygonMGD.dll</HintPath>
+      <HintPath>$(AUTOCAD2018)\AcMPolygonMGD.dll</HintPath>
     </Reference>
     <Reference Include="AecBaseMgd">
-      <HintPath>C:\Program Files\Autodesk\AutoCAD 2018\ACA\AecBaseMgd.dll</HintPath>
+      <HintPath>$(AUTOCAD2018)\ACA\AecBaseMgd.dll</HintPath>
       <Private>False</Private>
     </Reference>
     <Reference Include="AeccDbMgd">
-      <HintPath>C:\Program Files\Autodesk\AutoCAD 2018\C3D\AeccDbMgd.dll</HintPath>
+      <HintPath>$(AUTOCAD2018)\C3D\AeccDbMgd.dll</HintPath>
       <Private>False</Private>
     </Reference>
     <Reference Include="C5, Version=2.5.0.0, Culture=neutral, PublicKeyToken=282361b99ded7e8e, processorArchitecture=MSIL">
@@ -177,7 +177,7 @@
       <HintPath Condition="'$(Configuration)|$(Platform)'=='Release|AnyCPU'">$(SolutionDir)RBush\KnnUtility\Release\KnnUtility.dll</HintPath>
     </Reference>
     <Reference Include="ManagedMapApi">
-      <HintPath>C:\Program Files\Autodesk\AutoCAD 2018\Map\ManagedMapApi.dll</HintPath>
+      <HintPath>$(AUTOCAD2018)\Map\ManagedMapApi.dll</HintPath>
       <Private>False</Private>
     </Reference>
     <Reference Include="Microsoft.Expression.Interactions, Version=4.0.0.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL">
